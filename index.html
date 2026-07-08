@@ -42,9 +42,27 @@
       color: #52525b;
       font-variant-numeric: tabular-nums;
     }
+
+    /* ── update toast ── */
+    #update-toast {
+      position: fixed;
+      top: -60px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #065f46;
+      color: #6ee7b7;
+      padding: 0.6rem 1.2rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      transition: top 0.4s ease;
+      z-index: 100;
+      pointer-events: none;
+    }
+    #update-toast.show { top: 1rem; }
   </style>
 </head>
 <body>
+  <div id="update-toast">✨ updated — reloading</div>
   <h1>ai-demo<span>.</span>egonr.dev</h1>
   <div class="warning">🐉 here be dragons — unstable experiments, half-built tools, usual ai stuff</div>
   <div class="deploy-clock" id="clock"></div>
@@ -52,7 +70,7 @@
   <script>
     // ── deploy clock ──
     (function() {
-      var deployed = new Date("2026-07-08T18:12:22Z");
+      var deployed = new Date("2026-07-08T18:14:00Z");
       var el = document.getElementById("clock");
       function tick() {
         var diff = Math.floor((Date.now() - deployed.getTime()) / 1000);
@@ -67,6 +85,31 @@
       }
       tick();
       setInterval(tick, 1000);
+    })();
+
+    // ── auto-reload on deploy ──
+    (function() {
+      var current = "2026-07-08T18:14:00Z";
+      var toast = document.getElementById("update-toast");
+      var polling = false;
+
+      function check() {
+        if (polling) return;
+        polling = true;
+        fetch("/index.html?_ts=" + Date.now())
+          .then(function(r) { return r.text(); })
+          .then(function(html) {
+            var m = html.match(/var deployed = new Date\("([^"]+)"\)/);
+            if (m && m[1] !== current) {
+              toast.className = "show";
+              setTimeout(function() { location.reload(true); }, 2000);
+            }
+          })
+          .catch(function() {})
+          .then(function() { polling = false; });
+      }
+
+      setInterval(check, 15000);
     })();
   </script>
 </body>
