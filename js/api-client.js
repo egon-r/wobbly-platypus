@@ -24,6 +24,7 @@
     opts = opts || {};
     this.liveURL = opts.liveURL || "/api/v1/";
     this.staticURL = opts.staticURL || "/api/vV1/";
+    this.version = opts.version || "";
     this._base = null;       // resolved after init
     this.mode = "unknown";   // "live" | "static" | "error"
     this.health = null;      // health check response
@@ -38,7 +39,7 @@
     if (this._initPromise) return this._initPromise;
     var self = this;
 
-    this._initPromise = tryHealth(self.liveURL)
+    this._initPromise = tryHealth(self.liveURL, self.version)
       .then(function (health) {
         self.mode = "live";
         self._base = self.liveURL;
@@ -101,7 +102,7 @@
     if (this.mode !== "live") {
       return Promise.reject(new Error("query() requires live backend — currently in " + this.mode + " mode"));
     }
-    var url = this.baseURL() + "query?sql=" + encodeURIComponent(sql);
+    var url = versionize(this.baseURL() + "query?sql=" + encodeURIComponent(sql), this.version);
     return fetch(url).then(function (r) {
       if (!r.ok) throw new Error("Query failed: " + r.status);
       return r.json();
@@ -110,9 +111,16 @@
 
   // ── Internal ────────────────────────────────────────────────────
 
+  /** Append version param for cache busting on deploy */
+  function versionize(url, ver) {
+    if (!ver) return url;
+    var sep = url.indexOf("?") === -1 ? "?" : "&";
+    return url + sep + "v=" + encodeURIComponent(ver);
+  }
+
   /** Fetch a JSON resource relative to the current base URL */
   ApiClient.prototype._fetchJSON = function (path) {
-    var url = this.baseURL() + path;
+    var url = versionize(this.baseURL() + path, this.version);
     return fetch(url).then(function (r) {
       if (!r.ok) throw new Error("API error " + r.status + " for " + url);
       return r.json();
@@ -121,13 +129,14 @@
 
   // ── Health check helper ─────────────────────────────────────────
 
-  /** Try HEAD to a URL with a timeout. Resolves on 2xx, rejects on failure. */
-  function tryHealth(url) {
+  /** Try GET health.json with timeout. Resolves on 2xx, rejects on failure. */
+  function tryHealth(url, ver) {
     var controller = new AbortController();
     var timer = setTimeout(function () { controller.abort(); }, 3000);
+    var healthURL = versionize(url + "health.json", ver);
 
-    return fetch(url + "health.json", {
-      method: "GET",  // HEAD doesn't work on static file servers; use GET
+    return fetch(healthURL, {
+      method: "GET",
       signal: controller.signal,
     }).then(function (r) {
       clearTimeout(timer);

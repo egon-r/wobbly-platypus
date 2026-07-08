@@ -32,8 +32,9 @@
       text-shadow:
         3px  0 rgba(255,0,0,.35),
         -3px 0 rgba(0,255,255,.3),
-        0 0 12px rgba(204,0,0,.3),
-        0 0 40px rgba(204,0,0,.1);
+        0 0 10px rgba(204,0,0,.3),
+        0 0 30px rgba(204,0,0,.15),
+        0 0 80px rgba(204,0,0,.08);
       animation: glitch 12s infinite;
       margin: 0;
     }
@@ -43,32 +44,33 @@
         text-shadow:
           3px  0 rgba(255,0,0,.35),
           -3px 0 rgba(0,255,255,.3),
-          0 0 12px rgba(204,0,0,.3),
-          0 0 40px rgba(204,0,0,.1);
+          0 0 10px rgba(204,0,0,.3),
+          0 0 30px rgba(204,0,0,.15),
+          0 0 80px rgba(204,0,0,.08);
       }
       86% {
         text-shadow:
           10px  0 rgba(255,0,0,.5),
           -10px 0 rgba(0,255,255,.5),
-          0 0 12px rgba(204,0,0,.3);
+          0 0 10px rgba(204,0,0,.3);
       }
       88% {
         text-shadow:
           -8px  0 rgba(255,0,0,.45),
           8px 0 rgba(0,255,255,.45),
-          0 0 12px rgba(204,0,0,.3);
+          0 0 10px rgba(204,0,0,.3);
       }
       90% {
         text-shadow:
           5px  0 rgba(255,0,0,.4),
           -5px 0 rgba(0,255,255,.4),
-          0 0 12px rgba(204,0,0,.3);
+          0 0 10px rgba(204,0,0,.3);
       }
       93% {
         text-shadow:
           -3px  0 rgba(255,0,0,.35),
           3px 0 rgba(0,255,255,.3),
-          0 0 12px rgba(204,0,0,.3);
+          0 0 10px rgba(204,0,0,.3);
       }
     }
     .sub {
@@ -79,6 +81,51 @@
       text-transform: uppercase;
       text-shadow: 0.5px 0 rgba(255,0,0,.15), -0.5px 0 rgba(0,255,255,.12);
     }
+    /* ── CRT indicator light ── */
+    #indicator {
+      position: fixed;
+      top: 1rem;
+      right: 1.5rem;
+      z-index: 60;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.55rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #444;
+      font-family: "Courier New", Courier, monospace;
+      pointer-events: none;
+    }
+    #indicator .dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #1a1a1a;
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    #indicator .dot.live {
+      background: #00cc00;
+      box-shadow: 0 0 8px #00cc00, 0 0 16px #00cc0066;
+      animation: blink 1.6s ease-in-out infinite;
+    }
+    #indicator .dot.static {
+      background: #cc8800;
+      box-shadow: 0 0 6px #cc880088;
+    }
+    #indicator .dot.offline {
+      background: #1a1a1a;
+      box-shadow: none;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.25; }
+    }
+    #indicator .label { color: #444; }
+    #indicator .label.live    { color: #00cc00; }
+    #indicator .label.static  { color: #cc8800; }
+    #indicator .label.offline { color: #444; }
     .warning {
       margin-top: 2.5rem;
       font-size: 0.75rem;
@@ -99,7 +146,15 @@
       width: 3rem;
       border: none;
       border-top: 1px solid #333;
-      margin: 1.5rem auto;
+      margin: 1.2rem auto;
+    }
+    /* ── CRT ambient glow ── */
+    #crt-glow {
+      position: fixed;
+      inset: 0;
+      z-index: 48;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, rgba(60,15,15,.18) 0%, transparent 60%);
     }
     /* ── CRT vignette ── */
     body::before {
@@ -186,18 +241,61 @@
   </style>
 </head>
 <body>
+  <div id="crt-glow"></div>
   <div id="crt-beam"></div>
   <div id="noise"></div>
   <div id="update-toast">☐ updated — reloading</div>
   <h1>ai-demo<span>.</span>egonr.dev</h1>
   <div class="sub">present day. present time.</div>
   <hr>
+  <div id="indicator"><span class="dot" id="dot"></span><span class="label" id="indlabel">—</span></div>
+  <hr style="margin-top:0.8rem">
   <div class="warning">🐉 here be dragons<br>unstable experiments, half-built tools, usual ai stuff</div>
-  <div class="footer"><a href="https://egonr.dev">egonr.dev</a> <span style="color:#333">·</span> <span id="hash" style="color:#333">crt002</span></div>
+  <div class="footer"><a href="https://egonr.dev">egonr.dev</a> <span style="color:#333">·</span> <span id="hash" style="color:#333">crt003</span></div>
+
+  <script src="js/api-client.js?v=crt003"></script>
   <script>
-    // ── auto-reload on deploy ──
+    // ── version for deploy detection ──
+    var version = "crt003";
+
+    // ── virtual API init ──
     (function() {
-      var version = "crt002";
+      var api = new ApiClient({ version: version });
+      var dot = document.getElementById("dot");
+      var indlabel = document.getElementById("indlabel");
+
+      function setMode(m) {
+        if (m === "live") {
+          dot.className = "dot live";
+          indlabel.className = "label live";
+          indlabel.textContent = "LIVE";
+        } else if (m === "static") {
+          dot.className = "dot static";
+          indlabel.className = "label static";
+          indlabel.textContent = "STATIC";
+        } else {
+          dot.className = "dot offline";
+          indlabel.className = "label offline";
+          indlabel.textContent = "OFFLINE";
+        }
+      }
+
+      api.init().then(function(mode) {
+        if (mode === "live") {
+          setMode("live");
+        } else {
+          // Confirm static data exists before declaring STATIC
+          api.getHealth().then(function() {
+            setMode("static");
+          }).catch(function() {
+            setMode("offline");
+          });
+        }
+      }).catch(function() {
+        setMode("offline");
+      });
+
+      // ── auto-reload on deploy ──
       var toast = document.getElementById("update-toast");
       var polling = false;
 
