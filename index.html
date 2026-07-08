@@ -22,6 +22,7 @@
       font-size: 2rem;
       font-weight: 700;
       letter-spacing: -0.02em;
+      text-shadow: 0 0 12px rgba(99,102,241,.25), 0 0 40px rgba(99,102,241,.08);
     }
     h1 span { color: #6366f1; }
     .warning {
@@ -35,6 +36,30 @@
       margin-top: 3rem;
       font-size: 0.8rem;
       color: #52525b;
+    }
+    /* ── CRT vignette ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,.55) 100%);
+      pointer-events: none;
+      z-index: 50;
+    }
+    /* ── CRT scanlines ── */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0,0,0,.1) 0px,
+        rgba(0,0,0,.1) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+      pointer-events: none;
+      z-index: 50;
     }
     /* ── update toast ── */
     #update-toast {
@@ -58,11 +83,11 @@
   <div id="update-toast">✨ updated — reloading</div>
   <h1>ai-demo<span>.</span>egonr.dev</h1>
   <div class="warning">🐉 here be dragons - unstable experiments, half-built tools, usual ai stuff</div>
-  <div class="footer"><a href="https://egonr.dev">egonr.dev</a> <span id="ver" style="color:#3f3f46">· <span id="hash">fc06634</span></span></div>
+  <div class="footer"><a href="https://egonr.dev">egonr.dev</a> <span id="ver" style="color:#3f3f46">· <span id="hash">crt001</span></span></div>
   <script>
     // ── auto-reload on deploy ──
     (function() {
-      var version = "fc06634";
+      var version = "crt001";
       var toast = document.getElementById("update-toast");
       var polling = false;
 
