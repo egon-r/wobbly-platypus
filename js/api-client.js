@@ -95,6 +95,34 @@
   };
 
   /**
+   * Measure ping (ms) to the backend.
+   * In live mode, measures actual round-trip time.
+   * In static mode, returns 0 (no real network latency to measure).
+   */
+  ApiClient.prototype.ping = function () {
+    var self = this;
+    var start = Date.now();
+    return this.getHealth().then(function () {
+      return Date.now() - start;
+    });
+  };
+
+  /**
+   * Get aggregate status: table count, row count, generated_at timestamp.
+   * Works in both live and static modes.
+   */
+  ApiClient.prototype.getStatus = function () {
+    return this._fetchJSON("status.json").then(function (s) {
+      return {
+        tables: s.total_tables,
+        rows: s.total_rows,
+        generated_at: s.generated_at,
+        hash: s.hash
+      };
+    });
+  };
+
+  /**
    * Run a query against the live backend only.
    * Throws if in static mode.
    */
