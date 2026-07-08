@@ -37,7 +37,7 @@
       <div>
         <div class="card-name">hello</div>
         <div class="card-desc">a friendly greeting</div>
-        <div class="card-date">2026-07-09</div>
+        <div class="card-date" data-ts="2026-07-09T03:37:15+09:00"></div>
       </div>
       <span class="card-arrow">→</span>
     </a>
@@ -45,7 +45,7 @@
       <div>
         <div class="card-name">calc</div>
         <div class="card-desc">a pocket calculator</div>
-        <div class="card-date">2026-07-09</div>
+        <div class="card-date" data-ts="2026-07-09T03:42:32+09:00"></div>
       </div>
       <span class="card-arrow">→</span>
     </a>
@@ -53,7 +53,7 @@
       <div>
         <div class="card-name">myip</div>
         <div class="card-desc">your public IP address</div>
-        <div class="card-date">2026-07-09</div>
+        <div class="card-date" data-ts="2026-07-09T03:47:33+09:00"></div>
       </div>
       <span class="card-arrow">→</span>
     </a>
@@ -61,11 +61,32 @@
       <div>
         <div class="card-name">dice</div>
         <div class="card-desc">3D CSS cube roller</div>
-        <div class="card-date">2026-07-09</div>
+        <div class="card-date" data-ts="2026-07-09T04:12:05+09:00"></div>
       </div>
       <span class="card-arrow">→</span>
     </a>
   </div>
   <p><a class="back" href="/">back</a></p>
+<script>
+(function() {
+  const pad = n => String(n).padStart(2, '0');
+  document.querySelectorAll('.card-date[data-ts]').forEach(el => {
+    const d = new Date(el.getAttribute('data-ts'));
+    const now = new Date();
+    const diff = (now - d) / 1000;
+    const mins = Math.floor(diff / 60);
+    const hrs = Math.floor(diff / 3600);
+    const days = Math.floor(diff / 86400);
+    const timeStr = pad(d.getHours()) + ':' + pad(d.getMinutes());
+    let rel;
+    if (days === 0) rel = 'today at ' + timeStr;
+    else if (days === 1) rel = 'yesterday at ' + timeStr;
+    else if (days < 7) rel = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()] + ' at ' + timeStr;
+    else if (d.getFullYear() === now.getFullYear()) rel = (d.getMonth()+1) + '/' + d.getDate() + ' at ' + timeStr;
+    else rel = (d.getMonth()+1) + '/' + d.getDate() + '/' + d.getFullYear();
+    el.textContent = rel;
+  });
+})();
+</script>
 </body>
 </html>
