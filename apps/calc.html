@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>calc</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    background: #09090b;
+    color: #e4e4e7;
+    font-family: system-ui, sans-serif;
+    display: grid;
+    place-items: center;
+    height: 100vh;
+    margin: 0;
+  }
+  .calc {
+    background: #18181b;
+    border-radius: 1rem;
+    padding: 1.25rem;
+    width: 280px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.5);
+  }
+  .display {
+    background: #09090b;
+    border-radius: .5rem;
+    padding: .75rem 1rem;
+    margin-bottom: 1rem;
+    text-align: right;
+    min-height: 3.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: end;
+    align-items: end;
+    overflow: hidden;
+  }
+  .display .expr {
+    font-size: .8rem;
+    color: #71717a;
+    min-height: 1.2rem;
+    word-break: break-all;
+  }
+  .display .result {
+    font-size: 1.75rem;
+    font-weight: 300;
+    word-break: break-all;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: .5rem;
+  }
+  button {
+    font-size: 1.1rem;
+    font-family: inherit;
+    padding: .75rem 0;
+    border: none;
+    border-radius: .5rem;
+    cursor: pointer;
+    background: #27272a;
+    color: #e4e4e7;
+    transition: background .1s;
+  }
+  button:hover { background: #3f3f46; }
+  button:active { background: #52525b; }
+  button.op { background: #3f3f46; }
+  button.op:hover { background: #52525b; }
+  button.eq { background: #6366f1; color: #fff; }
+  button.eq:hover { background: #818cf8; }
+  button.clr { background: #7f1d1d; color: #fca5a5; }
+  button.clr:hover { background: #991b1b; }
+  button.span2 { grid-column: span 2; }
+  a { color: #a1a1aa; font-size: .875rem; display: inline-block; margin-top: 1rem; }
+</style>
+</head>
+<body>
+<div class="calc">
+  <div class="display">
+    <div class="expr" id="expr"></div>
+    <div class="result" id="result">0</div>
+  </div>
+  <div class="grid">
+    <button class="clr" data-action="clear">AC</button>
+    <button class="op" data-action="sign">±</button>
+    <button class="op" data-action="percent">%</button>
+    <button class="op" data-action="divide">÷</button>
+
+    <button data-action="digit" data-value="7">7</button>
+    <button data-action="digit" data-value="8">8</button>
+    <button data-action="digit" data-value="9">9</button>
+    <button class="op" data-action="multiply">×</button>
+
+    <button data-action="digit" data-value="4">4</button>
+    <button data-action="digit" data-value="5">5</button>
+    <button data-action="digit" data-value="6">6</button>
+    <button class="op" data-action="subtract">−</button>
+
+    <button data-action="digit" data-value="1">1</button>
+    <button data-action="digit" data-value="2">2</button>
+    <button data-action="digit" data-value="3">3</button>
+    <button class="op" data-action="add">+</button>
+
+    <button class="span2" data-action="digit" data-value="0">0</button>
+    <button data-action="decimal">.</button>
+    <button class="eq" data-action="equals">=</button>
+  </div>
+</div>
+<div style="text-align:center">
+  <a href="/">back</a>
+</div>
+<script>
+  const state = {
+    current: '0',
+    previous: null,
+    operation: null,
+    reset: false,
+    expression: ''
+  };
+
+  const resultEl = document.getElementById('result');
+  const exprEl = document.getElementById('expr');
+
+  function updateDisplay() {
+    resultEl.textContent = state.current;
+    exprEl.textContent = state.expression;
+  }
+
+  function inputDigit(digit) {
+    if (state.reset) {
+      state.current = digit;
+      state.reset = false;
+    } else {
+      state.current = state.current === '0' ? digit : state.current + digit;
+    }
+  }
+
+  function inputDecimal() {
+    if (state.reset) {
+      state.current = '0.';
+      state.reset = false;
+      return;
+    }
+    if (!state.current.includes('.')) {
+      state.current += '.';
+    }
+  }
+
+  function handleOperator(op) {
+    const prev = state.current;
+    if (state.operation && !state.reset) {
+      compute();
+    }
+    state.previous = state.current;
+    state.operation = op;
+    state.reset = true;
+    state.expression = state.previous + ' ' + opSymbol(op) + ' ';
+  }
+
+  function opSymbol(op) {
+    return { add: '+', subtract: '−', multiply: '×', divide: '÷' }[op] || op;
+  }
+
+  function compute() {
+    const a = parseFloat(state.previous);
+    const b = parseFloat(state.current);
+    if (isNaN(a) || isNaN(b)) return;
+    let result;
+    switch (state.operation) {
+      case 'add':      result = a + b; break;
+      case 'subtract': result = a - b; break;
+      case 'multiply': result = a * b; break;
+      case 'divide':   result = b === 0 ? 'Error' : a / b; break;
+      default: return;
+    }
+    if (result === 'Error') {
+      state.current = 'Error';
+      state.expression = '';
+    } else {
+      state.current = formatResult(result);
+      state.expression = formatResult(a) + ' ' + opSymbol(state.operation) + ' ' + formatResult(b) + ' =';
+    }
+    state.previous = null;
+    state.operation = null;
+    state.reset = true;
+  }
+
+  function formatResult(n) {
+    if (!isFinite(n)) return 'Error';
+    const s = n.toPrecision(12);
+    return parseFloat(s).toString();
+  }
+
+  function clear() {
+    state.current = '0';
+    state.previous = null;
+    state.operation = null;
+    state.reset = false;
+    state.expression = '';
+  }
+
+  function toggleSign() {
+    state.current = state.current === '0' ? '0' : String(-parseFloat(state.current));
+  }
+
+  function percent() {
+    state.current = String(parseFloat(state.current) / 100);
+  }
+
+  document.querySelector('.grid').addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    const action = btn.dataset.action;
+
+    switch (action) {
+      case 'digit':    inputDigit(btn.dataset.value); break;
+      case 'decimal':  inputDecimal(); break;
+      case 'add':
+      case 'subtract':
+      case 'multiply':
+      case 'divide':   handleOperator(action); break;
+      case 'equals':   if (state.operation) { compute(); } break;
+      case 'clear':    clear(); break;
+      case 'sign':     toggleSign(); break;
+      case 'percent':  percent(); break;
+    }
+    updateDisplay();
+  });
+</script>
+</body>
+</html>
