@@ -1,0 +1,34 @@
+[
+  {
+    "id": 1,
+    "name": "GitHub Activity",
+    "source": "github-api",
+    "record_count": 1420,
+    "last_updated": "2026-07-07 16:00:00",
+    "active": true
+  },
+  {
+    "id": 2,
+    "name": "Browser History",
+    "source": "playwright",
+    "record_count": 8900,
+    "last_updated": "2026-07-07 15:30:00",
+    "active": true
+  },
+  {
+    "id": 3,
+    "name": "HITL Flags",
+    "source": "data-layer",
+    "record_count": 12,
+    "last_updated": "2026-07-07 16:00:00",
+    "active": true
+  },
+  {
+    "id": 4,
+    "name": "Weather Data",
+    "source": "weather-scraper",
+    "record_count": 0,
+    "last_updated": "2026-07-07 12:00:00",
+    "active": false
+  }
+]

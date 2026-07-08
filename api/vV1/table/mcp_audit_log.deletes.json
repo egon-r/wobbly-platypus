@@ -1,0 +1,38 @@
+[
+  {
+    "id": 1,
+    "schema_name": "common",
+    "table_name": "agents",
+    "where_clause": "id=999999",
+    "rows_affected": 0,
+    "deleted_at": "2026-07-09 01:23:11.957250",
+    "deleted_by": "data-layer-mcp"
+  },
+  {
+    "id": 2,
+    "schema_name": "common",
+    "table_name": "jobs",
+    "where_clause": "name = 'test-backup'",
+    "rows_affected": 1,
+    "deleted_at": "2026-07-09 02:38:00.471786",
+    "deleted_by": "data-layer-mcp"
+  },
+  {
+    "id": 3,
+    "schema_name": "common",
+    "table_name": "jobs",
+    "where_clause": "id = 3",
+    "rows_affected": 1,
+    "deleted_at": "2026-07-09 03:21:28.071347",
+    "deleted_by": "data-layer-mcp"
+  },
+  {
+    "id": 4,
+    "schema_name": "common",
+    "table_name": "job_executions",
+    "where_clause": "job_id = 3",
+    "rows_affected": 1,
+    "deleted_at": "2026-07-09 03:21:28.382626",
+    "deleted_by": "data-layer-mcp"
+  }
+]

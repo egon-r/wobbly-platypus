@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "name": "main",
+    "model": "deepseek-v4-flash",
+    "status": "active",
+    "last_active": "2026-07-07 16:00:00",
+    "tasks_completed": 47
+  },
+  {
+    "id": 2,
+    "name": "scaffolder",
+    "model": "deepseek-v4-flash",
+    "status": "idle",
+    "last_active": "2026-07-07 14:00:00",
+    "tasks_completed": 12
+  },
+  {
+    "id": 3,
+    "name": "weather-bot",
+    "model": "haiku-4.5",
+    "status": "offline",
+    "last_active": "2026-07-06 20:00:00",
+    "tasks_completed": 3
+  }
+]

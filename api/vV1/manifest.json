@@ -1,0 +1,70 @@
+{
+  "generated_at": "2026-07-08T21:21:32.144338+00:00",
+  "elapsed_seconds": 0.03,
+  "tables": [
+    {
+      "key": "common.agents",
+      "rows": 3,
+      "file": "table/common.agents.json",
+      "size_bytes": 509
+    },
+    {
+      "key": "common.collections",
+      "rows": 4,
+      "file": "table/common.collections.json",
+      "size_bytes": 671
+    },
+    {
+      "key": "common.job_config",
+      "rows": 0,
+      "file": "table/common.job_config.json",
+      "size_bytes": 2
+    },
+    {
+      "key": "common.job_executions",
+      "rows": 0,
+      "file": "table/common.job_executions.json",
+      "size_bytes": 2
+    },
+    {
+      "key": "common.jobs",
+      "rows": 0,
+      "file": "table/common.jobs.json",
+      "size_bytes": 2
+    },
+    {
+      "key": "common.tasks",
+      "rows": 8,
+      "file": "table/common.tasks.json",
+      "size_bytes": 1402
+    },
+    {
+      "key": "mcp.backup_test",
+      "rows": 1,
+      "file": "table/mcp.backup_test.json",
+      "size_bytes": 88
+    },
+    {
+      "key": "mcp.demo",
+      "rows": 1,
+      "file": "table/mcp.demo.json",
+      "size_bytes": 88
+    },
+    {
+      "key": "mcp.saved_jobs",
+      "rows": 103,
+      "file": "table/mcp.saved_jobs.json",
+      "size_bytes": 102921
+    },
+    {
+      "key": "mcp_audit_log.deletes",
+      "rows": 4,
+      "file": "table/mcp_audit_log.deletes.json",
+      "size_bytes": 891
+    }
+  ],
+  "total_tables": 10,
+  "total_rows": 124,
+  "hash": "309ee37cc34eb66ba63648d3a650c66a",
+  "schema_hash": "71c2e2fa054e38aa56a95b5761c67487"
+}
