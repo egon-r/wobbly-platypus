@@ -73,14 +73,6 @@
           0 0 10px rgba(204,0,0,.3);
       }
     }
-    .sub {
-      margin-top: 0.6rem;
-      font-size: 0.65rem;
-      color: #555;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      text-shadow: 0.5px 0 rgba(255,0,0,.15), -0.5px 0 rgba(0,255,255,.12);
-    }
     /* ── CRT indicator light ── */
     #indicator {
       position: fixed;
@@ -126,28 +118,23 @@
     #indicator .label.live    { color: #00cc00; }
     #indicator .label.static  { color: #cc8800; }
     #indicator .label.offline { color: #444; }
-    .warning {
-      margin-top: 2.5rem;
-      font-size: 0.75rem;
-      color: #666;
-      line-height: 1.5;
-      text-shadow: 0.5px 0 rgba(255,0,0,.1), -0.5px 0 rgba(0,255,255,.08);
-    }
     a { color: #cc0000; text-decoration: none; }
     a:hover { text-decoration: underline; }
     .footer {
-      margin-top: 3rem;
+      position: fixed;
+      bottom: 1.5rem;
+      left: 0;
+      right: 0;
+      text-align: center;
       font-size: 0.7rem;
-      color: #444;
+      color: #555;
+      letter-spacing: 0.12em;
+      z-index: 60;
+      pointer-events: none;
+      font-family: "Courier New", Courier, monospace;
     }
-    .footer a { color: #555; }
-    .footer a:hover { color: #cc0000; }
-    hr {
-      width: 3rem;
-      border: none;
-      border-top: 1px solid #333;
-      margin: 1.2rem auto;
-    }
+    .footer span { display: inline-block; margin: 0 0.3rem; }
+    .footer .tagline { font-size: 0.6rem; color: #444; text-transform: uppercase; letter-spacing: 0.15em; }
     /* ── CRT ambient glow ── */
     #crt-glow {
       position: fixed;
@@ -259,14 +246,16 @@
   <div id="noise"></div>
   <div id="update-toast">☐ updated — reloading</div>
   <h1>ai-demo<span>.</span>egonr.dev</h1>
-  <div class="sub">present day. present time.</div>
-  <hr>
   <div id="clock">—</div>
   <div id="indicator"><span class="dot" id="dot"></span><span class="label" id="indlabel">—</span></div>
-  <hr style="margin-top:0.8rem">
-  <div class="warning">🐉 here be dragons<br>unstable experiments, half-built tools, usual ai stuff</div>
 
-  <div class="footer"><a href="https://egonr.dev">egonr.dev</a> <span style="color:#333">·</span> <span id="hash" style="color:#333">crt004</span></div>
+  <div class="footer">
+    <span class="tagline">present day. present time.</span>
+    <span style="color:#333">·</span>
+    <span><a href="https://egonr.dev" style="color:#555">egonr.dev</a></span>
+    <span style="color:#333">·</span>
+    <span style="color:#333" id="hash">crt004</span>
+  </div>
 
   <script src="js/api-client.js?v=crt004"></script>
   <script>
