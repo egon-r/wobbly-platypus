@@ -137,6 +137,8 @@
       font-family: "Courier New", Courier, monospace;
     }
     .footer-left, .footer-right { flex: 0 0 auto; }
+    .footer-right a { pointer-events: auto; color: #333; text-decoration: none; }
+    .footer-right a:hover { color: #cc0000; }
     .footer-center { flex: 1; text-align: center; }
     .tagline-wrap {
       display: inline-block;
@@ -280,7 +282,7 @@
   <div class="footer">
     <div class="footer-left"><a href="https://egonr.dev" style="color:#555">egonr.dev</a></div>
     <div class="footer-center"><span class="tagline-wrap" id="tagline-wrap"><span class="tagline" id="tagline"></span></span></div>
-    <div class="footer-right"><span style="color:#333" id="hash">crt004</span></div>
+    <div class="footer-right"><a href="/apps/" style="color:#333;text-decoration:none" id="hash">crt004</a></div>
   </div>
 
   <script src="js/api-client.js?v=crt004"></script>
