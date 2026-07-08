@@ -36,11 +36,38 @@
       font-size: 0.8rem;
       color: #52525b;
     }
+    .deploy-clock {
+      margin-top: 1.5rem;
+      font-size: 0.75rem;
+      color: #52525b;
+      font-variant-numeric: tabular-nums;
+    }
   </style>
 </head>
 <body>
   <h1>ai-demo<span>.</span>egonr.dev</h1>
   <div class="warning">🐉 here be dragons — unstable experiments, half-built tools, usual ai stuff</div>
+  <div class="deploy-clock" id="clock"></div>
   <div class="footer"><a href="https://egonr.dev">egonr.dev</a></div>
+  <script>
+    // ── deploy clock ──
+    (function() {
+      var deployed = new Date("2026-07-09T03:18:00+09:00");
+      var el = document.getElementById("clock");
+      function tick() {
+        var diff = Math.floor((Date.now() - deployed.getTime()) / 1000);
+        var s = diff % 60;
+        var m = Math.floor(diff / 60) % 60;
+        var h = Math.floor(diff / 3600);
+        var parts = [];
+        if (h > 0) parts.push(h + "h");
+        if (m > 0) parts.push(m + "m");
+        parts.push(s + "s");
+        el.textContent = "deployed " + parts.join(" ") + " ago";
+      }
+      tick();
+      setInterval(tick, 1000);
+    })();
+  </script>
 </body>
 </html>
