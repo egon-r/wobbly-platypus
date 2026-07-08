@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>myip</title>
+<style>
+  body { background: #09090b; color: #e4e4e7; font-family: system-ui, sans-serif; display: grid; place-items: center; height: 100vh; margin: 0; }
+  .ip { font-size: 3rem; font-weight: 300; letter-spacing: 0.05em; }
+  .label { color: #71717a; font-size: 0.875rem; margin-bottom: 0.5rem; }
+  .loading { color: #52525b; font-size: 1.5rem; }
+  .error { color: #ef4444; }
+  a { color: #a1a1aa; font-size: 0.875rem; margin-top: 2rem; display: inline-block; }
+</style>
+</head>
+<body>
+<div style="text-align:center">
+  <div class="label">your public IP</div>
+  <div id="ip" class="loading">fetching...</div>
+  <a href="/">back</a>
+</div>
+<script>
+(async () => {
+  try {
+    const r = await fetch('https://api.ipify.org?format=json');
+    const d = await r.json();
+    document.getElementById('ip').textContent = d.ip;
+    document.getElementById('ip').className = 'ip';
+  } catch {
+    document.getElementById('ip').textContent = 'failed to fetch IP';
+    document.getElementById('ip').className = 'error';
+  }
+})();
+</script>
+</body>
+</html>
