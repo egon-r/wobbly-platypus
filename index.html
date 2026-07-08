@@ -239,50 +239,18 @@
     }
     #update-toast.show { top: 1rem; }
 
-    /* ── Live data dashboard ── */
-    #dashboard {
-      margin-top: 1.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
-      font-size: 0.7rem;
-      letter-spacing: 0.06em;
-      opacity: 0.85;
-      transition: opacity 0.3s;
-    }
-    #dashboard.hidden { opacity: 0; }
-    .dash-row {
-      display: flex;
-      justify-content: center;
-      gap: 1.5rem;
-      flex-wrap: wrap;
-    }
-    .dash-item {
-      display: flex;
-      align-items: baseline;
-      gap: 0.35rem;
-    }
-    .dash-wide {
-      min-width: 12rem;
-    }
-    .dash-label {
-      color: #555;
+    /* ── CRT clock ── */
+    #clock {
+      position: fixed;
+      top: 1rem;
+      left: 1.5rem;
+      z-index: 60;
       font-size: 0.55rem;
-      letter-spacing: 0.12em;
-    }
-    .dash-value {
-      color: #999;
-      font-family: "Courier New", Courier, monospace;
-      transition: color 0.3s;
-    }
-    .dash-value.ping-green { color: #00cc00; }
-    .dash-value.ping-yellow { color: #ccaa00; }
-    .dash-value.ping-red { color: #cc3300; }
-    .dash-unit {
+      letter-spacing: 0.08em;
       color: #444;
-      font-size: 0.55rem;
+      font-family: "Courier New", Courier, monospace;
+      pointer-events: none;
     }
-    .dash-value.dim { color: #444; }
   </style>
 </head>
 <body>
@@ -293,38 +261,10 @@
   <h1>ai-demo<span>.</span>egonr.dev</h1>
   <div class="sub">present day. present time.</div>
   <hr>
+  <div id="clock">—</div>
   <div id="indicator"><span class="dot" id="dot"></span><span class="label" id="indlabel">—</span></div>
   <hr style="margin-top:0.8rem">
   <div class="warning">🐉 here be dragons<br>unstable experiments, half-built tools, usual ai stuff</div>
-
-  <!-- ── Live data dashboard ── -->
-  <div id="dashboard">
-    <div class="dash-row">
-      <div class="dash-item">
-        <span class="dash-label">PING</span>
-        <span class="dash-value" id="dash-ping">—</span>
-        <span class="dash-unit">ms</span>
-      </div>
-      <div class="dash-item">
-        <span class="dash-label">TABLES</span>
-        <span class="dash-value" id="dash-tables">—</span>
-      </div>
-      <div class="dash-item">
-        <span class="dash-label">ROWS</span>
-        <span class="dash-value" id="dash-rows">—</span>
-      </div>
-    </div>
-    <div class="dash-row">
-      <div class="dash-item">
-        <span class="dash-label">WEATHER</span>
-        <span class="dash-value" id="dash-weather">—</span>
-      </div>
-      <div class="dash-item dash-wide">
-        <span class="dash-label">UPDATED</span>
-        <span class="dash-value" id="dash-updated">—</span>
-      </div>
-    </div>
-  </div>
 
   <div class="footer"><a href="https://egonr.dev">egonr.dev</a> <span style="color:#333">·</span> <span id="hash" style="color:#333">crt004</span></div>
 
@@ -333,19 +273,25 @@
     // ── version for deploy detection ──
     var version = "crt004";
 
+    // ── clock ──
+    (function() {
+      var el = document.getElementById("clock");
+      function tick() {
+        var d = new Date();
+        var pad = function(n) { return n < 10 ? "0" + n : n; };
+        var s = pad(d.getMonth()+1) + "/" + pad(d.getDate()) + "/" + d.getFullYear()
+          + " " + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+        el.textContent = s;
+      }
+      tick();
+      setInterval(tick, 1000);
+    })();
+
     // ── virtual API init ──
     (function() {
       var api = new ApiClient({ version: version });
       var dot = document.getElementById("dot");
       var indlabel = document.getElementById("indlabel");
-
-      // Dashboard elements
-      var dashPing = document.getElementById("dash-ping");
-      var dashTables = document.getElementById("dash-tables");
-      var dashRows = document.getElementById("dash-rows");
-      var dashWeather = document.getElementById("dash-weather");
-      var dashUpdated = document.getElementById("dash-updated");
-      var dashboard = document.getElementById("dashboard");
 
       function setMode(m) {
         if (m === "live") {
@@ -360,72 +306,15 @@
           dot.className = "dot offline";
           indlabel.className = "label offline";
           indlabel.textContent = "OFFLINE";
-          // Hide dashboard in OFFLINE mode
-          if (dashboard) dashboard.style.display = "none";
         }
-      }
-
-      function setPingColor(el, ms) {
-        el.className = "dash-value";
-        if (ms < 100) el.classList.add("ping-green");
-        else if (ms < 300) el.classList.add("ping-yellow");
-        else el.classList.add("ping-red");
-      }
-
-      function formatTime(isoStr) {
-        if (!isoStr) return "—";
-        var d = new Date(isoStr);
-        var pad = function(n) { return n < 10 ? "0" + n : n; };
-        return d.getUTCFullYear() + "-" + pad(d.getUTCMonth()+1) + "-" + pad(d.getUTCDate())
-          + " " + pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes());
-      }
-
-      // Load status data (works in both live and static mode)
-      function loadStatus() {
-        api.getStatus().then(function(s) {
-          if (dashTables) dashTables.textContent = s.tables;
-          if (dashRows) dashRows.textContent = s.rows;
-          if (dashUpdated) dashUpdated.textContent = formatTime(s.generated_at);
-        }).catch(function() {
-          // Status unavailable
-          if (dashTables) dashTables.textContent = "—";
-          if (dashRows) dashRows.textContent = "—";
-          if (dashUpdated) dashUpdated.textContent = "—";
-        });
-      }
-
-      // Ping measurement (different behavior per mode)
-      function measurePing() {
-        api.ping().then(function(ms) {
-          if (dashPing) {
-            dashPing.textContent = ms;
-            setPingColor(dashPing, ms);
-          }
-        }).catch(function() {
-          if (dashPing) {
-            dashPing.textContent = "—";
-            dashPing.className = "dash-value dim";
-          }
-        });
       }
 
       api.init().then(function(mode) {
         if (mode === "live") {
           setMode("live");
-          // Start ping polling (every 10 seconds in live mode)
-          measurePing();
-          setInterval(measurePing, 10000);
-          loadStatus();
         } else {
-          // Confirm static data exists before declaring STATIC
-          api.getHealth().then(function(h) {
+          api.getHealth().then(function() {
             setMode("static");
-            loadStatus();
-            // In static mode, show known ping (0ms — no network call)
-            if (dashPing) {
-              dashPing.textContent = "—";
-              dashPing.className = "dash-value dim";
-            }
           }).catch(function() {
             setMode("offline");
           });
