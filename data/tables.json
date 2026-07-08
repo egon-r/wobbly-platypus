@@ -1,0 +1,30 @@
+[
+  {
+    "table_schema": "common",
+    "table_name": "agents"
+  },
+  {
+    "table_schema": "common",
+    "table_name": "collections"
+  },
+  {
+    "table_schema": "common",
+    "table_name": "tasks"
+  },
+  {
+    "table_schema": "mcp",
+    "table_name": "backup_test"
+  },
+  {
+    "table_schema": "mcp",
+    "table_name": "demo"
+  },
+  {
+    "table_schema": "mcp",
+    "table_name": "saved_jobs"
+  },
+  {
+    "table_schema": "mcp_audit_log",
+    "table_name": "deletes"
+  }
+]
