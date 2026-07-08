@@ -133,8 +133,32 @@
       pointer-events: none;
       font-family: "Courier New", Courier, monospace;
     }
-    .footer span { display: inline-block; margin: 0 0.3rem; }
-    .footer .tagline { font-size: 0.6rem; color: #444; text-transform: uppercase; letter-spacing: 0.15em; }
+    .footer span { display: inline-block; margin: 0 0.3rem; vertical-align: middle; }
+    .tagline-wrap {
+      display: inline-block;
+      max-width: 26ch;
+      overflow: hidden;
+      white-space: nowrap;
+      vertical-align: middle;
+      line-height: 1.5;
+    }
+    .tagline-wrap .tagline {
+      display: inline-block;
+      white-space: nowrap;
+      font-size: 0.6rem;
+      color: #444;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+    }
+    .tagline-wrap .tagline.scroll {
+      animation: marquee 10s linear infinite;
+    }
+    @keyframes marquee {
+      0%   { transform: translateX(0); }
+      5%   { transform: translateX(0); }
+      95%  { transform: translateX(calc(-100% + 26ch)); }
+      100% { transform: translateX(calc(-100% + 26ch)); }
+    }
     /* ── CRT ambient glow ── */
     #crt-glow {
       position: fixed;
@@ -250,7 +274,7 @@
   <div id="indicator"><span class="dot" id="dot"></span><span class="label" id="indlabel">—</span></div>
 
   <div class="footer">
-    <span class="tagline" id="tagline"></span>
+    <span class="tagline-wrap" id="tagline-wrap"><span class="tagline" id="tagline"></span></span>
     <span style="color:#333">·</span>
     <span><a href="https://egonr.dev" style="color:#555">egonr.dev</a></span>
     <span style="color:#333">·</span>
@@ -270,7 +294,12 @@
         "And if you gaze long into an abyss, the abyss also gazes into you.",
         "The quieter you become, the more you can hear."
       ];
-      document.getElementById("tagline").textContent = quotes[Math.floor(Math.random() * quotes.length)];
+      var wrap = document.getElementById("tagline-wrap");
+      var el = document.getElementById("tagline");
+      el.textContent = quotes[Math.floor(Math.random() * quotes.length)];
+      if (el.scrollWidth > wrap.clientWidth) {
+        el.className = "tagline scroll";
+      }
     })();
 
     // ── clock ──
