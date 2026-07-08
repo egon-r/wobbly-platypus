@@ -30,6 +30,8 @@
       letter-spacing: 0.04em;
       color: #eee;
       text-shadow:
+        3px  0 rgba(255,0,0,.35),
+        -3px 0 rgba(0,255,255,.3),
         0 0 12px rgba(204,0,0,.3),
         0 0 40px rgba(204,0,0,.1);
       animation: glitch 12s infinite;
@@ -37,25 +39,36 @@
     }
     h1 span { color: #cc0000; }
     @keyframes glitch {
-      0%, 88%, 100% {
+      0%, 84%, 100% {
         text-shadow:
+          3px  0 rgba(255,0,0,.35),
+          -3px 0 rgba(0,255,255,.3),
           0 0 12px rgba(204,0,0,.3),
           0 0 40px rgba(204,0,0,.1);
       }
+      86% {
+        text-shadow:
+          10px  0 rgba(255,0,0,.5),
+          -10px 0 rgba(0,255,255,.5),
+          0 0 12px rgba(204,0,0,.3);
+      }
+      88% {
+        text-shadow:
+          -8px  0 rgba(255,0,0,.45),
+          8px 0 rgba(0,255,255,.45),
+          0 0 12px rgba(204,0,0,.3);
+      }
       90% {
         text-shadow:
-          4px 0 rgba(0,255,255,.3),
-          -4px 0 rgba(204,0,0,.3);
+          5px  0 rgba(255,0,0,.4),
+          -5px 0 rgba(0,255,255,.4),
+          0 0 12px rgba(204,0,0,.3);
       }
-      92% {
+      93% {
         text-shadow:
-          -3px 0 rgba(0,255,255,.3),
-          3px 0 rgba(204,0,0,.3);
-      }
-      94% {
-        text-shadow:
-          1px 0 rgba(0,255,255,.2),
-          -1px 0 rgba(204,0,0,.2);
+          -3px  0 rgba(255,0,0,.35),
+          3px 0 rgba(0,255,255,.3),
+          0 0 12px rgba(204,0,0,.3);
       }
     }
     .sub {
@@ -64,12 +77,14 @@
       color: #555;
       letter-spacing: 0.15em;
       text-transform: uppercase;
+      text-shadow: 0.5px 0 rgba(255,0,0,.15), -0.5px 0 rgba(0,255,255,.12);
     }
     .warning {
       margin-top: 2.5rem;
       font-size: 0.75rem;
       color: #666;
       line-height: 1.5;
+      text-shadow: 0.5px 0 rgba(255,0,0,.1), -0.5px 0 rgba(0,255,255,.08);
     }
     a { color: #cc0000; text-decoration: none; }
     a:hover { text-decoration: underline; }
@@ -116,10 +131,40 @@
       inset: 0;
       z-index: 52;
       pointer-events: none;
-      opacity: 0.035;
+      opacity: 0.07;
       background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
       background-repeat: repeat;
       background-size: 256px 256px;
+      animation: noiseDrift 4s steps(4) infinite;
+    }
+    @keyframes noiseDrift {
+      0%   { background-position: 0 0; }
+      25%  { background-position: 128px 64px; }
+      50%  { background-position: 64px 128px; }
+      75%  { background-position: 192px 32px; }
+      100% { background-position: 0 0; }
+    }
+    /* ── CRT beam sweep ── */
+    #crt-beam {
+      position: fixed;
+      left: 0;
+      right: 0;
+      height: 3px;
+      z-index: 53;
+      pointer-events: none;
+      background: linear-gradient(to right,
+        transparent 0%,
+        rgba(204,0,0,.03) 20%,
+        rgba(204,0,0,.08) 50%,
+        rgba(204,0,0,.03) 80%,
+        transparent 100%
+      );
+      animation: beamSweep 8s linear infinite;
+      top: -3px;
+    }
+    @keyframes beamSweep {
+      0% { top: -3px; }
+      100% { top: 100vh; }
     }
     /* ── update toast ── */
     #update-toast {
@@ -141,6 +186,7 @@
   </style>
 </head>
 <body>
+  <div id="crt-beam"></div>
   <div id="noise"></div>
   <div id="update-toast">☐ updated — reloading</div>
   <h1>ai-demo<span>.</span>egonr.dev</h1>
