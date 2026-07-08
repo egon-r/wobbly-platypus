@@ -250,7 +250,7 @@
   <div id="indicator"><span class="dot" id="dot"></span><span class="label" id="indlabel">—</span></div>
 
   <div class="footer">
-    <span class="tagline">present day. present time.</span>
+    <span class="tagline" id="tagline"></span>
     <span style="color:#333">·</span>
     <span><a href="https://egonr.dev" style="color:#555">egonr.dev</a></span>
     <span style="color:#333">·</span>
@@ -261,6 +261,22 @@
   <script>
     // ── version for deploy detection ──
     var version = "crt004";
+
+    // ── random Lain quote ──
+    (function() {
+      var quotes = [
+        "We are all connected.",
+        "Let's all love Lain.",
+        "I am present.",
+        "The Wired is everywhere.",
+        "Reality is just a collective memory.",
+        "I exist everywhere and nowhere.",
+        "Connect to the Wired.",
+        "People are connected.",
+        "Knowledge is power."
+      ];
+      document.getElementById("tagline").textContent = quotes[Math.floor(Math.random() * quotes.length)];
+    })();
 
     // ── clock ──
     (function() {
