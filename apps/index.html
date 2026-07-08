@@ -74,16 +74,13 @@
     const d = new Date(el.getAttribute('data-ts'));
     const now = new Date();
     const diff = (now - d) / 1000;
-    const mins = Math.floor(diff / 60);
-    const hrs = Math.floor(diff / 3600);
     const days = Math.floor(diff / 86400);
     const timeStr = pad(d.getHours()) + ':' + pad(d.getMinutes());
     let rel;
     if (days === 0) rel = 'today at ' + timeStr;
     else if (days === 1) rel = 'yesterday at ' + timeStr;
     else if (days < 7) rel = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()] + ' at ' + timeStr;
-    else if (d.getFullYear() === now.getFullYear()) rel = (d.getMonth()+1) + '/' + d.getDate() + ' at ' + timeStr;
-    else rel = (d.getMonth()+1) + '/' + d.getDate() + '/' + d.getFullYear();
+    else rel = d.toLocaleDateString() + ' at ' + timeStr;
     el.textContent = rel;
   });
 })();
