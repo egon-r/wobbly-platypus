@@ -1,3 +1,1 @@
-# wobbly platypus
-
-Public-facing content, published via `07_public` MCP server — write, commit, then push manually.
+[wobbly platypus](https://github.com/egon-r/wobbly-platypus)
