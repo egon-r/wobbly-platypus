@@ -2,15 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>shader previewer</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
 body{
   background:#09090b;
   color:#e4e4e7;
   font-family:system-ui,-apple-system,sans-serif;
-  min-height:100vh;
   display:flex;
   justify-content:center;
   align-items:center;
@@ -37,7 +37,8 @@ body{
 #preview canvas{
   display:block;
   border-radius:.5rem;
-  background:#000
+  background:#000;
+  touch-action:none
 }
 #panel{
   width:420px;
@@ -46,6 +47,27 @@ body{
   gap:.5rem;
   min-width:0
 }
+#panel-header{
+  display:flex;
+  gap:.5rem;
+  align-items:center;
+  flex-wrap:wrap
+}
+#panel-header select{
+  flex:1;
+  background:#09090b;
+  color:#e4e4e7;
+  border:1px solid #27272a;
+  border-radius:.375rem;
+  padding:.5rem .75rem;
+  font-size:.875rem;
+  cursor:pointer;
+  font-family:system-ui,sans-serif;
+  min-width:0;
+  appearance:auto;
+  -webkit-appearance:auto
+}
+#panel-header select:focus{outline:none;border-color:#6366f1}
 #panel textarea{
   flex:1;
   background:#09090b;
@@ -76,7 +98,8 @@ body{
   padding:.5rem 1rem;
   font-size:.875rem;
   cursor:pointer;
-  transition:background .15s,border-color .15s
+  transition:background .15s,border-color .15s;
+  touch-action:manipulation
 }
 #toolbar button:hover{background:#3f3f46;border-color:#52525b}
 #toolbar button.primary{background:#6366f1;border-color:#6366f1}
@@ -98,11 +121,35 @@ body{
   word-break:break-all
 }
 #errors.show{display:block}
+
+/* mobile */
 @media(max-width:900px){
   body{padding:0;align-items:stretch}
-  #app{flex-direction:column;height:100vh;width:100%;border-radius:0;border:none;padding:.5rem}
-  #panel{width:100%}
-  #panel textarea{min-height:180px}
+  #app{
+    flex-direction:column;
+    height:100dvh;
+    width:100%;
+    border-radius:0;
+    border:none;
+    padding:.5rem;
+    gap:.5rem
+  }
+  #preview{flex:0 0 40vh}
+  #panel{width:100%;flex:1;min-height:0}
+  #panel textarea{
+    font-size:14px;
+    min-height:100px
+  }
+  #toolbar button{
+    padding:.6rem 1rem;
+    font-size:1rem;
+    min-height:44px
+  }
+  #panel-header select{
+    font-size:1rem;
+    padding:.6rem .75rem;
+    min-height:44px
+  }
 }
 </style>
 </head>
@@ -110,7 +157,16 @@ body{
 <div id="app">
   <div id="preview"><canvas id="c"></canvas></div>
   <div id="panel">
-    <textarea id="code" spellcheck="false"></textarea>
+    <div id="panel-header">
+      <select id="shader-select">
+        <option value="raymarcher">Raymarcher Scene</option>
+        <option value="plasma">Plasma</option>
+        <option value="mandelbrot">Mandelbrot</option>
+        <option value="waves">Ocean Waves</option>
+        <option value="neon-cube">Neon Cube</option>
+      </select>
+    </div>
+    <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
     <div id="toolbar">
       <button class="primary" id="compile">Compile</button>
       <button id="reset">Reset</button>
@@ -120,14 +176,14 @@ body{
   </div>
 </div>
 <script>
-const DEFAULT = `#version 300 es
+const SHADERS = {
+raymarcher: `#version 300 es
 precision highp float;
 out vec4 o;
 uniform vec2 r;
 uniform float t;
 uniform vec3 eye, target;
 
-// --- sdf primitives ---
 float sdSphere(vec3 p, float r){return length(p)-r;}
 float sdBox(vec3 p, vec3 b){vec3 d=abs(p)-b;return min(max(d.x,max(d.y,d.z)),0.0)+length(max(d,0.0));}
 float sdRoundBox(vec3 p, vec3 b, float r){vec3 d=abs(p)-b;return min(max(d.x,max(d.y,d.z)),0.0)+length(max(d,0.0))-r;}
@@ -139,7 +195,6 @@ float opSmoothSub(float d1,float d2,float k){float h=clamp(.5-.5*(d2+d1)/k,0.,1.
 float opSmoothInter(float d1,float d2,float k){float h=clamp(.5-.5*(d2-d1)/k,0.,1.);return mix(d2,d1,h)+k*h*(1.-h);}
 vec3 opRep(vec3 p, vec3 c){return mod(p,c)-.5*c;}
 
-// --- scene ---
 float scene(vec3 p){
   float gnd = sdPlane(p, 0.0);
   float col = sdRoundBox(p-vec3(0,1.2,0), vec3(.5,1.2,.5), .15);
@@ -155,7 +210,6 @@ float scene(vec3 p){
   return d;
 }
 
-// --- normal ---
 vec3 norm(vec3 p){
   vec2 e=vec2(.001,0);
   return normalize(vec3(scene(p+e.xyy)-scene(p-e.xyy),
@@ -163,7 +217,6 @@ vec3 norm(vec3 p){
                         scene(p+e.yyx)-scene(p-e.yyx)));
 }
 
-// --- shade ---
 vec3 shade(vec3 p, vec3 n, vec3 rd){
   vec3 L = normalize(vec3(5,8,6));
   vec3 C = normalize(vec3(-3,4,-5));
@@ -180,7 +233,6 @@ vec3 shade(vec3 p, vec3 n, vec3 rd){
   return col;
 }
 
-// --- main ---
 void main(){
   vec2 uv = (gl_FragCoord.xy-.5*r)/r.y;
   vec3 fwd = normalize(target-eye);
@@ -204,24 +256,138 @@ void main(){
   float vig = 1.-.3*length(uv);
   col *= vig;
   o = vec4(col,1);
-}`;
+}`,
 
-const canvas = document.getElementById('c');
-const gl = canvas.getContext('webgl2', {antialias:true});
-if(!gl){
-  document.getElementById('app').innerHTML='<div style="color:red;padding:2rem;width:100%;text-align:center">WebGL2 not supported</div>';
+plasma: `#version 300 es
+precision highp float;
+out vec4 o;
+uniform vec2 r;
+uniform float t;
+
+void main(){
+  vec2 uv = (gl_FragCoord.xy-.5*r)/r.y;
+  float c = 0.;
+  c += sin((uv.x*2.+uv.y)*3.+t*1.2);
+  c += sin((uv.x-uv.y*2.)*4.-t*1.7);
+  c += sin((uv.x+uv.y)*2.5+t*.9);
+  c += sin(length(uv)*6.-t*2.1);
+  c = sin(c*1.5+t*.4);
+  vec3 col = .5+.5*cos(vec3(1.,2.,3.)*c+t*.5);
+  col *= 1.-.3*length(uv);
+  o = vec4(col,1);
+}`,
+
+mandelbrot: `#version 300 es
+precision highp float;
+out vec4 o;
+uniform vec2 r;
+uniform float t;
+
+void main(){
+  vec2 uv = (gl_FragCoord.xy-.5*r)/r.y*3.;
+  vec2 c = vec2(uv.x-.45+sin(t*.1)*.1, uv.y+cos(t*.12)*.1);
+  vec2 z = vec2(0.);
+  float it = 0.;
+  for(int i=0;i<120;i++){
+    z = vec2(z.x*z.x-z.y*z.y,2.*z.x*z.y)+c;
+    if(length(z)>2.)break;
+    it = float(i);
+  }
+  float f = it/120.;
+  vec3 col = mix(
+    vec3(.02,.01,.06),
+    vec3(.5+.5*cos(vec3(1.,2.,3.)*f*8.+t*.15)), 
+    smoothstep(.0,.95,f)
+  );
+  col *= smoothstep(3.,0.,length(uv));
+  o = vec4(col,1);
+}`,
+
+waves: `#version 300 es
+precision highp float;
+out vec4 o;
+uniform vec2 r;
+uniform float t;
+
+void main(){
+  vec2 uv = (gl_FragCoord.xy-.5*r)/r.y;
+  float d = length(uv);
+  float wave = sin(uv.x*10.+t*2.)*.2+sin(uv.y*8.-t*1.5)*.2;
+  float mask = smoothstep(.6+wave,.3+wave,d);
+  vec3 col = mix(vec3(.05,.03,.12), vec3(.15,.55,.85), mask);
+  col = mix(col, vec3(.95,.7,.15), (1.-smoothstep(0.,.8,d))*pow(mask,2.));
+  col += vec3(.8,.5,.3)*pow(max(0.,1.-d*2.),4.);
+  col *= 1.-.2*length(uv);
+  o = vec4(col,1);
+}`,
+
+"neon-cube": `#version 300 es
+precision highp float;
+out vec4 o;
+uniform vec2 r;
+uniform float t;
+uniform vec3 eye, target;
+
+float sdBox(vec3 p, vec3 b){vec3 d=abs(p)-b;return min(max(d.x,max(d.y,d.z)),0.)+length(max(d,0.));}
+float sdSphere(vec3 p, float s){return length(p)-s;}
+
+float scene(vec3 p){
+  float cube = sdBox(p-vec3(0,1.2,0), vec3(1.));
+  float sphere = sdSphere(p-vec3(0,2.8,0), .5);
+  return min(cube, sphere);
 }
 
-// --- resize canvas to fill preview container ---
+vec3 norm(vec3 p){
+  vec2 e=vec2(.001,0);
+  return normalize(vec3(scene(p+e.xyy)-scene(p-e.xyy),
+                        scene(p+e.yxy)-scene(p-e.yxy),
+                        scene(p+e.yyx)-scene(p-e.yyx)));
+}
+
+void main(){
+  vec2 uv = (gl_FragCoord.xy-.5*r)/r.y;
+  vec3 fwd = normalize(target-eye);
+  vec3 rgt = normalize(cross(fwd, vec3(0,1,0)));
+  vec3 up = cross(rgt, fwd);
+  vec3 rd = normalize(uv.x*rgt+uv.y*up+fwd*1.8);
+  float th=.5, d;
+  vec3 p;
+  for(int i=0;i<60;i++){
+    p = eye+rd*th;
+    d = scene(p);
+    if(d<.001||th>30.)break;
+    th+=d*.7;
+  }
+  vec3 col;
+  if(th<30.){
+    vec3 n = norm(p);
+    vec3 L = normalize(vec3(3,5,4));
+    float dif = max(dot(n,L),0.)*.5+.25;
+    float rim = 1.-max(dot(-rd,n),0.);
+    col = vec3(.15,.5,1.)*dif;
+    col += vec3(0.,.6,1.)*pow(rim,3.)*1.2;
+    col += abs(fract(p*1.2)-.5)*.15;
+    col += vec3(.8,.3,.6)*pow(max(0.,1.-length(p-vec3(0,2.8,0))*2.),2.);
+  } else { col = vec3(0); }
+  col *= 1.-.25*length(uv);
+  o = vec4(col,1);
+}`
+};
+
+// --- setup ---
+const canvas = document.getElementById('c');
+const gl = canvas.getContext('webgl2', {antialias:true});
+if(!gl){document.getElementById('app').innerHTML='<div style="color:red;padding:2rem;width:100%;text-align:center">WebGL2 not supported</div>';}
+
 let W, H;
 function resize(){
   const rect = canvas.parentElement.getBoundingClientRect();
   const dpr = window.devicePixelRatio||1;
   const w = Math.floor(rect.width);
   const h = Math.floor(rect.height);
-  if(w === W/dpr && h === H/dpr) return; // skip if unchanged
-  W = w * dpr;
-  H = h * dpr;
+  if(w===Math.round(W/dpr)&&h===Math.round(H/dpr))return;
+  W = w*dpr;
+  H = h*dpr;
   canvas.width = W;
   canvas.height = H;
   canvas.style.width = w+'px';
@@ -232,16 +398,12 @@ new ResizeObserver(resize).observe(canvas.parentElement);
 window.addEventListener('resize', resize);
 resize();
 
-// --- vertex shader (fixed) ---
-const VS_SRC = `#version 300 es
-in vec2 p;
-void main(){gl_Position=vec4(p,0,1);}`;
-
+// --- vertex shader ---
+const VS_SRC = `#version 300 es\nin vec2 p;\nvoid main(){gl_Position=vec4(p,0,1);}`;
 const vs = gl.createShader(gl.VERTEX_SHADER);
 gl.shaderSource(vs, VS_SRC);
 gl.compileShader(vs);
 
-// --- quad buffers ---
 const buf = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, buf);
 gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), gl.STATIC_DRAW);
@@ -253,7 +415,7 @@ function createProgram(fsSrc){
   if(!gl.getShaderParameter(fs, gl.COMPILE_STATUS)){
     const log = gl.getShaderInfoLog(fs);
     gl.deleteShader(fs);
-    throw new Error('Fragment shader compile error:\n'+log);
+    throw new Error(log);
   }
   const prog = gl.createProgram();
   gl.attachShader(prog, vs);
@@ -263,37 +425,35 @@ function createProgram(fsSrc){
     const log = gl.getProgramInfoLog(prog);
     gl.deleteProgram(prog);
     gl.deleteShader(fs);
-    throw new Error('Program link error:\n'+log);
+    throw new Error(log);
   }
   gl.deleteShader(fs);
   return prog;
 }
 
 let curProg = null;
-let uR = null, uT = null, uEye = null, uTarget = null;
+let uR=null,uT=null,uEye=null,uTarget=null;
 let aP = null;
 
 function useProgram(prog){
-  curProg = prog;
-  gl.useProgram(prog);
-  aP = gl.getAttribLocation(prog, 'p');
+  curProg=prog; gl.useProgram(prog);
+  aP=gl.getAttribLocation(prog,'p');
   gl.vertexAttribPointer(aP,2,gl.FLOAT,false,0,0);
   gl.enableVertexAttribArray(aP);
-  uR = gl.getUniformLocation(prog, 'r');
-  uT = gl.getUniformLocation(prog, 't');
-  uEye = gl.getUniformLocation(prog, 'eye');
-  uTarget = gl.getUniformLocation(prog, 'target');
+  uR=gl.getUniformLocation(prog,'r');
+  uT=gl.getUniformLocation(prog,'t');
+  uEye=gl.getUniformLocation(prog,'eye');
+  uTarget=gl.getUniformLocation(prog,'target');
 }
 
-function compileShader(){
-  const src = code.value;
-  setStatus('compiling...', '');
-  try {
-    const prog = createProgram(src);
-    if(curProg) gl.deleteProgram(curProg);
+function compileShader(src){
+  setStatus('compiling...','');
+  try{
+    const prog = createProgram(src||code.value);
+    if(curProg)gl.deleteProgram(curProg);
     useProgram(prog);
-    setStatus('OK', '');
-  } catch(e){
+    setStatus('OK','');
+  }catch(e){
     setStatus('error', e.message);
   }
 }
@@ -303,8 +463,8 @@ let theta=0, phi=.6, dist=7;
 let targetPos = [0,1.2,0];
 let mx=0, my=0, down=false;
 
-canvas.onpointerdown=e=>{down=true;mx=e.clientX;my=e.clientY;};
-canvas.addEventListener('pointermove', e=>{
+canvas.addEventListener('pointerdown',e=>{down=true;mx=e.clientX;my=e.clientY;canvas.setPointerCapture(e.pointerId);});
+canvas.addEventListener('pointermove',e=>{
   if(!down)return;
   const dx=e.clientX-mx, dy=e.clientY-my;
   mx=e.clientX; my=e.clientY;
@@ -312,8 +472,7 @@ canvas.addEventListener('pointermove', e=>{
   phi=Math.max(.1,Math.min(Math.PI/2-.1,phi+dy*.008));
 });
 canvas.addEventListener('pointerup',()=>{down=false;});
-canvas.addEventListener('pointerleave',()=>{down=false;});
-// touch support via pointer events fallback
+canvas.addEventListener('pointercancel',()=>{down=false;});
 
 // --- render loop ---
 let start = performance.now();
@@ -332,35 +491,39 @@ function setStatus(msg, err){
 function frame(){
   const sec = (performance.now()-start)/1000;
   if(curProg && W>0 && H>0){
-    if(uR) gl.uniform2f(uR, W, H);
-    if(uT) gl.uniform1f(uT, sec);
+    if(uR)gl.uniform2f(uR,W,H);
+    if(uT)gl.uniform1f(uT,sec);
     const eye = [targetPos[0]+dist*Math.sin(theta)*Math.cos(phi),
                  targetPos[1]+dist*Math.sin(phi),
                  targetPos[2]+dist*Math.cos(theta)*Math.cos(phi)];
-    if(uEye) gl.uniform3fv(uEye, eye);
-    if(uTarget) gl.uniform3fv(uTarget, targetPos);
+    if(uEye)gl.uniform3fv(uEye,eye);
+    if(uTarget)gl.uniform3fv(uTarget,targetPos);
     gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
   }
   requestAnimationFrame(frame);
 }
 
-// --- DOM refs ---
+// --- DOM ---
 const code = document.getElementById('code');
-code.value = DEFAULT;
+const select = document.getElementById('shader-select');
 
-document.getElementById('compile').addEventListener('click', compileShader);
-document.getElementById('reset').addEventListener('click', ()=>{
-  code.value = DEFAULT;
-  compileShader();
-});
+function loadShader(name){
+  const src = SHADERS[name];
+  if(!src)return;
+  code.value = src;
+  compileShader(src);
+}
 
-// --- keyboard shortcut ---
-code.addEventListener('keydown', e=>{
-  if(e.ctrlKey && e.key==='Enter') compileShader();
+select.addEventListener('change',()=>loadShader(select.value));
+document.getElementById('compile').addEventListener('click',()=>compileShader());
+document.getElementById('reset').addEventListener('click',()=>loadShader(select.value));
+
+code.addEventListener('keydown',e=>{
+  if(e.ctrlKey&&e.key==='Enter')compileShader();
 });
 
 // --- init ---
-compileShader();
+loadShader('raymarcher');
 frame();
 </script>
 </body>
