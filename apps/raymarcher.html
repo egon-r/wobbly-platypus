@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raymarcher</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;overflow:hidden;font-family:monospace}
+canvas{display:block}
+#info{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);color:#888;font-size:13px;background:rgba(0,0,0,.7);padding:6px 14px;border-radius:8px;pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="info">drag to rotate · scroll to zoom</div>
+<script>
+const canvas = document.getElementById('c');
+const gl = canvas.getContext('webgl2', {antialias:true});
+if(!gl)document.body.innerHTML='<div style="color:red;padding:40px">WebGL2 not supported</div>';
+
+let W, H;
+function resize(){
+  W=canvas.width=innerWidth;
+  H=canvas.height=innerHeight;
+  gl.viewport(0,0,W,H);
+}
+addEventListener('resize',resize);
+resize();
+
+// Fullscreen quad
+const vs = `#version 300 es
+in vec2 p;
+void main(){gl_Position=vec4(p,0,1);}`;
+const fs = `#version 300 es
+precision highp float;
+out vec4 o;
+uniform vec2 r;
+uniform float t;
+uniform vec3 eye, target;
+
+// --- sdf primitives ---
+float sdSphere(vec3 p, float r){return length(p)-r;}
+float sdBox(vec3 p, vec3 b){vec3 d=abs(p)-b;return min(max(d.x,max(d.y,d.z)),0.0)+length(max(d,0.0));}
+float sdRoundBox(vec3 p, vec3 b, float r){vec3 d=abs(p)-b;return min(max(d.x,max(d.y,d.z)),0.0)+length(max(d,0.0))-r;}
+float sdPlane(vec3 p, float h){return p.y+h;}
+float sdCylinder(vec3 p, vec2 h){vec2 d=abs(vec2(length(p.xz),p.y))-h;return min(max(d.x,d.y),0.0)+length(max(d,0.0));}
+float sdTorus(vec3 p, vec2 t){vec2 q=vec2(length(p.xz)-t.x,p.y);return length(q)-t.y;}
+float opSmoothUnion(float d1,float d2,float k){float h=clamp(.5+.5*(d2-d1)/k,0.,1.);return mix(d2,d1,h)-k*h*(1.-h);}
+float opSmoothSub(float d1,float d2,float k){float h=clamp(.5-.5*(d2+d1)/k,0.,1.);return mix(d2,-d1,h)+k*h*(1.-h);}
+float opSmoothInter(float d1,float d2,float k){float h=clamp(.5-.5*(d2-d1)/k,0.,1.);return mix(d2,d1,h)+k*h*(1.-h);}
+vec3 opRep(vec3 p, vec3 c){return mod(p,c)-.5*c;}
+
+// --- scene ---
+float scene(vec3 p){
+  float gnd = sdPlane(p, 0.0);
+  // central column
+  float col = sdRoundBox(p-vec3(0,1.2,0), vec3(.5,1.2,.5), .15);
+  // floating cubes
+  vec3 q = p;
+  q.y = mod(q.y+2.,4.)-2.;
+  float cubes = sdBox(opRep(q+vec3(0,0,0), vec3(2.5,4.,2.5)), vec3(.35));
+  // torus ring
+  float ring = sdTorus(p-vec3(0,1.5,-2.2), vec2(1.0,.12));
+  // sphere on top
+  float sphere = sdSphere(p-vec3(0,3.2,0), .6);
+  // merge
+  float d = opSmoothUnion(gnd, col, .3);
+  d = opSmoothUnion(d, cubes, .4);
+  d = opSmoothUnion(d, ring, .2);
+  d = opSmoothSub(d, sphere, .2);
+  return d;
+}
+
+// --- normal ---
+vec3 norm(vec3 p){
+  vec2 e=vec2(.001,0);
+  return normalize(vec3(scene(p+e.xyy)-scene(p-e.xyy),
+                        scene(p+e.yxy)-scene(p-e.yxy),
+                        scene(p+e.yyx)-scene(p-e.yyx)));
+}
+
+// --- shade ---
+vec3 shade(vec3 p, vec3 n, vec3 rd){
+  vec3 L = normalize(vec3(5,8,6));
+  vec3 C = normalize(vec3(-3,4,-5));
+  float amb = .15;
+  float dif = max(dot(n,L),0.);
+  float bac = max(dot(n,C),0.)*.3;
+  float occ = .5+.5*scene(p+n*.15);
+  float spec = pow(max(dot(reflect(-L,n),-rd),0.),32.);
+
+  vec3 col = mix(vec3(.05,.1,.2), vec3(.9,.5,.2), p.y*.15+.5);
+  col = mix(col, vec3(.2), step(.5,fract(p.x*.5+p.z*.3)));
+  col *= (amb + dif*.7 + bac + occ*.6);
+  col += vec3(1,.8,.5)*spec*.6;
+  // fog
+  col = mix(col, vec3(.02,.02,.05), 1.-exp(-.012*length(p)*length(p)));
+  return col;
+}
+
+// --- main ---
+void main(){
+  vec2 uv = (gl_FragCoord.xy-.5*r)/r.y;
+
+  vec3 fwd = normalize(target-eye);
+  vec3 right = normalize(cross(fwd, vec3(0,1,0)));
+  vec3 up = cross(right, fwd);
+  vec3 rd = normalize(uv.x*right + uv.y*up + fwd*1.8);
+
+  // march
+  float tmin=.5, tmax=40., precis=.001;
+  float th=0., d;
+  vec3 p;
+  for(int i=0;i<80;i++){
+    p = eye + rd*th;
+    d = scene(p);
+    if(d<precis || th>tmax) break;
+    th += d*.7;
+  }
+
+  vec3 col;
+  if(th<tmax){
+    vec3 n = norm(p);
+    col = shade(p,n,rd);
+  } else {
+    col = vec3(.02,.02,.05);
+  }
+
+  // vignette
+  float vig = 1.-.3*length(uv);
+  col *= vig;
+
+  o = vec4(col,1);
+}`;
+
+function compile(src, type){
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src);
+  gl.compileShader(s);
+  if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(s));
+  return s;
+}
+const prog = gl.createProgram();
+gl.attachShader(prog, compile(vs, gl.VERTEX_SHADER));
+gl.attachShader(prog, compile(fs, gl.FRAGMENT_SHADER));
+gl.linkProgram(prog);
+gl.useProgram(prog);
+
+// quad
+const buf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), gl.STATIC_DRAW);
+const a = gl.getAttribLocation(prog,'p');
+gl.vertexAttribPointer(a,2,gl.FLOAT,false,0,0);
+gl.enableVertexAttribArray(a);
+
+const uR = gl.getUniformLocation(prog,'r');
+const uT = gl.getUniformLocation(prog,'t');
+const uEye = gl.getUniformLocation(prog,'eye');
+const uTarget = gl.getUniformLocation(prog,'target');
+
+// camera
+let theta=0., phi=.6, dist=7.;
+let targetPos = [0,1.2,0];
+
+let mx=0, my=0, down=false;
+canvas.onpointerdown=e=>{down=true;mx=e.clientX;my=e.clientY;};
+canvas.onpointermove=e=>{if(!down)return;let dx=e.clientX-mx,dy=e.clientY-my;mx=e.clientX;my=e.clientY;theta-=dx*.008;phi=Math.max(.1,Math.min(1.4,phi+dy*.008));};
+canvas.onpointerup=e=>{down=false;};
+canvas.onwheel=e=>{dist=Math.max(2,Math.min(20,dist+e.deltaY*.008));e.preventDefault();};
+canvas.addEventListener('touchstart',e=>{const t=e.touches[0];down=true;mx=t.clientX;my=t.clientY;});
+canvas.addEventListener('touchmove',e=>{if(!down)return;const t=e.touches[0];let dx=t.clientX-mx,dy=t.clientY-my;mx=t.clientX;my=t.clientY;theta-=dx*.008;phi=Math.max(.1,Math.min(1.4,phi+dy*.008));});
+canvas.addEventListener('touchend',e=>{down=false;});
+
+let start = performance.now();
+function frame(){
+  const sec = (performance.now()-start)/1000;
+  gl.uniform2f(uR,W,H);
+  gl.uniform1f(uT,sec);
+
+  const eye = [targetPos[0]+dist*Math.sin(theta)*Math.cos(phi),
+               targetPos[1]+dist*Math.sin(phi),
+               targetPos[2]+dist*Math.cos(theta)*Math.cos(phi)];
+  gl.uniform3fv(uEye, eye);
+  gl.uniform3fv(uTarget, targetPos);
+
+  gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+  requestAnimationFrame(frame);
+}
+frame();
+</script>
+</body>
+</html>

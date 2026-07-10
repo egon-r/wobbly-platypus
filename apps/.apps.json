@@ -14,5 +14,9 @@
   "dice": {
     "description": "3D CSS cube roller",
     "created": "2026-07-09T04:12:05+09:00"
+  },
+  "raymarcher": {
+    "description": "Interactive WebGL2 raymarcher with smooth CSG operations",
+    "created": "2026-07-10T01:05:04.471006+00:00"
   }
 }
