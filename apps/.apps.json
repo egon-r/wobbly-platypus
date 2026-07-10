@@ -16,7 +16,11 @@
     "created": "2026-07-09T04:12:05+09:00"
   },
   "raymarcher": {
-    "description": "shader previewer/editor — live GLSL editing, shader presets, orbit + zoom camera",
+    "description": "shader previewer/editor \u2014 live GLSL editing, shader presets, orbit + zoom camera",
     "created": "2026-07-10T01:05:04.471006+00:00"
+  },
+  "sensors": {
+    "description": "Real-time device sensor monitor \u2014 gyroscope, accelerometer, geolocation, battery, network, screen, ambient light",
+    "created": "2026-07-11T12:00:00+00:00"
   }
 }

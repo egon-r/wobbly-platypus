@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Device Sensors</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d1117;
+    --card: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --dim: #8b949e;
+    --green: #3fb950;
+    --red: #f85149;
+    --yellow: #d29922;
+    --blue: #58a6ff;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.5 var(--font);
+    padding: 16px 12px 80px;
+    max-width: 600px;
+    margin: 0 auto;
+    min-height: 100vh;
+  }
+  h1 {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .subtitle {
+    color: var(--dim);
+    font-size: 12px;
+    margin-bottom: 20px;
+  }
+  .grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--dim);
+  }
+  .card-header .status {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 500;
+  }
+  .status.ok { background: #1a3a1a; color: var(--green); }
+  .status.warn { background: #3a2a1a; color: var(--yellow); }
+  .status.err { background: #3a1a1a; color: var(--red); }
+  .status.unsup { background: #1a1a2a; color: var(--dim); }
+  .data-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(48,54,61,0.4);
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+  .data-row:last-child { border-bottom: none; }
+  .data-row .label { color: var(--dim); }
+  .data-row .value {
+    font-weight: 500;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+  .unsupported-msg {
+    color: var(--dim);
+    font-size: 12px;
+    font-style: italic;
+  }
+  .btn {
+    background: #21262d;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .btn:active { background: #30363d; }
+  .btn.vibrate { margin-top: 6px; }
+  .vibration-area {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .perm-bar {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+    padding: 8px 12px;
+    background: #1a1a2a;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 12px;
+    align-items: center;
+  }
+  .perm-bar .label { color: var(--dim); }
+  .perm-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .perm-btn:active { background: var(--border); }
+  .perm-btn.granted { border-color: var(--green); color: var(--green); }
+  .refresh-note {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    padding: 8px;
+    font-size: 10px;
+    color: var(--dim);
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #ffffff;
+      --card: #f6f8fa;
+      --border: #d0d7de;
+      --text: #1f2328;
+      --dim: #656d76;
+    }
+    .status.ok { background: #dafbe1; color: #1a7f37; }
+    .status.warn { background: #fff8c5; color: #9a6700; }
+    .status.err { background: #ffebe9; color: #cf222e; }
+    .status.unsup { background: #f0f0f0; color: #656d76; }
+    .perm-bar { background: #f6f8fa; }
+    .btn { background: #f3f4f6; }
+  }
+</style>
+</head>
+<body>
+
+<h1>&#9881; Device Sensors</h1>
+<p class="subtitle">Raw sensor data &mdash; all client-side, no network send</p>
+
+<div class="perm-bar" id="permBar">
+  <span class="label">Permissions:</span>
+  <button class="perm-btn" id="permGeo" data-perm="geolocation">Geolocation</button>
+  <button class="perm-btn" id="permMotion" data-perm="motion">Motion</button>
+  <button class="perm-btn" id="permOrientation" data-perm="orientation">Orientation</button>
+  <span style="color:var(--dim);font-size:11px;margin-left:4px">(iOS 13+ requires)</span>
+</div>
+
+<div class="grid" id="sensorGrid">
+
+  <!-- Motion -->
+  <div class="card" id="card-motion">
+    <div class="card-header">
+      <span>&#9881; Motion</span>
+      <span class="status" id="status-motion">waiting</span>
+    </div>
+    <div id="body-motion">
+      <div class="data-row"><span class="label">acceleration</span><span class="value" id="val-acc">—</span></div>
+      <div class="data-row"><span class="label">accel incl. gravity</span><span class="value" id="val-accg">—</span></div>
+      <div class="data-row"><span class="label">rotation rate</span><span class="value" id="val-rot">—</span></div>
+      <div class="data-row"><span class="label">interval</span><span class="value" id="val-interval">—</span></div>
+    </div>
+  </div>
+
+  <!-- Orientation -->
+  <div class="card" id="card-orient">
+    <div class="card-header">
+      <span>&#9739; Orientation</span>
+      <span class="status" id="status-orient">waiting</span>
+    </div>
+    <div id="body-orient">
+      <div class="data-row"><span class="label">alpha (z-axis)</span><span class="value" id="val-alpha">—</span></div>
+      <div class="data-row"><span class="label">beta (x-axis)</span><span class="value" id="val-beta">—</span></div>
+      <div class="data-row"><span class="label">gamma (y-axis)</span><span class="value" id="val-gamma">—</span></div>
+      <div class="data-row"><span class="label">absolute</span><span class="value" id="val-absolute">—</span></div>
+    </div>
+  </div>
+
+  <!-- Geolocation -->
+  <div class="card" id="card-geo">
+    <div class="card-header">
+      <span>&#127758; Geolocation</span>
+      <span class="status" id="status-geo">waiting</span>
+    </div>
+    <div id="body-geo">
+      <div class="data-row"><span class="label">latitude</span><span class="value" id="val-lat">—</span></div>
+      <div class="data-row"><span class="label">longitude</span><span class="value" id="val-lng">—</span></div>
+      <div class="data-row"><span class="label">accuracy</span><span class="value" id="val-accuracy">—</span></div>
+      <div class="data-row"><span class="label">altitude</span><span class="value" id="val-altitude">—</span></div>
+      <div class="data-row"><span class="label">altitude accuracy</span><span class="value" id="val-altAcc">—</span></div>
+      <div class="data-row"><span class="label">heading</span><span class="value" id="val-heading">—</span></div>
+      <div class="data-row"><span class="label">speed</span><span class="value" id="val-speed">—</span></div>
+    </div>
+  </div>
+
+  <!-- Battery -->
+  <div class="card" id="card-battery">
+    <div class="card-header">
+      <span>&#9889; Battery</span>
+      <span class="status" id="status-battery">waiting</span>
+    </div>
+    <div id="body-battery">
+      <div class="data-row"><span class="label">level</span><span class="value" id="val-bat-level">—</span></div>
+      <div class="data-row"><span class="label">charging</span><span class="value" id="val-bat-charging">—</span></div>
+      <div class="data-row"><span class="label">charging time</span><span class="value" id="val-bat-ctime">—</span></div>
+      <div class="data-row"><span class="label">discharging time</span><span class="value" id="val-bat-dtime">—</span></div>
+    </div>
+  </div>
+
+  <!-- Network -->
+  <div class="card" id="card-network">
+    <div class="card-header">
+      <span>&#127760; Network</span>
+      <span class="status" id="status-network">waiting</span>
+    </div>
+    <div id="body-network">
+      <div class="data-row"><span class="label">effective type</span><span class="value" id="val-etype">—</span></div>
+      <div class="data-row"><span class="label">downlink</span><span class="value" id="val-downlink">—</span></div>
+      <div class="data-row"><span class="label">rtt</span><span class="value" id="val-rtt">—</span></div>
+      <div class="data-row"><span class="label">save data</span><span class="value" id="val-savedata">—</span></div>
+    </div>
+  </div>
+
+  <!-- Screen & Device -->
+  <div class="card" id="card-device">
+    <div class="card-header">
+      <span>&#9000; Screen &amp; Device</span>
+      <span class="status ok">static</span>
+    </div>
+    <div id="body-device">
+      <div class="data-row"><span class="label">screen</span><span class="value" id="val-screen">—</span></div>
+      <div class="data-row"><span class="label">pixel ratio</span><span class="value" id="val-pixelratio">—</span></div>
+      <div class="data-row"><span class="label">orientation</span><span class="value" id="val-orientation">—</span></div>
+      <div class="data-row"><span class="label">deviceMemory</span><span class="value" id="val-memory">—</span></div>
+      <div class="data-row"><span class="label">hardwareConcurrency</span><span class="value" id="val-cores">—</span></div>
+      <div class="data-row"><span class="label">max touch points</span><span class="value" id="val-touch">—</span></div>
+      <div class="data-row"><span class="label">color depth</span><span class="value" id="val-colordepth">—</span></div>
+      <div class="data-row"><span class="label">dark mode</span><span class="value" id="val-darkmode">—</span></div>
+    </div>
+  </div>
+
+  <!-- Ambient Light -->
+  <div class="card" id="card-light">
+    <div class="card-header">
+      <span>&#127775; Ambient Light</span>
+      <span class="status" id="status-light">unsupported</span>
+    </div>
+    <div id="body-light">
+      <div class="data-row"><span class="label">illuminance</span><span class="value" id="val-light">—</span></div>
+      <p class="unsupported-msg" id="light-unsup">AmbientLightSensor not available</p>
+    </div>
+  </div>
+
+  <!-- Proximity -->
+  <div class="card" id="card-prox">
+    <div class="card-header">
+      <span>&#128200; Proximity</span>
+      <span class="status" id="status-prox">unsupported</span>
+    </div>
+    <div id="body-prox">
+      <div class="data-row"><span class="label">distance</span><span class="value" id="val-prox">—</span></div>
+      <div class="data-row"><span class="label">max range</span><span class="value" id="val-proxmax">—</span></div>
+      <p class="unsupported-msg" id="prox-unsup">ProximitySensor not available</p>
+    </div>
+  </div>
+
+  <!-- Vibration -->
+  <div class="card" id="card-vibrate">
+    <div class="card-header">
+      <span>&#128259; Vibration</span>
+      <span class="status ok">ready</span>
+    </div>
+    <div>
+      <div class="vibration-area">
+        <button class="btn vibrate" data-ms="100">100ms</button>
+        <button class="btn vibrate" data-ms="300">300ms</button>
+        <button class="btn vibrate" data-ms="500">500ms</button>
+        <button class="btn vibrate" data-ms="1000">1s</button>
+        <button class="btn vibrate" data-ms="2000">2s</button>
+        <span id="vibrate-status" style="font-size:11px;color:var(--dim);"></span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="refresh-note" id="refreshNote">Sensors update in real-time. Open on a phone for full data.</div>
+
+<script>
+(function(){
+  'use strict';
+
+  const $ = id => document.getElementById(id);
+  const $$ = document.querySelectorAll.bind(document);
+
+  function round(v, d=2) {
+    if (v === null || v === undefined || v === Infinity || v === -Infinity) return '—';
+    if (typeof v !== 'number') return v;
+    return v.toFixed(d);
+  }
+
+  function fmtXYZ(x, y, z, d=2) {
+    if (x === null || y === null || z === null) return '—';
+    return `${round(x,d)}, ${round(y,d)}, ${round(z,d)}`;
+  }
+
+  // Status helpers
+  function setStatus(cardId, cls, text) {
+    const el = $(`status-${cardId}`);
+    if (el) { el.className = 'status ' + cls; el.textContent = text; }
+  }
+
+  // --- Device Orientation ---
+  let orientSupported = false;
+  function onOrientation(e) {
+    orientSupported = true;
+    setStatus('orient', 'ok', 'active');
+    $('val-alpha').textContent = round(e.alpha) + '°';
+    $('val-beta').textContent = round(e.beta) + '°';
+    $('val-gamma').textContent = round(e.gamma) + '°';
+    $('val-absolute').textContent = e.absolute ? 'yes' : 'no';
+  }
+  function tryOrientation() {
+    if (typeof DeviceOrientationEvent !== 'undefined') {
+      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        // iOS 13+ — permission button handles this
+        return;
+      }
+      window.addEventListener('deviceorientation', onOrientation, true);
+      // fallback: check if event fires
+      setTimeout(() => {
+        if (!orientSupported) {
+          setStatus('orient', 'unsup', 'no data');
+        }
+      }, 3000);
+    } else {
+      setStatus('orient', 'unsup', 'unavailable');
+    }
+  }
+
+  // --- Device Motion ---
+  let motionSupported = false;
+  function onMotion(e) {
+    motionSupported = true;
+    setStatus('motion', 'ok', 'active');
+    const a = e.acceleration;
+    const ag = e.accelerationIncludingGravity;
+    const rr = e.rotationRate;
+
+    if (a) $('val-acc').textContent = fmtXYZ(a.x, a.y, a.z);
+    else $('val-acc').textContent = 'null (iOS)';
+    if (ag) $('val-accg').textContent = fmtXYZ(ag.x, ag.y, ag.z);
+    else $('val-accg').textContent = 'null (iOS)';
+    if (rr) $('val-rot').textContent = fmtXYZ(rr.alpha, rr.beta, rr.gamma);
+    else $('val-rot').textContent = 'null (iOS)';
+    $('val-interval').textContent = round(e.interval, 1) + 'ms';
+  }
+  function tryMotion() {
+    if (typeof DeviceMotionEvent !== 'undefined') {
+      if (typeof DeviceMotionEvent.requestPermission === 'function') {
+        return; // permission button
+      }
+      window.addEventListener('devicemotion', onMotion, true);
+      setTimeout(() => {
+        if (!motionSupported) setStatus('motion', 'unsup', 'no data');
+      }, 3000);
+    } else {
+      setStatus('motion', 'unsup', 'unavailable');
+    }
+  }
+
+  // --- Geolocation ---
+  let geoRunning = false;
+  let geoWatchId = null;
+  function startGeo() {
+    if (!navigator.geolocation) {
+      setStatus('geo', 'unsup', 'unavailable');
+      return;
+    }
+    geoWatchId = navigator.geolocation.watchPosition(
+      pos => {
+        geoRunning = true;
+        setStatus('geo', 'ok', 'active');
+        const c = pos.coords;
+        $('val-lat').textContent = round(c.latitude, 6);
+        $('val-lng').textContent = round(c.longitude, 6);
+        $('val-accuracy').textContent = round(c.accuracy, 1) + ' m';
+        $('val-altitude').textContent = c.altitude !== null ? round(c.altitude, 1) + ' m' : '—';
+        $('val-altAcc').textContent = c.altitudeAccuracy !== null ? round(c.altitudeAccuracy, 1) + ' m' : '—';
+        $('val-heading').textContent = c.heading !== null ? round(c.heading, 1) + '°' : '—';
+        $('val-speed').textContent = c.speed !== null ? round(c.speed, 2) + ' m/s' : '—';
+      },
+      err => {
+        setStatus('geo', 'err', 'error');
+        if (err.code === 1) $('val-lat').textContent = 'permission denied';
+        else $('val-lat').textContent = 'error ' + err.code;
+      },
+      { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 }
+    );
+  }
+
+  // --- Battery ---
+  async function tryBattery() {
+    if (!navigator.getBattery) {
+      setStatus('battery', 'unsup', 'unavailable');
+      return;
+    }
+    try {
+      const b = await navigator.getBattery();
+      function updateBattery() {
+        $('val-bat-level').textContent = round(b.level * 100, 0) + '%';
+        $('val-bat-charging').textContent = b.charging ? 'yes' : 'no';
+        $('val-bat-ctime').textContent = b.chargingTime === Infinity ? '—' : round(b.chargingTime, 0) + 's';
+        $('val-bat-dtime').textContent = b.dischargingTime === Infinity ? '—' : round(b.dischargingTime, 0) + 's';
+      }
+      updateBattery();
+      setStatus('battery', 'ok', 'active');
+      b.addEventListener('levelchange', updateBattery);
+      b.addEventListener('chargingchange', updateBattery);
+      b.addEventListener('chargingtimechange', updateBattery);
+      b.addEventListener('dischargingtimechange', updateBattery);
+    } catch(e) {
+      setStatus('battery', 'err', 'error');
+    }
+  }
+
+  // --- Network ---
+  function tryNetwork() {
+    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (!conn) {
+      setStatus('network', 'unsup', 'unavailable');
+      return;
+    }
+    function updateNet() {
+      $('val-etype').textContent = conn.effectiveType || '—';
+      $('val-downlink').textContent = (conn.downlink != null) ? round(conn.downlink, 1) + ' Mbps' : '—';
+      $('val-rtt').textContent = (conn.rtt != null) ? round(conn.rtt, 0) + ' ms' : '—';
+      $('val-savedata').textContent = conn.saveData ? 'yes' : 'no';
+    }
+    updateNet();
+    setStatus('network', 'ok', 'active');
+    conn.addEventListener('change', updateNet);
+  }
+
+  // --- Screen & Device static ---
+  function initDeviceStatic() {
+    $('val-screen').textContent = screen.width + '×' + screen.height;
+    $('val-pixelratio').textContent = round(window.devicePixelRatio, 2);
+    $('val-colordepth').textContent = screen.colorDepth + ' bit';
+
+    const orient = screen.orientation || screen.msOrientation || {};
+    $('val-orientation').textContent = orient.type || '—';
+
+    $('val-memory').textContent = navigator.deviceMemory ? navigator.deviceMemory + ' GB' : '—';
+    $('val-cores').textContent = navigator.hardwareConcurrency || '—';
+
+    let maxTouches = '—';
+    if ('maxTouchPoints' in navigator) maxTouches = navigator.maxTouchPoints;
+    $('val-touch').textContent = maxTouches;
+
+    const dark = window.matchMedia('(prefers-color-scheme: dark)');
+    $('val-darkmode').textContent = dark.matches ? 'yes' : 'no';
+    dark.addEventListener('change', e => {
+      $('val-darkmode').textContent = e.matches ? 'yes' : 'no';
+    });
+
+    // Listen for orientation changes
+    window.addEventListener('orientationchange', () => {
+      setTimeout(() => {
+        $('val-screen').textContent = screen.width + '×' + screen.height;
+        const o = screen.orientation || screen.msOrientation || {};
+        $('val-orientation').textContent = o.type || '—';
+      }, 200);
+    });
+  }
+
+  // --- Ambient Light Sensor (Generic Sensor API) ---
+  function tryAmbientLight() {
+    if (typeof AmbientLightSensor === 'undefined') {
+      setStatus('light', 'unsup', 'unavailable');
+      return;
+    }
+    try {
+      const sensor = new AmbientLightSensor({ frequency: 10 });
+      sensor.addEventListener('reading', () => {
+        setStatus('light', 'ok', 'active');
+        $('val-light').textContent = round(sensor.illuminance, 1) + ' lx';
+        $('light-unsup').style.display = 'none';
+      });
+      sensor.addEventListener('error', () => {
+        setStatus('light', 'err', 'denied');
+      });
+      sensor.start();
+    } catch(e) {
+      setStatus('light', 'err', 'error');
+    }
+  }
+
+  // --- Proximity Sensor ---
+  function tryProximity() {
+    if (typeof ProximitySensor === 'undefined') {
+      setStatus('prox', 'unsup', 'unavailable');
+      return;
+    }
+    try {
+      const sensor = new ProximitySensor({ frequency: 10 });
+      sensor.addEventListener('reading', () => {
+        setStatus('prox', 'ok', 'active');
+        $('val-prox').textContent = round(sensor.distance, 2) + ' cm';
+        $('val-proxmax').textContent = round(sensor.maxRange, 2) + ' cm';
+        $('prox-unsup').style.display = 'none';
+      });
+      sensor.addEventListener('error', () => {
+        setStatus('prox', 'err', 'denied');
+      });
+      sensor.start();
+    } catch(e) {
+      setStatus('prox', 'err', 'error');
+    }
+  }
+
+  // --- Vibration ---
+  function initVibration() {
+    const avail = navigator.vibrate || navigator.webkitVibrate || navigator.mozVibrate;
+    if (!avail) {
+      $('card-vibrate').querySelector('.card-header .status').className = 'status unsup';
+      $('card-vibrate').querySelector('.card-header .status').textContent = 'unavailable';
+      $$('.btn.vibrate').forEach(b => b.disabled = true);
+      return;
+    }
+    const vb = (ms) => navigator.vibrate(ms);
+    $$('.btn.vibrate').forEach(b => {
+      b.addEventListener('click', () => {
+        const ms = parseInt(b.dataset.ms);
+        vb(ms);
+        $('vibrate-status').textContent = ms + 'ms';
+        setTimeout(() => { $('vibrate-status').textContent = ''; }, ms + 200);
+      });
+    });
+  }
+
+  // --- iOS Permission Requests ---
+  async function requestMotionPermission() {
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+      try {
+        const r = await DeviceMotionEvent.requestPermission();
+        if (r === 'granted') {
+          window.addEventListener('devicemotion', onMotion, true);
+          setStatus('motion', 'ok', 'waiting...');
+        } else {
+          setStatus('motion', 'err', 'denied');
+        }
+      } catch(e) {
+        setStatus('motion', 'err', 'error');
+      }
+    }
+  }
+  async function requestOrientationPermission() {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      try {
+        const r = await DeviceOrientationEvent.requestPermission();
+        if (r === 'granted') {
+          window.addEventListener('deviceorientation', onOrientation, true);
+          setStatus('orient', 'ok', 'waiting...');
+        } else {
+          setStatus('orient', 'err', 'denied');
+        }
+      } catch(e) {
+        setStatus('orient', 'err', 'error');
+      }
+    }
+  }
+  async function requestGeoPermission() {
+    if (!navigator.geolocation) {
+      setStatus('geo', 'unsup', 'unavailable');
+      return;
+    }
+    // Already handled by watchPosition prompt, but on iOS need user gesture
+    startGeo();
+  }
+
+  // Wire permission buttons
+  function wirePerms() {
+    const btnGeo = $('permGeo');
+    const btnMotion = $('permMotion');
+    const btnOrient = $('permOrientation');
+
+    btnGeo.addEventListener('click', async () => {
+      await requestGeoPermission();
+      btnGeo.classList.add('granted');
+    });
+    btnMotion.addEventListener('click', async () => {
+      await requestMotionPermission();
+      btnMotion.classList.add('granted');
+    });
+    btnOrient.addEventListener('click', async () => {
+      await requestOrientationPermission();
+      btnOrient.classList.add('granted');
+    });
+
+    // Show permission buttons only if needed (iOS 13+)
+    const needsPerm = typeof DeviceOrientationEvent !== 'undefined' &&
+      typeof DeviceOrientationEvent.requestPermission === 'function';
+    if (!needsPerm) {
+      $('permBar').style.display = 'none';
+      // Non-iOS: auto-start
+      tryMotion();
+      tryOrientation();
+      startGeo();
+    } else {
+      // iOS: show tips
+      // Still auto-start geo (it prompts on its own)
+      startGeo();
+    }
+  }
+
+  // --- Init ---
+  function init() {
+    wirePerms();
+    tryBattery();
+    tryNetwork();
+    initDeviceStatic();
+    tryAmbientLight();
+    tryProximity();
+    initVibration();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>
