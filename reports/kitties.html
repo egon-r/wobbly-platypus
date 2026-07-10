@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>東京 猫の里親・販売 ディレクトリ — Tokyo Cat Adoption Directory</title>
+<style>
+:root {
+  --bg: #faf6f0;
+  --card-bg: #ffffff;
+  --text: #3a2a1a;
+  --text-light: #7a6a5a;
+  --border: #e8ddd0;
+  --accent: #c75b39;
+  --accent-light: #f5e6de;
+  --blue: #4a8bc2;
+  --green: #5a9e6f;
+  --purple: #8a6e9e;
+  --orange: #d4894a;
+  --yellow: #c4a43a;
+  --teal: #4a9e9e;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1a16;
+    --card-bg: #2a2520;
+    --text: #e8ddd0;
+    --text-light: #a09080;
+    --border: #3a3028;
+    --accent: #d4894a;
+    --accent-light: #3a2820;
+  }
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+.container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+header { text-align: center; padding: 40px 0 20px; border-bottom: 2px solid var(--accent); margin-bottom: 30px; }
+header h1 { font-size: 1.6rem; color: var(--accent); }
+header p { color: var(--text-light); font-size: 0.9rem; margin-top: 8px; }
+.summary { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin: 20px 0; }
+.summary-item { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 15px 25px; text-align: center; flex: 0 1 auto; min-width: 120px; }
+.summary-item .num { font-size: 1.8rem; font-weight: bold; color: var(--accent); }
+.summary-item .label { font-size: 0.8rem; color: var(--text-light); }
+.store-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 16px; overflow: hidden; }
+.store-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; cursor: pointer; user-select: none; transition: background 0.2s; flex-wrap: wrap; gap: 8px; }
+.store-header:hover { background: var(--accent-light); }
+.store-title { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.store-title a { color: var(--text); text-decoration: none; }
+.store-title a:hover { text-decoration: underline; color: var(--accent); }
+.store-meta { display: flex; align-items: center; gap: 10px; }
+.area-badge { background: var(--accent-light); color: var(--accent); font-size: 0.75rem; padding: 2px 10px; border-radius: 12px; }
+.count-badge { background: var(--accent); color: white; font-size: 0.75rem; padding: 2px 10px; border-radius: 12px; }
+.toggle-icon { transition: transform 0.2s; font-size: 0.8rem; }
+.collapsed .toggle-icon { transform: rotate(-90deg); }
+.collapsed .store-body { display: none; }
+.store-body { padding: 0 20px 20px; }
+.store-notes { color: var(--text-light); font-size: 0.88rem; margin-bottom: 15px; padding: 10px; background: var(--bg); border-radius: 8px; }
+.jp-text { color: var(--text-light); font-size: 0.85rem; }
+.listing-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.listing-table th { background: var(--bg); padding: 8px 10px; text-align: left; font-weight: 600; border-bottom: 2px solid var(--border); white-space: nowrap; }
+.listing-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.listing-table tbody tr:nth-child(even) { background: var(--bg); }
+.listing-table tbody tr:hover { background: var(--accent-light); }
+.name-col { font-weight: 600; }
+.name-col a { color: var(--accent); text-decoration: none; }
+.name-col a:hover { text-decoration: underline; }
+.desc-col { font-size: 0.82rem; color: var(--text-light); max-width: 250px; }
+.gender-badge { font-size: 0.78rem; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+.gender-male { background: #d0e0f0; color: #2a5a8a; }
+.gender-female { background: #f0d0e0; color: #8a2a5a; }
+@media (prefers-color-scheme: dark) {
+  .gender-male { background: #1a2a3a; color: #8ab8e0; }
+  .gender-female { background: #3a1a2a; color: #e08ab8; }
+}
+footer { text-align: center; padding: 30px 0; color: var(--text-light); font-size: 0.85rem; border-top: 1px solid var(--border); margin-top: 40px; }
+@media (max-width: 768px) {
+  .listing-table { font-size: 0.78rem; }
+  .store-header { flex-direction: column; align-items: flex-start; }
+  .desc-col { max-width: 120px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>🐱 東京 猫の里親・販売 ディレクトリ</h1>
+    <p>Tokyo Cat Adoption &amp; Purchase Directory — 2026年7月10日 更新</p>
+    <p style="font-size:0.8rem;color:var(--text-light);">出典: Google Japan + Yahoo! Japan 検索</p>
+  </header>
+
+  <div class="summary">
+    <div class="summary-item"><div class="num">100</div><div class="label">掲載猫</div></div>
+    <div class="summary-item"><div class="num">4</div><div class="label">店舗・施設</div></div>
+    <div class="summary-item"><div class="num">44♂ 54♀</div><div class="label">オス・メス</div></div>
+  </div>
+
+
+    <div class="store-card">
+      <div class="store-header" onclick="this.parentElement.classList.toggle('collapsed')">
+        <div class="store-title">
+          <span class="type-badge" style="background: var(--blue); color: white; font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; margin-right: 8px;">ペットショップ</span>
+          <strong><a href="https://www.pet-coo.com/" target="_blank">Coo&amp;RIKU</a></strong>
+          <span class="jp-text" style="margin-left: 8px;">ペットショップCoo＆RIKU</span>
+        </div>
+        <div class="store-meta">
+          <span class="area-badge">Tokyo (multiple)</span>
+          <span class="count-badge">29 匹</span>
+          <span class="toggle-icon">▼</span>
+        </div>
+      </div>
+      <div class="store-body">
+        <p class="store-notes">Large pet shop chain. Has adoption (譲渡) program with 333 cats listed.</p>
+        <table class="listing-table">
+          <thead>
+            <tr>
+              <th>名前</th><th>日本語</th><th>品種</th><th>年齢</th><th>性別</th><th>価格</th><th>備考</th>
+            </tr>
+          </thead>
+          <tbody>
+          <tr>
+            <td class="name-col"><a href="https://www.pet-coo.com/protect-order/?tp=2&amp;num=00017476&amp;protect=1" target="_blank">Minuette (Long-legged)</a></td>
+            <td><span class="jp-text">ミヌエット（長足）</span></td>
+            <td>Minuette<br><span class="jp-text">ミヌエット</span></td>
+            <td>2026-04-13</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">No.00017476 at 板橋店 (Itabashi). Vaccinated.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://www.pet-coo.com/protect-order/?tp=2&amp;num=00017475&amp;protect=1" target="_blank">Russian Blue</a></td>
+            <td><span class="jp-text">ロシアンブルー</span></td>
+            <td>Russian Blue<br><span class="jp-text">ロシアンブルー</span></td>
+            <td>2026-05-07</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">No.00017475 at 板橋店 (Itabashi). Vaccinated.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://www.pet-coo.com/protect-order/?tp=2&amp;num=00017468&amp;protect=1" target="_blank">Siberian</a></td>
+            <td><span class="jp-text">サイベリアン</span></td>
+            <td>Siberian<br><span class="jp-text">サイベリアン</span></td>
+            <td>2026-05-02</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">No.00017468 at 筑後店. Vaccinated.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://www.pet-coo.com/protect-order/?tp=2&amp;num=00017473&amp;protect=1" target="_blank">American Shorthair</a></td>
+            <td><span class="jp-text">アメリカンショートヘアー</span></td>
+            <td>American Shorthair<br><span class="jp-text">アメリカンショートヘアー</span></td>
+            <td>2026-04-19</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">No.00017473 at アニマルケアセンター大宮. Vaccinated.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://www.pet-coo.com/protect-order/?tp=2&amp;num=00017472&amp;protect=1" target="_blank">American Shorthair</a></td>
+            <td><span class="jp-text">アメリカンショートヘアー</span></td>
+            <td>American Shorthair<br><span class="jp-text">アメリカンショートヘアー</span></td>
+            <td>2026-04-19</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">No.00017472 at アニマルケアセンター大宮.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://www.pet-coo.com/protect-order/?tp=2&amp;num=00017471&amp;protect=1" target="_blank">American Shorthair</a></td>
+            <td><span class="jp-text">アメリカンショートヘアー</span></td>
+            <td>American Shorthair<br><span class="jp-text">アメリカンショートヘアー</span></td>
+            <td>2026-04-01</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">No.00017471 at 板橋店 (Itabashi). Vaccinated.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://www.pet-coo.com/protect-order/?tp=2&amp;num=00017470&amp;protect=1" target="_blank">Norwegian Forest Cat</a></td>
+            <td><span class="jp-text">ノルウェージャン・フォレストキャット</span></td>
+            <td>Norwegian Forest Cat<br><span class="jp-text">ノルウェージャン・フォレストキャット</span></td>
+            <td>2026-04-13</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">No.00017470 at 板橋店 (Itabashi). Vaccinated.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://www.pet-coo.com/protect-order/?tp=2&amp;num=00017469&amp;protect=1" target="_blank">Exotic Shorthair</a></td>
+            <td><span class="jp-text">エキゾチック</span></td>
+            <td>Exotic Shorthair<br><span class="jp-text">エキゾチック</span></td>
+            <td>2026-05-12</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">No.00017469 at 板橋店 (Itabashi). Vaccinated.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://www.pet-coo.com/protect-order/?tp=2&amp;num=00017453&amp;protect=1" target="_blank">Scottish Fold</a></td>
+            <td><span class="jp-text">スコティッシュフォールド</span></td>
+            <td>Scottish Fold<br><span class="jp-text">スコティッシュフォールド</span></td>
+            <td>2026-02-11</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">No.00017453 at 福生店 (Fussa). Vaccinated.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://www.pet-coo.com/protect-order/?tp=2&amp;num=00017452&amp;protect=1" target="_blank">Scottish Fold</a></td>
+            <td><span class="jp-text">スコティッシュフォールド</span></td>
+            <td>Scottish Fold<br><span class="jp-text">スコティッシュフォールド</span></td>
+            <td>2026-02-11</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">No.00017452 at 福生店 (Fussa). Vaccinated.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://www.pet-coo.com/protect-order/?tp=2&amp;num=00017449&amp;protect=1" target="_blank">Ragamuffin</a></td>
+            <td><span class="jp-text">ラガマフィン</span></td>
+            <td>Ragamuffin<br><span class="jp-text">ラガマフィン</span></td>
+            <td>2025-12-25</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">No.00017449 at 福生店 (Fussa). Vaccinated.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://www.pet-coo.com/protect-order/?tp=2&amp;num=00017448&amp;protect=1" target="_blank">Ragdoll</a></td>
+            <td><span class="jp-text">ラグドール</span></td>
+            <td>Ragdoll<br><span class="jp-text">ラグドール</span></td>
+            <td>2026-03-17</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">No.00017448 at 足立本店 (Adachi). Vaccinated.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://www.pet-coo.com/protect-order/?tp=2&amp;num=00017458&amp;protect=1" target="_blank">Scottish Fold</a></td>
+            <td><span class="jp-text">スコティッシュフォールド</span></td>
+            <td>Scottish Fold<br><span class="jp-text">スコティッシュフォールド</span></td>
+            <td>2026-04-09</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">No.00017458 at 富士店. Vaccinated.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://www.pet-coo.com/protect-order/?tp=2&amp;num=00017396&amp;protect=1" target="_blank">British Shorthair</a></td>
+            <td><span class="jp-text">ブリティッシュショートヘアー</span></td>
+            <td>British Shorthair<br><span class="jp-text">ブリティッシュショートヘアー</span></td>
+            <td>2026-05-05</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">No.00017396 at 東久留米店 (Higashikurume). Vaccinated.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://www.pet-coo.com/protect-order/?tp=2&amp;num=00017392&amp;protect=1" target="_blank">Minuette (Long-legged)</a></td>
+            <td><span class="jp-text">ミヌエット（長足）</span></td>
+            <td>Minuette<br><span class="jp-text">ミヌエット</span></td>
+            <td>2026-05-01</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">No.00017392 at イオン野々市南店.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://www.pet-coo.com/protect-order/?tp=2&amp;num=00017385&amp;protect=1" target="_blank">Norwegian Forest Cat</a></td>
+            <td><span class="jp-text">ノルウェージャン・フォレストキャット</span></td>
+            <td>Norwegian Forest Cat<br><span class="jp-text">ノルウェージャン・フォレストキャット</span></td>
+            <td>2025-11-20</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">No.00017385 at フレスポ住吉店.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://www.pet-coo.com/protect-order/?tp=2&amp;num=00017382&amp;protect=1" target="_blank">Norwegian Forest Cat</a></td>
+            <td><span class="jp-text">ノルウェージャン・フォレストキャット</span></td>
+            <td>Norwegian Forest Cat<br><span class="jp-text">ノルウェージャン・フォレストキャット</span></td>
+            <td>2025-12-08</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">No.00017382 at アニマルケアセンター大宮.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://www.pet-coo.com/protect-order/?tp=2&amp;num=00017381&amp;protect=1" target="_blank">Norwegian Forest Cat</a></td>
+            <td><span class="jp-text">ノルウェージャン・フォレストキャット</span></td>
+            <td>Norwegian Forest Cat<br><span class="jp-text">ノルウェージャン・フォレストキャット</span></td>
+            <td>2025-12-08</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">No.00017381 at アニマルケアセンター大宮.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://www.pet-coo.com/protect-order/?tp=2&amp;num=00017380&amp;protect=1" target="_blank">Munchkin (Long-legged)</a></td>
+            <td><span class="jp-text">マンチカン（長足）</span></td>
+            <td>Munchkin<br><span class="jp-text">マンチカン</span></td>
+            <td>2025-12-09</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">No.00017380 at 春日部店.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://www.pet-coo.com/protect-order/?tp=2&amp;num=00017379&amp;protect=1" target="_blank">Ragamuffin</a></td>
+            <td><span class="jp-text">ラガマフィン</span></td>
+            <td>Ragamuffin<br><span class="jp-text">ラガマフィン</span></td>
+            <td>2025-12-03</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">No.00017379 at アニマルケアセンター大宮.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://www.pet-coo.com/protect-order/?tp=2&amp;num=00017378&amp;protect=1" target="_blank">Siberian</a></td>
+            <td><span class="jp-text">サイベリアン</span></td>
+            <td>Siberian<br><span class="jp-text">サイベリアン</span></td>
+            <td>2025-11-24</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">No.00017378 at アニマルケアセンター大宮.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://www.pet-coo.com/protect-order/?tp=2&amp;num=00017376&amp;protect=1" target="_blank">Siberian</a></td>
+            <td><span class="jp-text">サイベリアン</span></td>
+            <td>Siberian<br><span class="jp-text">サイベリアン</span></td>
+            <td>2026-02-28</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">No.00017376 at アニマルケアセンター大宮.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://www.pet-coo.com/protect-order/?tp=2&amp;num=00017374&amp;protect=1" target="_blank">Scottish Fold (Straight Ear)</a></td>
+            <td><span class="jp-text">スコティッシュフォールド（立ち耳）</span></td>
+            <td>Scottish Fold<br><span class="jp-text">スコティッシュフォールド</span></td>
+            <td>2026-01-22</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">No.00017374 at 春日部店.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://www.pet-coo.com/protect-order/?tp=2&amp;num=00017373&amp;protect=1" target="_blank">Scottish Fold (Straight Ear)</a></td>
+            <td><span class="jp-text">スコティッシュフォールド（立ち耳）</span></td>
+            <td>Scottish Fold<br><span class="jp-text">スコティッシュフォールド</span></td>
+            <td>2026-01-22</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">No.00017373 at アニマルケアセンター大宮.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://www.pet-coo.com/protect-order/?tp=2&amp;num=00017372&amp;protect=1" target="_blank">American Shorthair</a></td>
+            <td><span class="jp-text">アメリカンショートヘアー</span></td>
+            <td>American Shorthair<br><span class="jp-text">アメリカンショートヘアー</span></td>
+            <td>2026-02-22</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">No.00017372 at アニマルケアセンター大宮.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://www.pet-coo.com/protect-order/?tp=2&amp;num=00017371&amp;protect=1" target="_blank">Ragamuffin</a></td>
+            <td><span class="jp-text">ラガマフィン</span></td>
+            <td>Ragamuffin<br><span class="jp-text">ラガマフィン</span></td>
+            <td>2025-12-23</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">No.00017371 at アニマルケアセンター大宮.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://www.pet-coo.com/protect-order/?tp=2&amp;num=00017369&amp;protect=1" target="_blank">Siberian</a></td>
+            <td><span class="jp-text">サイベリアン</span></td>
+            <td>Siberian<br><span class="jp-text">サイベリアン</span></td>
+            <td>2026-02-08</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">No.00017369 at 高円寺店 (Koenji, Tokyo).</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://www.pet-coo.com/protect-order/?tp=2&amp;num=00017368&amp;protect=1" target="_blank">Siberian</a></td>
+            <td><span class="jp-text">サイベリアン</span></td>
+            <td>Siberian<br><span class="jp-text">サイベリアン</span></td>
+            <td>2026-03-17</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">No.00017368 at アニマルケアセンター大宮.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://www.pet-coo.com/protect-order/?tp=2&amp;num=00017367&amp;protect=1" target="_blank">Siberian</a></td>
+            <td><span class="jp-text">サイベリアン</span></td>
+            <td>Siberian<br><span class="jp-text">サイベリアン</span></td>
+            <td>2026-03-17</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">No.00017367 at 春日部店.</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="store-card">
+      <div class="store-header" onclick="this.parentElement.classList.toggle('collapsed')">
+        <div class="store-title">
+          <span class="type-badge" style="background: var(--green); color: white; font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; margin-right: 8px;">保護シェルター</span>
+          <strong><a href="https://ago-jp.com/" target="_blank">Ago wa Neko</a></strong>
+          <span class="jp-text" style="margin-left: 8px;">アゴはネコ</span>
+        </div>
+        <div class="store-meta">
+          <span class="area-badge">Shinjuku</span>
+          <span class="count-badge">2 匹</span>
+          <span class="toggle-icon">▼</span>
+        </div>
+      </div>
+      <div class="store-body">
+        <p class="store-notes">Cat adoption shop near Takadanobaba station. JR高田馬場駅早稲田口徒歩6分</p>
+        <table class="listing-table">
+          <thead>
+            <tr>
+              <th>名前</th><th>日本語</th><th>品種</th><th>年齢</th><th>性別</th><th>価格</th><th>備考</th>
+            </tr>
+          </thead>
+          <tbody>
+          <tr>
+            <td class="name-col"><a href="https://ago-jp.com/kittyinfo2/7335%e3%80%80%e3%83%a1%e3%82%a4%e3%83%b3%e3%82%af%e3%83%bc%e3%83%b3%e3%80%80%e3%82%b7%e3%83%ab%e3%83%90%e3%83%bc/" target="_blank">Maine Coon Silver</a></td>
+            <td><span class="jp-text">メインクーン シルバー</span></td>
+            <td>Maine Coon<br><span class="jp-text">メインクーン</span></td>
+            <td>~11 months</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>¥45,000-55,000</td>
+            <td class="desc-col">No.7335. Rear legs disabled. Very affectionate personality.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://ago-jp.com/kittyinfo2/7337%e3%80%80%e3%83%96%e3%83%aa%e3%83%86%e3%82%a3%e3%83%83%e3%82%b7%e3%83%a5%e3%80%80%e3%83%96%e3%83%ab%e3%83%bc/" target="_blank">British Shorthair Blue</a></td>
+            <td><span class="jp-text">ブリティッシュショートヘアー ブルー</span></td>
+            <td>British Shorthair<br><span class="jp-text">ブリティッシュショートヘアー</span></td>
+            <td>kitten</td>
+            <td><span class="gender-badge gender-unknown"> </span></td>
+            <td>¥45,000-55,000</td>
+            <td class="desc-col">No.7337. Heart malformation (心臓形成不全).</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="store-card">
+      <div class="store-header" onclick="this.parentElement.classList.toggle('collapsed')">
+        <div class="store-title">
+          <span class="type-badge" style="background: var(--orange); color: white; font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; margin-right: 8px;">猫カフェ譲渡</span>
+          <strong><a href="https://cat-living.co.jp/" target="_blank">CAT LIVING</a></strong>
+          <span class="jp-text" style="margin-left: 8px;">CAT LIVING（キャットリビング）</span>
+        </div>
+        <div class="store-meta">
+          <span class="area-badge">Tokyo</span>
+          <span class="count-badge">12 匹</span>
+          <span class="toggle-icon">▼</span>
+        </div>
+      </div>
+      <div class="store-body">
+        <p class="store-notes">Cat cafe with adoption program. Encourages adoption over pet shop purchase.</p>
+        <table class="listing-table">
+          <thead>
+            <tr>
+              <th>名前</th><th>日本語</th><th>品種</th><th>年齢</th><th>性別</th><th>価格</th><th>備考</th>
+            </tr>
+          </thead>
+          <tbody>
+          <tr>
+            <td class="name-col"><a href="https://cat-living.co.jp/cats/" target="_blank">Lala</a></td>
+            <td><span class="jp-text">ララ</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>2025-04</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Apr 2025 born. Stray origin. One of 5 sisters. Curious and energetic.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://cat-living.co.jp/cats/" target="_blank">Coco</a></td>
+            <td><span class="jp-text">ココ</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>2025-04</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Apr 2025 born. Stray origin. Cautious but sweet once comfortable.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://cat-living.co.jp/cats/" target="_blank">Shizuka</a></td>
+            <td><span class="jp-text">しずか</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>2025-04</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Apr 2025 born. Stray origin. Quiet and shy personality.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://cat-living.co.jp/cats/" target="_blank">Victoria</a></td>
+            <td><span class="jp-text">ヴィクトリア</span></td>
+            <td>Mixed (Longhair)<br><span class="jp-text">雑種（長毛）</span></td>
+            <td>2025-04</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Apr 2025 born. Stray origin. Only longhair of the 5 sisters.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://cat-living.co.jp/cats/" target="_blank">Momo</a></td>
+            <td><span class="jp-text">もも</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>2024-08</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Aug 2024 born. Air-rescued from Kochi. Playful and healthy.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://cat-living.co.jp/cats/" target="_blank">Sky</a></td>
+            <td><span class="jp-text">スカイ</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>adult</td>
+            <td><span class="gender-badge gender-unknown"> </span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Rescued from mass hoarding in Kumamoto. Air-transported to Tokyo.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://cat-living.co.jp/cats/" target="_blank">Maririn</a></td>
+            <td><span class="jp-text">マリリン</span></td>
+            <td>Ragamuffin<br><span class="jp-text">ラガマフィン</span></td>
+            <td>adult</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">6.5kg Ragamuffin. Owner could no longer care due to illness.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://cat-living.co.jp/cats/" target="_blank">Ginji</a></td>
+            <td><span class="jp-text">ギンジ</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>senior</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Therapy cat. Prone to urinary stones. Tsundere personality.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://cat-living.co.jp/cats/" target="_blank">King</a></td>
+            <td><span class="jp-text">キング</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>senior</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Therapy cat. Loves laps. Gentle peaceful personality.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://cat-living.co.jp/cats/" target="_blank">Purima</a></td>
+            <td><span class="jp-text">プリマ</span></td>
+            <td>Mixed (Calico)<br><span class="jp-text">雑種（三毛）</span></td>
+            <td>adult</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Pastel calico. Rescued from mass hoarding in Ibaraki. Beauty queen.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://cat-living.co.jp/cats/" target="_blank">Mochiee</a></td>
+            <td><span class="jp-text">モッチー</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>adult</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Very friendly. Jumps into arms for hugs. Transferred from another shelter.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://cat-living.co.jp/cats/" target="_blank">Chikuwa Atom</a></td>
+            <td><span class="jp-text">ちくわ（ちくわんアトム）</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>adult</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Rescued from Ibaraki hoarding situation. Needs love and comfort.</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="store-card">
+      <div class="store-header" onclick="this.parentElement.classList.toggle('collapsed')">
+        <div class="store-title">
+          <span class="type-badge" style="background: var(--purple); color: white; font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; margin-right: 8px;">NPO譲渡</span>
+          <strong><a href="https://tokyocatguardian.org/" target="_blank">Tokyo Cat Guardian</a></strong>
+          <span class="jp-text" style="margin-left: 8px;">NPO法人東京キャットガーディアン</span>
+        </div>
+        <div class="store-meta">
+          <span class="area-badge">Otsuka/Tokyo</span>
+          <span class="count-badge">57 匹</span>
+          <span class="toggle-icon">▼</span>
+        </div>
+      </div>
+      <div class="store-body">
+        <p class="store-notes">NPO. Runs a cat cafe shelter. 221 cats currently awaiting adoption (46 kittens, 175 adults).</p>
+        <table class="listing-table">
+          <thead>
+            <tr>
+              <th>名前</th><th>日本語</th><th>品種</th><th>年齢</th><th>性別</th><th>価格</th><th>備考</th>
+            </tr>
+          </thead>
+          <tbody>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j824/" target="_blank">Kitten J824</a></td>
+            <td><span class="jp-text">子猫 J824</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>1-2 months est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 1-2 months. ★デビュー準備中 (preparing for debut).</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j823/" target="_blank">Kitten J823</a></td>
+            <td><span class="jp-text">子猫 J823</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>1-2 months est.</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 1-2 months. ★デビュー準備中.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j750/" target="_blank">Kitten J750</a></td>
+            <td><span class="jp-text">子猫 J750</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>3-4 months est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 3-4 months. Available for adoption.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j838/" target="_blank">Cat J838</a></td>
+            <td><span class="jp-text">猫 J838</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>14 years est.</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 14 years. Senior cat needing a home.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j732/" target="_blank">Cat J732</a></td>
+            <td><span class="jp-text">猫 J732</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>1 year est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 1 year. Young adult.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j759/" target="_blank">Cat J759</a></td>
+            <td><span class="jp-text">猫 J759</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>10 years est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 10 years. Senior cat.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/h671/" target="_blank">Cat H671</a></td>
+            <td><span class="jp-text">猫 H671</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>10 years est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 10 years. Senior cat.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j502/" target="_blank">Cat J502</a></td>
+            <td><span class="jp-text">猫 J502</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>1 year est.</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 1 year. Young adult.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j806/" target="_blank">Cat J806</a></td>
+            <td><span class="jp-text">猫 J806</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>12 years est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 12 years. Senior cat.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/h723/" target="_blank">Cat H723</a></td>
+            <td><span class="jp-text">猫 H723</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>5 years est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 5 years. ★フォスターさん募集中 (foster needed).</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j826/" target="_blank">Kitten J826</a></td>
+            <td><span class="jp-text">子猫 J826</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>1-2 months est.</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 1-2 months. Preparing for debut.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j825/" target="_blank">Kitten J825</a></td>
+            <td><span class="jp-text">子猫 J825</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>1-2 months est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 1-2 months. Preparing for debut.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j783/" target="_blank">Kitten J783</a></td>
+            <td><span class="jp-text">子猫 J783</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>2-3 months est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 2-3 months.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j787/" target="_blank">Kitten J787</a></td>
+            <td><span class="jp-text">子猫 J787</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>2-3 months est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 2-3 months.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j732/" target="_blank">Cat J732</a></td>
+            <td><span class="jp-text">猫 J732</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>1 year est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 1 year.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j759/" target="_blank">Cat J759</a></td>
+            <td><span class="jp-text">猫 J759</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>10 years est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 10 years. Senior.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j699/" target="_blank">Cat J699</a></td>
+            <td><span class="jp-text">猫 J699</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>7 years est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 7 years.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j458/" target="_blank">Cat J458</a></td>
+            <td><span class="jp-text">猫 J458</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>15 years est.</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 15 years. Senior. Foster needed.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j735/" target="_blank">Cat J735</a></td>
+            <td><span class="jp-text">猫 J735</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>13 years est.</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 13 years. Senior.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j698/" target="_blank">Cat J698</a></td>
+            <td><span class="jp-text">猫 J698</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>9 years est.</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 9 years.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j731/" target="_blank">Cat J731</a></td>
+            <td><span class="jp-text">猫 J731</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>2 years est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 2 years.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j739/" target="_blank">Cat J739</a></td>
+            <td><span class="jp-text">猫 J739</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>10 years est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 10 years. Senior.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/i837/" target="_blank">Cat I837</a></td>
+            <td><span class="jp-text">猫 I837</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>7 years est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 7 years.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j740/" target="_blank">Cat J740</a></td>
+            <td><span class="jp-text">猫 J740</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>9 years est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 9 years.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j412/" target="_blank">Cat J412</a></td>
+            <td><span class="jp-text">猫 J412</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>10 years est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 10 years. Senior.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/i845/" target="_blank">Cat I845</a></td>
+            <td><span class="jp-text">猫 I845</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>4 years est.</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 4 years.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j729/" target="_blank">Cat J729</a></td>
+            <td><span class="jp-text">猫 J729</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>13 years est.</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 13 years. Senior.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/h810/" target="_blank">Cat H810</a></td>
+            <td><span class="jp-text">猫 H810</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>4 years est.</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 4 years.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j675/" target="_blank">Cat J675</a></td>
+            <td><span class="jp-text">猫 J675</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>6 years est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 6 years.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j673/" target="_blank">Cat J673</a></td>
+            <td><span class="jp-text">猫 J673</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>6 years est.</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 6 years.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/i617/" target="_blank">Cat I617</a></td>
+            <td><span class="jp-text">猫 I617</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>6 years est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 6 years.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j736/" target="_blank">Cat J736</a></td>
+            <td><span class="jp-text">猫 J736</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>2 years est.</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 2 years. Foster needed.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j304/" target="_blank">Cat J304</a></td>
+            <td><span class="jp-text">猫 J304</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>10 years est.</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 10 years. Senior.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/i860/" target="_blank">Cat I860</a></td>
+            <td><span class="jp-text">猫 I860</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>2 years est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 2 years.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j674/" target="_blank">Cat J674</a></td>
+            <td><span class="jp-text">猫 J674</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>6 years est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 6 years.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/2797-2/" target="_blank">Cat 2797</a></td>
+            <td><span class="jp-text">猫 2797</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>16 years est.</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 16 years. Senior. Foster needed.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/h078/" target="_blank">Cat H078</a></td>
+            <td><span class="jp-text">猫 H078</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>7 years est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 7 years.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/h070/" target="_blank">Cat H070</a></td>
+            <td><span class="jp-text">猫 H070</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>14 years est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 14 years. Senior.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/d678/" target="_blank">Cat D678</a></td>
+            <td><span class="jp-text">猫 D678</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>10 years est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 10 years. Senior.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j307/" target="_blank">Cat J307</a></td>
+            <td><span class="jp-text">猫 J307</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>2 years est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 2 years.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j306/" target="_blank">Cat J306</a></td>
+            <td><span class="jp-text">猫 J306</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>2 years est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 2 years.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/d515/" target="_blank">Cat D515</a></td>
+            <td><span class="jp-text">猫 D515</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>16 years est.</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 16 years. Senior.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j714/" target="_blank">Cat J714</a></td>
+            <td><span class="jp-text">猫 J714</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>7 years est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 7 years.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/f556/" target="_blank">Cat F556</a></td>
+            <td><span class="jp-text">猫 F556</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>11 years est.</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 11 years. Senior.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j470/" target="_blank">Cat J470</a></td>
+            <td><span class="jp-text">猫 J470</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>1 year est.</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 1 year.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j280/" target="_blank">Cat J280</a></td>
+            <td><span class="jp-text">猫 J280</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>6 years est.</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 6 years.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/i930/" target="_blank">Cat I930</a></td>
+            <td><span class="jp-text">猫 I930</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>2 years est.</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 2 years.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j445/" target="_blank">Cat J445</a></td>
+            <td><span class="jp-text">猫 J445</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>7 years est.</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 7 years.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j269/" target="_blank">Cat J269</a></td>
+            <td><span class="jp-text">猫 J269</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>7 years est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 7 years.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j279/" target="_blank">Cat J279</a></td>
+            <td><span class="jp-text">猫 J279</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>5 years est.</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 5 years.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j609/" target="_blank">Cat J609</a></td>
+            <td><span class="jp-text">猫 J609</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>5 years est.</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 5 years.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j471/" target="_blank">Cat J471</a></td>
+            <td><span class="jp-text">猫 J471</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>1 year est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 1 year. Preparing for debut.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/i965/" target="_blank">Cat I965</a></td>
+            <td><span class="jp-text">猫 I965</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>5 years est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 5 years.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j394/" target="_blank">Cat J394</a></td>
+            <td><span class="jp-text">猫 J394</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>13 years est.</td>
+            <td><span class="gender-badge gender-female">♀ 女の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 13 years. Care shelter. Foster needed.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j300/" target="_blank">Cat J300</a></td>
+            <td><span class="jp-text">猫 J300</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>5 years est.</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 5 years.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j509/" target="_blank">Cat J509</a></td>
+            <td><span class="jp-text">猫 J509</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>13 years est.</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 13 years. Care shelter. Foster needed.</td>
+          </tr>
+          <tr>
+            <td class="name-col"><a href="https://tokyocatguardian.org/cats_date/j078/" target="_blank">Cat J078</a></td>
+            <td><span class="jp-text">猫 J078</span></td>
+            <td>Mixed<br><span class="jp-text">雑種</span></td>
+            <td>2 years est.</td>
+            <td><span class="gender-badge gender-male">♂ 男の子</span></td>
+            <td>譲渡</td>
+            <td class="desc-col">Estimated 2 years.</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  <footer>
+    <p>Data collected from Google Japan and Yahoo Japan searches on 2026-07-10.</p>
+    <p>Always verify current availability directly with the stores.</p>
+    <p style="margin-top:8px;font-size:0.8rem;">
+      出典: 
+      <a href="https://www.google.co.jp/search?q=東京+猫+譲渡+ペットショップ+店舗&hl=ja" target="_blank" style="color:var(--accent);">Google Japan</a> · 
+      <a href="https://search.yahoo.co.jp/search?p=東京+猫+譲渡+ペットショップ" target="_blank" style="color:var(--accent);">Yahoo! Japan</a>
+    </p>
+  </footer>
+</div>
+<script>
+// Collapse all by default on mobile
+if (window.innerWidth < 768) {
+  document.querySelectorAll('.store-card').forEach(c => c.classList.add('collapsed'));
+}
+</script>
+</body>
+</html>
