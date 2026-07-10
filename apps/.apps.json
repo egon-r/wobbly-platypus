@@ -16,7 +16,7 @@
     "created": "2026-07-09T04:12:05+09:00"
   },
   "raymarcher": {
-    "description": "Interactive WebGL2 raymarcher with smooth CSG operations",
+    "description": "Live GLSL shader editor/previewer with real-time WebGL2 compilation",
     "created": "2026-07-10T01:05:04.471006+00:00"
   }
 }

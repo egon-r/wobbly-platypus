@@ -3,36 +3,131 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Raymarcher</title>
+<title>Shader Editor</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#000;overflow:hidden;font-family:monospace}
-canvas{display:block}
-#info{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);color:#888;font-size:13px;background:rgba(0,0,0,.7);padding:6px 14px;border-radius:8px;pointer-events:none}
+body{
+  background:#09090b;
+  color:#e4e4e7;
+  font-family:system-ui,-apple-system,sans-serif;
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:1rem
+}
+#app{
+  width:min(1200px,100%);
+  height:min(800px,90vh);
+  display:flex;
+  gap:1rem;
+  background:#18181b;
+  border:1px solid #27272a;
+  border-radius:1rem;
+  padding:1rem
+}
+#preview{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  min-width:0
+}
+#preview canvas{
+  flex:1;
+  width:100%;
+  border-radius:.5rem;
+  background:#000;
+  display:block;
+  image-rendering:auto
+}
+#panel{
+  width:420px;
+  display:flex;
+  flex-direction:column;
+  gap:.5rem;
+  min-width:0
+}
+#panel textarea{
+  flex:1;
+  background:#09090b;
+  color:#e4e4e7;
+  border:1px solid #27272a;
+  border-radius:.5rem;
+  padding:.75rem;
+  font-family:'JetBrains Mono','Fira Code','Cascadia Code',monospace;
+  font-size:13px;
+  line-height:1.5;
+  resize:none;
+  tab-size:2;
+  white-space:pre;
+  overflow:auto
+}
+#panel textarea:focus{outline:none;border-color:#6366f1}
+#toolbar{
+  display:flex;
+  gap:.5rem;
+  align-items:center;
+  flex-wrap:wrap
+}
+#toolbar button{
+  background:#27272a;
+  color:#e4e4e7;
+  border:1px solid #3f3f46;
+  border-radius:.375rem;
+  padding:.5rem 1rem;
+  font-size:.875rem;
+  cursor:pointer;
+  transition:background .15s,border-color .15s
+}
+#toolbar button:hover{background:#3f3f46;border-color:#52525b}
+#toolbar button.primary{background:#6366f1;border-color:#6366f1}
+#toolbar button.primary:hover{background:#818cf8}
+#status{font-size:.75rem;color:#71717a;margin-left:auto}
+#errors{
+  background:#1a0a0a;
+  border:1px solid #7f1d1d;
+  border-radius:.375rem;
+  padding:.5rem .75rem;
+  font-family:monospace;
+  font-size:12px;
+  color:#fca5a5;
+  min-height:2rem;
+  max-height:6rem;
+  overflow:auto;
+  display:none;
+  white-space:pre-wrap;
+  word-break:break-all
+}
+#errors.show{display:block}
+#help{
+  font-size:.7rem;
+  color:#52525b;
+  line-height:1.4;
+  padding:0 .25rem
+}
+@media(max-width:900px){
+  body{padding:0;align-items:stretch}
+  #app{flex-direction:column;height:100vh;width:100%;border-radius:0;border:none;padding:.5rem}
+  #panel{width:100%}
+  #panel textarea{min-height:180px}
+}
 </style>
 </head>
 <body>
-<canvas id="c"></canvas>
-<div id="info">drag to rotate · scroll to zoom</div>
+<div id="app">
+  <div id="preview"><canvas id="c"></canvas></div>
+  <div id="panel">
+    <textarea id="code" spellcheck="false"></textarea>
+    <div id="toolbar">
+      <button class="primary" id="compile">Compile</button>
+      <button id="reset">Reset</button>
+      <span id="status">ready</span>
+    </div>
+    <div id="errors"></div>
+  </div>
+</div>
 <script>
-const canvas = document.getElementById('c');
-const gl = canvas.getContext('webgl2', {antialias:true});
-if(!gl)document.body.innerHTML='<div style="color:red;padding:40px">WebGL2 not supported</div>';
-
-let W, H;
-function resize(){
-  W=canvas.width=innerWidth;
-  H=canvas.height=innerHeight;
-  gl.viewport(0,0,W,H);
-}
-addEventListener('resize',resize);
-resize();
-
-// Fullscreen quad
-const vs = `#version 300 es
-in vec2 p;
-void main(){gl_Position=vec4(p,0,1);}`;
-const fs = `#version 300 es
+const DEFAULT = `#version 300 es
 precision highp float;
 out vec4 o;
 uniform vec2 r;
@@ -54,17 +149,12 @@ vec3 opRep(vec3 p, vec3 c){return mod(p,c)-.5*c;}
 // --- scene ---
 float scene(vec3 p){
   float gnd = sdPlane(p, 0.0);
-  // central column
   float col = sdRoundBox(p-vec3(0,1.2,0), vec3(.5,1.2,.5), .15);
-  // floating cubes
   vec3 q = p;
   q.y = mod(q.y+2.,4.)-2.;
   float cubes = sdBox(opRep(q+vec3(0,0,0), vec3(2.5,4.,2.5)), vec3(.35));
-  // torus ring
   float ring = sdTorus(p-vec3(0,1.5,-2.2), vec2(1.0,.12));
-  // sphere on top
   float sphere = sdSphere(p-vec3(0,3.2,0), .6);
-  // merge
   float d = opSmoothUnion(gnd, col, .3);
   d = opSmoothUnion(d, cubes, .4);
   d = opSmoothUnion(d, ring, .2);
@@ -89,12 +179,10 @@ vec3 shade(vec3 p, vec3 n, vec3 rd){
   float bac = max(dot(n,C),0.)*.3;
   float occ = .5+.5*scene(p+n*.15);
   float spec = pow(max(dot(reflect(-L,n),-rd),0.),32.);
-
   vec3 col = mix(vec3(.05,.1,.2), vec3(.9,.5,.2), p.y*.15+.5);
   col = mix(col, vec3(.2), step(.5,fract(p.x*.5+p.z*.3)));
   col *= (amb + dif*.7 + bac + occ*.6);
   col += vec3(1,.8,.5)*spec*.6;
-  // fog
   col = mix(col, vec3(.02,.02,.05), 1.-exp(-.012*length(p)*length(p)));
   return col;
 }
@@ -102,13 +190,10 @@ vec3 shade(vec3 p, vec3 n, vec3 rd){
 // --- main ---
 void main(){
   vec2 uv = (gl_FragCoord.xy-.5*r)/r.y;
-
   vec3 fwd = normalize(target-eye);
   vec3 right = normalize(cross(fwd, vec3(0,1,0)));
   vec3 up = cross(right, fwd);
   vec3 rd = normalize(uv.x*right + uv.y*up + fwd*1.8);
-
-  // march
   float tmin=.5, tmax=40., precis=.001;
   float th=0., d;
   vec3 p;
@@ -118,76 +203,177 @@ void main(){
     if(d<precis || th>tmax) break;
     th += d*.7;
   }
-
   vec3 col;
   if(th<tmax){
     vec3 n = norm(p);
     col = shade(p,n,rd);
-  } else {
-    col = vec3(.02,.02,.05);
-  }
-
-  // vignette
+  } else { col = vec3(.02,.02,.05); }
   float vig = 1.-.3*length(uv);
   col *= vig;
-
   o = vec4(col,1);
 }`;
 
-function compile(src, type){
-  const s = gl.createShader(type);
-  gl.shaderSource(s, src);
-  gl.compileShader(s);
-  if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(s));
-  return s;
+const canvas = document.getElementById('c');
+const gl = canvas.getContext('webgl2', {antialias:true});
+if(!gl){
+  document.getElementById('app').innerHTML='<div style="color:red;padding:2rem;width:100%;text-align:center">WebGL2 not supported</div>';
 }
-const prog = gl.createProgram();
-gl.attachShader(prog, compile(vs, gl.VERTEX_SHADER));
-gl.attachShader(prog, compile(fs, gl.FRAGMENT_SHADER));
-gl.linkProgram(prog);
-gl.useProgram(prog);
 
-// quad
+// --- resize canvas to fill parent ---
+let W, H;
+function resize(){
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const dpr = window.devicePixelRatio||1;
+  W = rect.width*dpr;
+  H = rect.height*dpr;
+  canvas.width = W;
+  canvas.height = H;
+  canvas.style.width = rect.width+'px';
+  canvas.style.height = rect.height+'px';
+  gl.viewport(0,0,W,H);
+}
+new ResizeObserver(resize).observe(canvas.parentElement);
+resize();
+
+// --- vertex shader (fixed) ---
+const VS_SRC = `#version 300 es
+in vec2 p;
+void main(){gl_Position=vec4(p,0,1);}`;
+
+const vs = gl.createShader(gl.VERTEX_SHADER);
+gl.shaderSource(vs, VS_SRC);
+gl.compileShader(vs);
+
+// --- quad buffers ---
 const buf = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, buf);
 gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), gl.STATIC_DRAW);
-const a = gl.getAttribLocation(prog,'p');
-gl.vertexAttribPointer(a,2,gl.FLOAT,false,0,0);
-gl.enableVertexAttribArray(a);
 
-const uR = gl.getUniformLocation(prog,'r');
-const uT = gl.getUniformLocation(prog,'t');
-const uEye = gl.getUniformLocation(prog,'eye');
-const uTarget = gl.getUniformLocation(prog,'target');
+function createProgram(fsSrc){
+  const fs = gl.createShader(gl.FRAGMENT_SHADER);
+  gl.shaderSource(fs, fsSrc);
+  gl.compileShader(fs);
+  if(!gl.getShaderParameter(fs, gl.COMPILE_STATUS)){
+    const log = gl.getShaderInfoLog(fs);
+    gl.deleteShader(fs);
+    throw new Error('Fragment shader compile error:\n'+log);
+  }
+  const prog = gl.createProgram();
+  gl.attachShader(prog, vs);
+  gl.attachShader(prog, fs);
+  gl.linkProgram(prog);
+  if(!gl.getProgramParameter(prog, gl.LINK_STATUS)){
+    const log = gl.getProgramInfoLog(prog);
+    gl.deleteProgram(prog);
+    gl.deleteShader(fs);
+    throw new Error('Program link error:\n'+log);
+  }
+  gl.deleteShader(fs);
+  return prog;
+}
 
-// camera
-let theta=0., phi=.6, dist=7.;
+let curProg = null;
+let uR = null, uT = null, uEye = null, uTarget = null;
+let aP = null;
+
+function useProgram(prog){
+  curProg = prog;
+  gl.useProgram(prog);
+  aP = gl.getAttribLocation(prog, 'p');
+  gl.vertexAttribPointer(aP,2,gl.FLOAT,false,0,0);
+  gl.enableVertexAttribArray(aP);
+  uR = gl.getUniformLocation(prog, 'r');
+  uT = gl.getUniformLocation(prog, 't');
+  uEye = gl.getUniformLocation(prog, 'eye');
+  uTarget = gl.getUniformLocation(prog, 'target');
+}
+
+function compileShader(){
+  const src = code.value;
+  setStatus('compiling...', '');
+  try {
+    const prog = createProgram(src);
+    if(curProg) gl.deleteProgram(curProg);
+    useProgram(prog);
+    setStatus('OK', '');
+  } catch(e){
+    setStatus('error', e.message);
+  }
+}
+
+// --- orbital camera ---
+let theta=0, phi=.6, dist=7;
 let targetPos = [0,1.2,0];
-
 let mx=0, my=0, down=false;
-canvas.onpointerdown=e=>{down=true;mx=e.clientX;my=e.clientY;};
-canvas.onpointermove=e=>{if(!down)return;let dx=e.clientX-mx,dy=e.clientY-my;mx=e.clientX;my=e.clientY;theta-=dx*.008;phi=Math.max(.1,Math.min(1.4,phi+dy*.008));};
-canvas.onpointerup=e=>{down=false;};
-canvas.onwheel=e=>{dist=Math.max(2,Math.min(20,dist+e.deltaY*.008));e.preventDefault();};
-canvas.addEventListener('touchstart',e=>{const t=e.touches[0];down=true;mx=t.clientX;my=t.clientY;});
-canvas.addEventListener('touchmove',e=>{if(!down)return;const t=e.touches[0];let dx=t.clientX-mx,dy=t.clientY-my;mx=t.clientX;my=t.clientY;theta-=dx*.008;phi=Math.max(.1,Math.min(1.4,phi+dy*.008));});
-canvas.addEventListener('touchend',e=>{down=false;});
 
+canvas.onpointerdown=e=>{down=true;mx=e.clientX;my=e.clientY;};
+canvas.onpointermove=e=>{
+  if(!down)return;
+  let dx=e.clientX-mx, dy=e.clientY-my;
+  mx=e.clientX; my=e.clientY;
+  theta-=dx*.008;
+  phi=Math.max(.1,Math.min(1.4,phi+dy*.008));
+};
+canvas.onpointerup=()=>{down=false;};
+canvas.onwheel=e=>{
+  dist=Math.max(2,Math.min(20,dist+e.deltaY*.008));
+  e.preventDefault();
+};
+canvas.addEventListener('touchstart',e=>{const t=e.touches[0];down=true;mx=t.clientX;my=t.clientY;});
+canvas.addEventListener('touchmove',e=>{
+  if(!down)return;
+  const t=e.touches[0];let dx=t.clientX-mx,dy=t.clientY-my;
+  mx=t.clientX;my=t.clientY;
+  theta-=dx*.008;phi=Math.max(.1,Math.min(1.4,phi+dy*.008));
+});
+canvas.addEventListener('touchend',()=>{down=false;});
+
+// --- render loop ---
 let start = performance.now();
+let errEl = document.getElementById('errors');
+
+function setStatus(msg, err){
+  document.getElementById('status').textContent = msg;
+  if(err){
+    errEl.textContent = err;
+    errEl.classList.add('show');
+  } else {
+    errEl.classList.remove('show');
+  }
+}
+
 function frame(){
   const sec = (performance.now()-start)/1000;
-  gl.uniform2f(uR,W,H);
-  gl.uniform1f(uT,sec);
-
-  const eye = [targetPos[0]+dist*Math.sin(theta)*Math.cos(phi),
-               targetPos[1]+dist*Math.sin(phi),
-               targetPos[2]+dist*Math.cos(theta)*Math.cos(phi)];
-  gl.uniform3fv(uEye, eye);
-  gl.uniform3fv(uTarget, targetPos);
-
-  gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+  if(curProg && W>0 && H>0){
+    if(uR) gl.uniform2f(uR, W, H);
+    if(uT) gl.uniform1f(uT, sec);
+    const eye = [targetPos[0]+dist*Math.sin(theta)*Math.cos(phi),
+                 targetPos[1]+dist*Math.sin(phi),
+                 targetPos[2]+dist*Math.cos(theta)*Math.cos(phi)];
+    if(uEye) gl.uniform3fv(uEye, eye);
+    if(uTarget) gl.uniform3fv(uTarget, targetPos);
+    gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+  }
   requestAnimationFrame(frame);
 }
+
+// --- DOM refs ---
+const code = document.getElementById('code');
+code.value = DEFAULT;
+
+document.getElementById('compile').addEventListener('click', compileShader);
+document.getElementById('reset').addEventListener('click', ()=>{
+  code.value = DEFAULT;
+  compileShader();
+});
+
+// --- keyboard shortcut ---
+code.addEventListener('keydown', e=>{
+  if(e.ctrlKey && e.key==='Enter') compileShader();
+});
+
+// --- init ---
+compileShader();
 frame();
 </script>
 </body>
