@@ -80,6 +80,12 @@ header h1{font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.5px;white-
 #loading{display:none;text-align:center;padding:40px;color:var(--text-dim)}
 .loader{display:inline-block;width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+#publish-date{font-size:12px;color:var(--text-dim);margin-top:4px;padding:4px 8px;background:var(--bg3);border-radius:4px;display:inline-block}
+#publish-date.loading{opacity:0.5;animation:pulse 1s ease-in-out infinite}
+#publish-date.fresh{color:#4caf50}
+#publish-date.stale{color:#ff9800}
+#publish-date.old{color:var(--accent)}
+@keyframes pulse{0%,100%{opacity:0.5}50%{opacity:1}}
 /* Schedule info bar */
 #sched-info{font-size:11px;color:var(--text-dim);padding:4px 0;text-align:center;border-top:1px solid var(--border);margin-top:8px}
 #sched-info a{color:var(--accent)}
@@ -108,12 +114,12 @@ header h1{font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.5px;white-
     <div id="grid-inner">
       <div id="time-headers"></div>
       <div id="slots-area">
-        <div id="now-line"></div>
         <div id="loading">
           <div class="loader"></div>
           <div style="margin-top:12px">Loading schedule...</div>
         </div>
       </div>
+      <div id="now-line"></div>
     </div>
   </div>
 
@@ -129,6 +135,7 @@ header h1{font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.5px;white-
       <div id="now-playing-info">
         <h3 id="np-title">Select a slot to play</h3>
         <div class="meta" id="np-meta">Click any time slot or wait for auto-play</div>
+        <div id="publish-date" class="meta"></div>
       </div>
       <div id="channel-selector" style="display:none">
         <h4>Channel</h4>
@@ -296,7 +303,8 @@ async function loadSchedule(url) {
 }
 
 function showLoading(v) {
-  document.getElementById('loading').style.display = v ? 'block' : 'none';
+  const el = document.getElementById('loading');
+  if (el) el.style.display = v ? 'block' : 'none';
 }
 
 function setSchedInfo(msg) {
@@ -436,7 +444,10 @@ function renderDay(day) {
     showNoiseScreen(true);
     document.getElementById('np-title').textContent = '📡 Off Air';
     document.getElementById('np-meta').textContent = 'No show scheduled right now';
-    document.getElementById('channel-selector').style.display = 'none';
+    const cs = document.getElementById('channel-selector');
+    if (cs) cs.style.display = 'none';
+    const pubEl = document.getElementById('publish-date');
+    if (pubEl) pubEl.style.display = 'none';
     currentSlotId = null;
   }
 }
@@ -489,6 +500,7 @@ function playChannel(slot, day) {
 
   renderSlotList(day, slot);
   renderChannelSelector(slot, day);
+  updatePublishDate(channel.id);
 }
 
 function switchChannel(slot, day, index) {
@@ -565,6 +577,102 @@ function stopNoise() {
   }
 }
 
+// ─── PUBLISH DATE ───
+const PUB_DATE_CACHE_KEY = 'ytv_pub_cache';
+const PUB_CACHE_TTL = 15 * 60 * 1000; // 15 min
+
+function getPubCache() {
+  try { return JSON.parse(localStorage.getItem(PUB_DATE_CACHE_KEY) || '{}'); }
+  catch { return {}; }
+}
+
+function setPubCache(channelId, dateStr) {
+  const cache = getPubCache();
+  cache[channelId] = { date: dateStr, ts: Date.now() };
+  localStorage.setItem(PUB_DATE_CACHE_KEY, JSON.stringify(cache));
+}
+
+function timeAgo(dateStr) {
+  const then = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now - then;
+  if (diffMs < 0) return 'just now';
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return 'just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHrs = Math.floor(diffMin / 60);
+  if (diffHrs < 24) return `${diffHrs}h ago`;
+  const diffDays = Math.floor(diffHrs / 24);
+  if (diffDays < 30) return `${diffDays}d ago`;
+  return `${Math.floor(diffDays / 30)}mo ago`;
+}
+
+function freshnessClass(dateStr) {
+  const then = new Date(dateStr);
+  const hoursAgo = (Date.now() - then) / 3600000;
+  if (hoursAgo < 24) return 'fresh';
+  if (hoursAgo < 72) return 'stale';
+  return 'old';
+}
+
+function getProxyUrl() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('proxy') || 'https://api.allorigins.win/raw?url=';
+}
+
+async function fetchLatestPublishDate(channelId) {
+  // Check cache
+  const cache = getPubCache();
+  const cached = cache[channelId];
+  if (cached && Date.now() - cached.ts < PUB_CACHE_TTL) {
+    return cached.date;
+  }
+
+  try {
+    const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+    const proxyBase = getProxyUrl();
+    const url = proxyBase + encodeURIComponent(rssUrl);
+
+    const resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const xml = await resp.text();
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xml, 'text/xml');
+    const entries = doc.getElementsByTagName('entry');
+    if (entries.length === 0) throw new Error('No entries');
+
+    const published = entries[0].getElementsByTagName('published')[0]?.textContent;
+    if (!published) throw new Error('No date in entry');
+
+    setPubCache(channelId, published);
+    return published;
+  } catch (e) {
+    console.warn('Pub date fetch failed:', e.message);
+    return cached?.date || null;
+  }
+}
+
+async function updatePublishDate(channelId) {
+  const el = document.getElementById('publish-date');
+  if (!el) return;
+  
+  el.textContent = '⏳ Checking freshness...';
+  el.className = 'meta loading';
+  el.style.display = 'inline-block';
+  
+  const dateStr = await fetchLatestPublishDate(channelId);
+  if (dateStr) {
+    const ago = timeAgo(dateStr);
+    const cls = freshnessClass(dateStr);
+    el.textContent = `📅 Uploaded ${ago}`;
+    el.className = `meta ${cls}`;
+  } else {
+    el.textContent = '';
+    el.style.display = 'none';
+  }
+}
+
 // ─── AUTO ADVANCE ───
 function startAutoAdvance() {
   if (autoAdvanceTimer) clearInterval(autoAdvanceTimer);
@@ -594,7 +702,10 @@ function startAutoAdvance() {
       showNoiseScreen(true);
       document.getElementById('np-title').textContent = '📡 Off Air';
       document.getElementById('np-meta').textContent = 'No show scheduled right now';
-      document.getElementById('channel-selector').style.display = 'none';
+      const cs = document.getElementById('channel-selector');
+      if (cs) cs.style.display = 'none';
+      const pubEl = document.getElementById('publish-date');
+      if (pubEl) pubEl.style.display = 'none';
       currentSlotId = null;
       renderSlotList(day, null);
     }
