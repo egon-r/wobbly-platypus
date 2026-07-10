@@ -135,7 +135,7 @@ body{
 #toolbar button:hover{background:#3f3f46;border-color:#52525b}
 #toolbar button.primary{background:#6366f1;border-color:#6366f1}
 #toolbar button.primary:hover{background:#818cf8}
-#status{font-size:.75rem;color:#71717a;margin-left:auto}
+
 #errors{
   background:#1a0a0a;
   border:1px solid #7f1d1d;
@@ -206,9 +206,9 @@ body{
     </div>
     <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
     <div id="toolbar">
-      <span id="status">ready</span>
       <button class="primary" id="compile">Compile</button>
       <button id="reset">Reset</button>
+      <span style="flex:1"></span>
       <a class="back-link" href="/apps/">← back</a>
     </div>
     <div id="errors"></div>
@@ -615,14 +615,14 @@ function useProgram(prog){
 }
 
 function compileShader(src){
-  setStatus('compiling...','');
   try{
     const prog = createProgram(src||code.value);
     if(curProg)gl.deleteProgram(curProg);
     useProgram(prog);
-    setStatus('OK','');
+    errEl.classList.remove('show');
   }catch(e){
-    setStatus('error', e.message);
+    errEl.textContent = e.message;
+    errEl.classList.add('show');
   }
 }
 
@@ -672,16 +672,6 @@ canvas.addEventListener('touchend',e=>{
 // --- render loop ---
 let start = performance.now();
 let errEl = document.getElementById('errors');
-
-function setStatus(msg, err){
-  document.getElementById('status').textContent = msg;
-  if(err){
-    errEl.textContent = err;
-    errEl.classList.add('show');
-  } else {
-    errEl.classList.remove('show');
-  }
-}
 
 function frame(){
   const sec = (performance.now()-start)/1000;
