@@ -59,6 +59,15 @@ header h1{font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.5px;white-
 .mini-slot.active{background:var(--accent-glow);border-color:var(--accent)}
 .mini-slot .ms-name{color:#fff;font-weight:500}
 .mini-slot .ms-time{color:var(--text-dim);font-size:11px}
+/* Channel selector */
+#channel-selector{margin-bottom:12px;padding-top:8px;border-top:1px solid var(--border)}
+#channel-selector h4{font-size:11px;color:var(--text-dim);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px}
+.ch-pills{display:flex;flex-wrap:wrap;gap:4px}
+.ch-pill{font-size:11px;padding:3px 10px;border-radius:12px;cursor:pointer;background:var(--bg3);border:1px solid var(--border);color:var(--text-dim);transition:.1s}
+.ch-pill:hover{background:var(--highlight);color:var(--text)}
+.ch-pill.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.ch-pill .ch-label{font-weight:500}
+.ch-pill .ch-badge{font-size:9px;opacity:0.7;margin-left:4px}
 /* Static noise */
 #noise-screen{position:absolute;inset:0;display:none;z-index:2;background:#000}
 #noise-screen.active{display:block}
@@ -121,6 +130,10 @@ header h1{font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.5px;white-
         <h3 id="np-title">Select a slot to play</h3>
         <div class="meta" id="np-meta">Click any time slot or wait for auto-play</div>
       </div>
+      <div id="channel-selector" style="display:none">
+        <h4>Channel</h4>
+        <div class="ch-pills" id="ch-pills"></div>
+      </div>
       <div id="slot-list"></div>
     </div>
   </div>
@@ -136,46 +149,46 @@ const DEFAULT_SCHEDULE = {
   description: "Curated YouTube programming — replace with your own schedule!",
   days: {
     monday: [
-      { id:"mon-news", start:"08:00", duration:60, channelId:"UCsBjURrPoezykLs9EqgamOA", name:"Morning News Brief" },
-      { id:"mon-tech", start:"10:00", duration:90, channelId:"UCBJYsmdcv6S6kXEYnNAPQ0w", name:"Tech Deep Dive" },
-      { id:"mon-learn", start:"14:00", duration:60, channelId:"UC_4NoVAkQxSq9E-6MkBun1g", name:"Learning Hour" },
-      { id:"mon-creator", start:"18:00", duration:45, channelId:"UCsT0YIqwnpJCM-mx7-gSA4Q", name:"Creator Spotlight" },
-      { id:"mon-late", start:"21:00", duration:60, channelId:"UCX6b17PVsYBQ0ip5gyeme-Q", name:"Late Night Watch" }
+      { id:"mon-news", start:"08:00", duration:60, name:"Morning News", genre:"news", channels:[{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"},{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"}] },
+      { id:"mon-tech", start:"10:00", duration:90, name:"Tech Deep Dive", genre:"tech", channels:[{id:"UCBJYsmdcv6S6kXEYnNAPQ0w",name:"MKBHD"},{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"}] },
+      { id:"mon-learn", start:"14:00", duration:60, name:"Learning Hour", genre:"education", channels:[{id:"UC_4NoVAkQxSq9E-6MkBun1g",name:"Vsauce"},{id:"UCsT0YIqwnpJCM-mx7-gSA4Q",name:"Tom Scott"},{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"}] },
+      { id:"mon-creator", start:"18:00", duration:45, name:"Creator Spotlight", genre:"creator", channels:[{id:"UCsT0YIqwnpJCM-mx7-gSA4Q",name:"Tom Scott"},{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"}] },
+      { id:"mon-late", start:"21:00", duration:60, name:"Late Night Watch", genre:"entertainment", channels:[{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"},{id:"UC_4NoVAkQxSq9E-6MkBun1g",name:"Vsauce"}] }
     ],
     tuesday: [
-      { id:"tue-news", start:"08:00", duration:60, channelId:"UCsBjURrPoezykLs9EqgamOA", name:"Morning News Brief" },
-      { id:"tue-science", start:"10:00", duration:60, channelId:"UC_4NoVAkQxSq9E-6MkBun1g", name:"Science Hour" },
-      { id:"tue-gaming", start:"16:00", duration:120, channelId:"UCX6b17PVsYBQ0ip5gyeme-Q", name:"Gaming Block" },
-      { id:"tue-music", start:"20:00", duration:90, channelId:"UCsT0YIqwnpJCM-mx7-gSA4Q", name:"Music Night" }
+      { id:"tue-news", start:"08:00", duration:60, name:"Morning News", genre:"news", channels:[{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"},{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"}] },
+      { id:"tue-science", start:"10:00", duration:60, name:"Science Hour", genre:"education", channels:[{id:"UC_4NoVAkQxSq9E-6MkBun1g",name:"Vsauce"},{id:"UCsT0YIqwnpJCM-mx7-gSA4Q",name:"Tom Scott"}] },
+      { id:"tue-gaming", start:"16:00", duration:120, name:"Gaming Block", genre:"entertainment", channels:[{id:"UCsT0YIqwnpJCM-mx7-gSA4Q",name:"Tom Scott"},{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"}] },
+      { id:"tue-music", start:"20:00", duration:90, name:"Music Night", genre:"entertainment", channels:[{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"},{id:"UC_4NoVAkQxSq9E-6MkBun1g",name:"Vsauce"}] }
     ],
     wednesday: [
-      { id:"wed-news", start:"08:00", duration:60, channelId:"UCsBjURrPoezykLs9EqgamOA", name:"Morning News Brief" },
-      { id:"wed-dev", start:"11:00", duration:90, channelId:"UCBJYsmdcv6S6kXEYnNAPQ0w", name:"Developer Hour" },
-      { id:"wed-doc", start:"15:00", duration:90, channelId:"UC_4NoVAkQxSq9E-6MkBun1g", name:"Documentary Block" },
-      { id:"wed-comedy", start:"20:00", duration:60, channelId:"UCX6b17PVsYBQ0ip5gyeme-Q", name:"Comedy Hour" }
+      { id:"wed-news", start:"08:00", duration:60, name:"Morning News", genre:"news", channels:[{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"},{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"}] },
+      { id:"wed-dev", start:"11:00", duration:90, name:"Developer Hour", genre:"tech", channels:[{id:"UCBJYsmdcv6S6kXEYnNAPQ0w",name:"MKBHD"},{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"}] },
+      { id:"wed-doc", start:"15:00", duration:90, name:"Documentary Block", genre:"education", channels:[{id:"UC_4NoVAkQxSq9E-6MkBun1g",name:"Vsauce"},{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"},{id:"UCsT0YIqwnpJCM-mx7-gSA4Q",name:"Tom Scott"}] },
+      { id:"wed-comedy", start:"20:00", duration:60, name:"Comedy Hour", genre:"entertainment", channels:[{id:"UCsT0YIqwnpJCM-mx7-gSA4Q",name:"Tom Scott"},{id:"UC_4NoVAkQxSq9E-6MkBun1g",name:"Vsauce"}] }
     ],
     thursday: [
-      { id:"thu-news", start:"08:00", duration:60, channelId:"UCsBjURrPoezykLs9EqgamOA", name:"Morning News Brief" },
-      { id:"thu-hardware", start:"10:00", duration:60, channelId:"UCBJYsmdcv6S6kXEYnNAPQ0w", name:"Hardware Review" },
-      { id:"thu-education", start:"14:00", duration:60, channelId:"UC_4NoVAkQxSq9E-6MkBun1g", name:"Education Hour" },
-      { id:"thu-vlog", start:"17:00", duration:60, channelId:"UCsT0YIqwnpJCM-mx7-gSA4Q", name:"Vlog Block" },
-      { id:"thu-movies", start:"20:00", duration:120, channelId:"UCX6b17PVsYBQ0ip5gyeme-Q", name:"Movie Night" }
+      { id:"thu-news", start:"08:00", duration:60, name:"Morning News", genre:"news", channels:[{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"},{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"}] },
+      { id:"thu-hardware", start:"10:00", duration:60, name:"Hardware Review", genre:"tech", channels:[{id:"UCBJYsmdcv6S6kXEYnNAPQ0w",name:"MKBHD"},{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"}] },
+      { id:"thu-education", start:"14:00", duration:60, name:"Education Hour", genre:"education", channels:[{id:"UC_4NoVAkQxSq9E-6MkBun1g",name:"Vsauce"},{id:"UCsT0YIqwnpJCM-mx7-gSA4Q",name:"Tom Scott"},{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"}] },
+      { id:"thu-vlog", start:"17:00", duration:60, name:"Vlog Block", genre:"creator", channels:[{id:"UCsT0YIqwnpJCM-mx7-gSA4Q",name:"Tom Scott"},{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"}] },
+      { id:"thu-movies", start:"20:00", duration:120, name:"Movie Night", genre:"entertainment", channels:[{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"},{id:"UC_4NoVAkQxSq9E-6MkBun1g",name:"Vsauce"}] }
     ],
     friday: [
-      { id:"fri-news", start:"08:00", duration:60, channelId:"UCsBjURrPoezykLs9EqgamOA", name:"Morning News Brief" },
-      { id:"fri-tech", start:"10:00", duration:90, channelId:"UCBJYsmdcv6S6kXEYnNAPQ0w", name:"Friday Tech" },
-      { id:"fri-weekend", start:"16:00", duration:180, channelId:"UCsT0YIqwnpJCM-mx7-gSA4Q", name:"Weekend Prep" },
-      { id:"fri-night", start:"21:00", duration:120, channelId:"UCX6b17PVsYBQ0ip5gyeme-Q", name:"Friday Night" }
+      { id:"fri-news", start:"08:00", duration:60, name:"Morning News", genre:"news", channels:[{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"},{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"}] },
+      { id:"fri-tech", start:"10:00", duration:90, name:"Friday Tech", genre:"tech", channels:[{id:"UCBJYsmdcv6S6kXEYnNAPQ0w",name:"MKBHD"},{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"}] },
+      { id:"fri-weekend", start:"16:00", duration:180, name:"Weekend Prep", genre:"entertainment", channels:[{id:"UCsT0YIqwnpJCM-mx7-gSA4Q",name:"Tom Scott"},{id:"UC_4NoVAkQxSq9E-6MkBun1g",name:"Vsauce"}] },
+      { id:"fri-night", start:"21:00", duration:120, name:"Friday Night", genre:"entertainment", channels:[{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"},{id:"UCsT0YIqwnpJCM-mx7-gSA4Q",name:"Tom Scott"}] }
     ],
     saturday: [
-      { id:"sat-late", start:"09:00", duration:120, channelId:"UC_4NoVAkQxSq9E-6MkBun1g", name:"Saturday Slow Start" },
-      { id:"sat-marathon", start:"13:00", duration:240, channelId:"UCBJYsmdcv6S6kXEYnNAPQ0w", name:"Tech Marathon" },
-      { id:"sat-fun", start:"18:00", duration:180, channelId:"UCsT0YIqwnpJCM-mx7-gSA4Q", name:"Saturday Fun" }
+      { id:"sat-late", start:"09:00", duration:120, name:"Saturday Slow Start", genre:"education", channels:[{id:"UC_4NoVAkQxSq9E-6MkBun1g",name:"Vsauce"},{id:"UCsT0YIqwnpJCM-mx7-gSA4Q",name:"Tom Scott"},{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"}] },
+      { id:"sat-marathon", start:"13:00", duration:240, name:"Tech Marathon", genre:"tech", channels:[{id:"UCBJYsmdcv6S6kXEYnNAPQ0w",name:"MKBHD"},{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"}] },
+      { id:"sat-fun", start:"18:00", duration:180, name:"Saturday Fun", genre:"entertainment", channels:[{id:"UCsT0YIqwnpJCM-mx7-gSA4Q",name:"Tom Scott"},{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"}] }
     ],
     sunday: [
-      { id:"sun-chill", start:"09:00", duration:180, channelId:"UC_4NoVAkQxSq9E-6MkBun1g", name:"Sunday Chill" },
-      { id:"sun-review", start:"14:00", duration:120, channelId:"UCBJYsmdcv6S6kXEYnNAPQ0w", name:"Week Review" },
-      { id:"sun-wind", start:"19:00", duration:150, channelId:"UCsT0YIqwnpJCM-mx7-gSA4Q", name:"Sunday Wind Down" }
+      { id:"sun-chill", start:"09:00", duration:180, name:"Sunday Chill", genre:"education", channels:[{id:"UC_4NoVAkQxSq9E-6MkBun1g",name:"Vsauce"},{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"},{id:"UCsT0YIqwnpJCM-mx7-gSA4Q",name:"Tom Scott"}] },
+      { id:"sun-review", start:"14:00", duration:120, name:"Week Review", genre:"tech", channels:[{id:"UCBJYsmdcv6S6kXEYnNAPQ0w",name:"MKBHD"},{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"}] },
+      { id:"sun-wind", start:"19:00", duration:150, name:"Sunday Wind Down", genre:"entertainment", channels:[{id:"UCsT0YIqwnpJCM-mx7-gSA4Q",name:"Tom Scott"},{id:"UC_4NoVAkQxSq9E-6MkBun1g",name:"Vsauce"}] }
     ]
   }
 };
@@ -186,6 +199,7 @@ let currentDay = null;
 let currentSlotId = null;
 let noiseInterval = null;
 let autoAdvanceTimer = null;
+let activeChannelIndex = 0;
 const DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
 const DAY_LABELS = {monday:'Mon',tuesday:'Tue',wednesday:'Wed',thursday:'Thu',friday:'Fri',saturday:'Sat',sunday:'Sun'};
 const GRID_START_HOUR = 6; // 6 AM
@@ -224,6 +238,21 @@ function findCurrentSlot(day) {
     if (nowMin >= startMin && nowMin < endMin) return s;
   }
   return null;
+}
+
+// ─── MIGRATION ───
+function migrateSchedule(sched) {
+  if (!sched || !sched.days) return;
+  for (const day of DAYS) {
+    const slots = sched.days[day];
+    if (!slots) continue;
+    for (const slot of slots) {
+      if (slot.channelId && !slot.channels) {
+        slot.channels = [{ id: slot.channelId, name: slot.name }];
+        delete slot.channelId;
+      }
+    }
+  }
 }
 
 // ─── SCHEDULE LOADING ───
@@ -276,6 +305,7 @@ function setSchedInfo(msg) {
 
 // ─── INIT ───
 function initApp() {
+  migrateSchedule(schedule);
   const now = getNow();
   currentDay = now.day;
   renderTabs();
@@ -406,6 +436,7 @@ function renderDay(day) {
     showNoiseScreen(true);
     document.getElementById('np-title').textContent = '📡 Off Air';
     document.getElementById('np-meta').textContent = 'No show scheduled right now';
+    document.getElementById('channel-selector').style.display = 'none';
     currentSlotId = null;
   }
 }
@@ -428,23 +459,25 @@ function updateNowLine(now) {
 // ─── PLAYER ───
 function playSlot(slot, day) {
   if (!slot) return;
+  // Reset channel index for new slot
+  activeChannelIndex = 0;
   currentSlotId = slot.id;
-  const player = document.getElementById('player');
-  const noise = document.getElementById('noise-screen');
+  playChannel(slot, day);
+}
 
-  // Use uploads playlist trick: UU + channelId without UC
-  let listId = '';
-  if (slot.channelId.startsWith('UC')) {
-    listId = 'UU' + slot.channelId.slice(2);
-  } else {
-    listId = 'UU' + slot.channelId;
-  }
+function playChannel(slot, day) {
+  const channels = slot.channels;
+  if (!channels || channels.length === 0) return;
+
+  const channel = channels[activeChannelIndex] || channels[0];
+  const listId = 'UU' + channel.id.slice(2);
+  const player = document.getElementById('player');
 
   player.src = `https://www.youtube.com/embed/videoseries?list=${listId}&index=1&autoplay=1&rel=0`;
   showNoiseScreen(false);
 
   document.getElementById('np-title').textContent = `▶ ${slot.name}`;
-  document.getElementById('np-meta').textContent = `${slot.start} · ${slot.duration}min · ${schedule.title || 'YouTube TV'}`;
+  document.getElementById('np-meta').textContent = `${slot.start} · ${slot.duration}min · ${channel.name}`;
 
   // Scroll to player
   document.getElementById('player-container').scrollIntoView({behavior:'smooth',block:'nearest'});
@@ -455,6 +488,36 @@ function playSlot(slot, day) {
   if (activeRow) activeRow.classList.add('active-slot');
 
   renderSlotList(day, slot);
+  renderChannelSelector(slot, day);
+}
+
+function switchChannel(slot, day, index) {
+  if (index === activeChannelIndex) return;
+  activeChannelIndex = index;
+  playChannel(slot, day);
+}
+
+function renderChannelSelector(slot, day) {
+  const container = document.getElementById('channel-selector');
+  const pills = document.getElementById('ch-pills');
+
+  if (!slot || !slot.channels || slot.channels.length <= 1) {
+    container.style.display = 'none';
+    return;
+  }
+
+  container.style.display = 'block';
+  pills.innerHTML = '';
+
+  for (let i = 0; i < slot.channels.length; i++) {
+    const ch = slot.channels[i];
+    const pill = document.createElement('span');
+    pill.className = 'ch-pill' + (i === activeChannelIndex ? ' active' : '');
+    const badge = i === 0 ? 'Primary' : 'Alt ' + i;
+    pill.innerHTML = `<span class="ch-label">${ch.name}</span><span class="ch-badge">${badge}</span>`;
+    pill.addEventListener('click', () => switchChannel(slot, day, i));
+    pills.appendChild(pill);
+  }
 }
 
 function showNoiseScreen(show) {
@@ -531,6 +594,7 @@ function startAutoAdvance() {
       showNoiseScreen(true);
       document.getElementById('np-title').textContent = '📡 Off Air';
       document.getElementById('np-meta').textContent = 'No show scheduled right now';
+      document.getElementById('channel-selector').style.display = 'none';
       currentSlotId = null;
       renderSlotList(day, null);
     }
@@ -553,7 +617,9 @@ function renderSlotList(day, active) {
   for (const s of slots) {
     const item = document.createElement('div');
     item.className = 'mini-slot' + (active && s.id === active.id ? ' active' : '');
-    item.innerHTML = `<div class="ms-name">${s.name}</div><div class="ms-time">${s.start} · ${s.duration}min</div>`;
+    const altCount = s.channels ? s.channels.length - 1 : 0;
+    const altStr = altCount > 0 ? ` (${altCount} alt)` : '';
+    item.innerHTML = `<div class="ms-name">${s.name}${altStr}</div><div class="ms-time">${s.start} · ${s.duration}min</div>`;
     item.addEventListener('click', () => playSlot(s, day));
     list.appendChild(item);
   }
