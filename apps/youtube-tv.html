@@ -153,49 +153,78 @@ header h1{font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.5px;white-
 const DEFAULT_SCHEDULE = {
   title: "AI Life TV",
   timezone: "America/New_York",
-  description: "Curated YouTube programming — replace with your own schedule!",
+  description: "24/7 news and tech from verified sources",
   days: {
+    // ── Weekdays: 9 slots each (Mon-Fri) ──
     monday: [
-      { id:"mon-news", start:"08:00", duration:60, name:"Morning News", genre:"news", channels:[{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"},{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"}] },
-      { id:"mon-tech", start:"10:00", duration:90, name:"Tech Deep Dive", genre:"tech", channels:[{id:"UCBJYsmdcv6S6kXEYnNAPQ0w",name:"MKBHD"},{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"}] },
-      { id:"mon-learn", start:"14:00", duration:60, name:"Learning Hour", genre:"education", channels:[{id:"UC_4NoVAkQxSq9E-6MkBun1g",name:"Vsauce"},{id:"UCsT0YIqwnpJCM-mx7-gSA4Q",name:"Tom Scott"},{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"}] },
-      { id:"mon-creator", start:"18:00", duration:45, name:"Creator Spotlight", genre:"creator", channels:[{id:"UCsT0YIqwnpJCM-mx7-gSA4Q",name:"Tom Scott"},{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"}] },
-      { id:"mon-late", start:"21:00", duration:60, name:"Late Night Watch", genre:"entertainment", channels:[{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"},{id:"UC_4NoVAkQxSq9E-6MkBun1g",name:"Vsauce"}] }
+      { id:"mon-morning",    start:"08:00", duration:60, name:"Morning News",      genre:"news", channels:[{id:"UCCj956IF62FbT7Gouszaj9w",name:"BBC News"},{id:"UChqUTb7kYRX8-EiaN3XFrSQ",name:"Reuters"}] },
+      { id:"mon-global",     start:"09:00", duration:60, name:"Global Briefing",   genre:"news", channels:[{id:"UCbbS1GE942k3UVqpLklyhIA",name:"DW News"},{id:"UCfiwzLy-8yKzIbsmZTzxDgw",name:"Al Jazeera"}] },
+      { id:"mon-tech",       start:"10:00", duration:60, name:"Tech Hour",         genre:"tech", channels:[{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"},{id:"UC52X5wxOL_s5yw0dQk7NtgA",name:"Associated Press"}] },
+      { id:"mon-midday",     start:"12:00", duration:60, name:"Midday News",       genre:"news", channels:[{id:"UCkFclpi8U9VJjfxLYoms7Aw",name:"Sky News"},{id:"UChqUTb7kYRX8-EiaN3XFrSQ",name:"Reuters"}] },
+      { id:"mon-deep",       start:"14:00", duration:60, name:"Deep Dive",         genre:"news", channels:[{id:"UCbbS1GE942k3UVqpLklyhIA",name:"DW News"},{id:"UCfiwzLy-8yKzIbsmZTzxDgw",name:"Al Jazeera"}] },
+      { id:"mon-afternoon",  start:"16:00", duration:60, name:"Afternoon Update",  genre:"news", channels:[{id:"UC52X5wxOL_s5yw0dQk7NtgA",name:"Associated Press"},{id:"UCCj956IF62FbT7Gouszaj9w",name:"BBC News"}] },
+      { id:"mon-evening",    start:"18:00", duration:60, name:"Evening News",      genre:"news", channels:[{id:"UCCj956IF62FbT7Gouszaj9w",name:"BBC News"},{id:"UCkFclpi8U9VJjfxLYoms7Aw",name:"Sky News"},{id:"UChqUTb7kYRX8-EiaN3XFrSQ",name:"Reuters"}] },
+      { id:"mon-night",      start:"20:00", duration:60, name:"Night Watch",       genre:"news", channels:[{id:"UCfiwzLy-8yKzIbsmZTzxDgw",name:"Al Jazeera"},{id:"UCbbS1GE942k3UVqpLklyhIA",name:"DW News"}] },
+      { id:"mon-late",       start:"22:00", duration:60, name:"Late Edition",      genre:"news", channels:[{id:"UChqUTb7kYRX8-EiaN3XFrSQ",name:"Reuters"},{id:"UC52X5wxOL_s5yw0dQk7NtgA",name:"Associated Press"}] }
     ],
     tuesday: [
-      { id:"tue-news", start:"08:00", duration:60, name:"Morning News", genre:"news", channels:[{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"},{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"}] },
-      { id:"tue-science", start:"10:00", duration:60, name:"Science Hour", genre:"education", channels:[{id:"UC_4NoVAkQxSq9E-6MkBun1g",name:"Vsauce"},{id:"UCsT0YIqwnpJCM-mx7-gSA4Q",name:"Tom Scott"}] },
-      { id:"tue-gaming", start:"16:00", duration:120, name:"Gaming Block", genre:"entertainment", channels:[{id:"UCsT0YIqwnpJCM-mx7-gSA4Q",name:"Tom Scott"},{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"}] },
-      { id:"tue-music", start:"20:00", duration:90, name:"Music Night", genre:"entertainment", channels:[{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"},{id:"UC_4NoVAkQxSq9E-6MkBun1g",name:"Vsauce"}] }
+      { id:"tue-morning",    start:"08:00", duration:60, name:"Morning News",      genre:"news", channels:[{id:"UCCj956IF62FbT7Gouszaj9w",name:"BBC News"},{id:"UChqUTb7kYRX8-EiaN3XFrSQ",name:"Reuters"}] },
+      { id:"tue-global",     start:"09:00", duration:60, name:"Global Briefing",   genre:"news", channels:[{id:"UCbbS1GE942k3UVqpLklyhIA",name:"DW News"},{id:"UCfiwzLy-8yKzIbsmZTzxDgw",name:"Al Jazeera"}] },
+      { id:"tue-tech",       start:"10:00", duration:60, name:"Tech Hour",         genre:"tech", channels:[{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"},{id:"UC52X5wxOL_s5yw0dQk7NtgA",name:"Associated Press"}] },
+      { id:"tue-midday",     start:"12:00", duration:60, name:"Midday News",       genre:"news", channels:[{id:"UCkFclpi8U9VJjfxLYoms7Aw",name:"Sky News"},{id:"UChqUTb7kYRX8-EiaN3XFrSQ",name:"Reuters"}] },
+      { id:"tue-deep",       start:"14:00", duration:60, name:"Deep Dive",         genre:"news", channels:[{id:"UCbbS1GE942k3UVqpLklyhIA",name:"DW News"},{id:"UCfiwzLy-8yKzIbsmZTzxDgw",name:"Al Jazeera"}] },
+      { id:"tue-afternoon",  start:"16:00", duration:60, name:"Afternoon Update",  genre:"news", channels:[{id:"UC52X5wxOL_s5yw0dQk7NtgA",name:"Associated Press"},{id:"UCCj956IF62FbT7Gouszaj9w",name:"BBC News"}] },
+      { id:"tue-evening",    start:"18:00", duration:60, name:"Evening News",      genre:"news", channels:[{id:"UCCj956IF62FbT7Gouszaj9w",name:"BBC News"},{id:"UCkFclpi8U9VJjfxLYoms7Aw",name:"Sky News"},{id:"UChqUTb7kYRX8-EiaN3XFrSQ",name:"Reuters"}] },
+      { id:"tue-night",      start:"20:00", duration:60, name:"Night Watch",       genre:"news", channels:[{id:"UCfiwzLy-8yKzIbsmZTzxDgw",name:"Al Jazeera"},{id:"UCbbS1GE942k3UVqpLklyhIA",name:"DW News"}] },
+      { id:"tue-late",       start:"22:00", duration:60, name:"Late Edition",      genre:"news", channels:[{id:"UChqUTb7kYRX8-EiaN3XFrSQ",name:"Reuters"},{id:"UC52X5wxOL_s5yw0dQk7NtgA",name:"Associated Press"}] }
     ],
     wednesday: [
-      { id:"wed-news", start:"08:00", duration:60, name:"Morning News", genre:"news", channels:[{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"},{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"}] },
-      { id:"wed-dev", start:"11:00", duration:90, name:"Developer Hour", genre:"tech", channels:[{id:"UCBJYsmdcv6S6kXEYnNAPQ0w",name:"MKBHD"},{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"}] },
-      { id:"wed-doc", start:"15:00", duration:90, name:"Documentary Block", genre:"education", channels:[{id:"UC_4NoVAkQxSq9E-6MkBun1g",name:"Vsauce"},{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"},{id:"UCsT0YIqwnpJCM-mx7-gSA4Q",name:"Tom Scott"}] },
-      { id:"wed-comedy", start:"20:00", duration:60, name:"Comedy Hour", genre:"entertainment", channels:[{id:"UCsT0YIqwnpJCM-mx7-gSA4Q",name:"Tom Scott"},{id:"UC_4NoVAkQxSq9E-6MkBun1g",name:"Vsauce"}] }
+      { id:"wed-morning",    start:"08:00", duration:60, name:"Morning News",      genre:"news", channels:[{id:"UCCj956IF62FbT7Gouszaj9w",name:"BBC News"},{id:"UChqUTb7kYRX8-EiaN3XFrSQ",name:"Reuters"}] },
+      { id:"wed-global",     start:"09:00", duration:60, name:"Global Briefing",   genre:"news", channels:[{id:"UCbbS1GE942k3UVqpLklyhIA",name:"DW News"},{id:"UCfiwzLy-8yKzIbsmZTzxDgw",name:"Al Jazeera"}] },
+      { id:"wed-tech",       start:"10:00", duration:60, name:"Tech Hour",         genre:"tech", channels:[{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"},{id:"UC52X5wxOL_s5yw0dQk7NtgA",name:"Associated Press"}] },
+      { id:"wed-midday",     start:"12:00", duration:60, name:"Midday News",       genre:"news", channels:[{id:"UCkFclpi8U9VJjfxLYoms7Aw",name:"Sky News"},{id:"UChqUTb7kYRX8-EiaN3XFrSQ",name:"Reuters"}] },
+      { id:"wed-deep",       start:"14:00", duration:60, name:"Deep Dive",         genre:"news", channels:[{id:"UCbbS1GE942k3UVqpLklyhIA",name:"DW News"},{id:"UCfiwzLy-8yKzIbsmZTzxDgw",name:"Al Jazeera"}] },
+      { id:"wed-afternoon",  start:"16:00", duration:60, name:"Afternoon Update",  genre:"news", channels:[{id:"UC52X5wxOL_s5yw0dQk7NtgA",name:"Associated Press"},{id:"UCCj956IF62FbT7Gouszaj9w",name:"BBC News"}] },
+      { id:"wed-evening",    start:"18:00", duration:60, name:"Evening News",      genre:"news", channels:[{id:"UCCj956IF62FbT7Gouszaj9w",name:"BBC News"},{id:"UCkFclpi8U9VJjfxLYoms7Aw",name:"Sky News"},{id:"UChqUTb7kYRX8-EiaN3XFrSQ",name:"Reuters"}] },
+      { id:"wed-night",      start:"20:00", duration:60, name:"Night Watch",       genre:"news", channels:[{id:"UCfiwzLy-8yKzIbsmZTzxDgw",name:"Al Jazeera"},{id:"UCbbS1GE942k3UVqpLklyhIA",name:"DW News"}] },
+      { id:"wed-late",       start:"22:00", duration:60, name:"Late Edition",      genre:"news", channels:[{id:"UChqUTb7kYRX8-EiaN3XFrSQ",name:"Reuters"},{id:"UC52X5wxOL_s5yw0dQk7NtgA",name:"Associated Press"}] }
     ],
     thursday: [
-      { id:"thu-news", start:"08:00", duration:60, name:"Morning News", genre:"news", channels:[{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"},{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"}] },
-      { id:"thu-hardware", start:"10:00", duration:60, name:"Hardware Review", genre:"tech", channels:[{id:"UCBJYsmdcv6S6kXEYnNAPQ0w",name:"MKBHD"},{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"}] },
-      { id:"thu-education", start:"14:00", duration:60, name:"Education Hour", genre:"education", channels:[{id:"UC_4NoVAkQxSq9E-6MkBun1g",name:"Vsauce"},{id:"UCsT0YIqwnpJCM-mx7-gSA4Q",name:"Tom Scott"},{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"}] },
-      { id:"thu-vlog", start:"17:00", duration:60, name:"Vlog Block", genre:"creator", channels:[{id:"UCsT0YIqwnpJCM-mx7-gSA4Q",name:"Tom Scott"},{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"}] },
-      { id:"thu-movies", start:"20:00", duration:120, name:"Movie Night", genre:"entertainment", channels:[{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"},{id:"UC_4NoVAkQxSq9E-6MkBun1g",name:"Vsauce"}] }
+      { id:"thu-morning",    start:"08:00", duration:60, name:"Morning News",      genre:"news", channels:[{id:"UCCj956IF62FbT7Gouszaj9w",name:"BBC News"},{id:"UChqUTb7kYRX8-EiaN3XFrSQ",name:"Reuters"}] },
+      { id:"thu-global",     start:"09:00", duration:60, name:"Global Briefing",   genre:"news", channels:[{id:"UCbbS1GE942k3UVqpLklyhIA",name:"DW News"},{id:"UCfiwzLy-8yKzIbsmZTzxDgw",name:"Al Jazeera"}] },
+      { id:"thu-tech",       start:"10:00", duration:60, name:"Tech Hour",         genre:"tech", channels:[{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"},{id:"UC52X5wxOL_s5yw0dQk7NtgA",name:"Associated Press"}] },
+      { id:"thu-midday",     start:"12:00", duration:60, name:"Midday News",       genre:"news", channels:[{id:"UCkFclpi8U9VJjfxLYoms7Aw",name:"Sky News"},{id:"UChqUTb7kYRX8-EiaN3XFrSQ",name:"Reuters"}] },
+      { id:"thu-deep",       start:"14:00", duration:60, name:"Deep Dive",         genre:"news", channels:[{id:"UCbbS1GE942k3UVqpLklyhIA",name:"DW News"},{id:"UCfiwzLy-8yKzIbsmZTzxDgw",name:"Al Jazeera"}] },
+      { id:"thu-afternoon",  start:"16:00", duration:60, name:"Afternoon Update",  genre:"news", channels:[{id:"UC52X5wxOL_s5yw0dQk7NtgA",name:"Associated Press"},{id:"UCCj956IF62FbT7Gouszaj9w",name:"BBC News"}] },
+      { id:"thu-evening",    start:"18:00", duration:60, name:"Evening News",      genre:"news", channels:[{id:"UCCj956IF62FbT7Gouszaj9w",name:"BBC News"},{id:"UCkFclpi8U9VJjfxLYoms7Aw",name:"Sky News"},{id:"UChqUTb7kYRX8-EiaN3XFrSQ",name:"Reuters"}] },
+      { id:"thu-night",      start:"20:00", duration:60, name:"Night Watch",       genre:"news", channels:[{id:"UCfiwzLy-8yKzIbsmZTzxDgw",name:"Al Jazeera"},{id:"UCbbS1GE942k3UVqpLklyhIA",name:"DW News"}] },
+      { id:"thu-late",       start:"22:00", duration:60, name:"Late Edition",      genre:"news", channels:[{id:"UChqUTb7kYRX8-EiaN3XFrSQ",name:"Reuters"},{id:"UC52X5wxOL_s5yw0dQk7NtgA",name:"Associated Press"}] }
     ],
     friday: [
-      { id:"fri-news", start:"08:00", duration:60, name:"Morning News", genre:"news", channels:[{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"},{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"}] },
-      { id:"fri-tech", start:"10:00", duration:90, name:"Friday Tech", genre:"tech", channels:[{id:"UCBJYsmdcv6S6kXEYnNAPQ0w",name:"MKBHD"},{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"}] },
-      { id:"fri-weekend", start:"16:00", duration:180, name:"Weekend Prep", genre:"entertainment", channels:[{id:"UCsT0YIqwnpJCM-mx7-gSA4Q",name:"Tom Scott"},{id:"UC_4NoVAkQxSq9E-6MkBun1g",name:"Vsauce"}] },
-      { id:"fri-night", start:"21:00", duration:120, name:"Friday Night", genre:"entertainment", channels:[{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"},{id:"UCsT0YIqwnpJCM-mx7-gSA4Q",name:"Tom Scott"}] }
+      { id:"fri-morning",    start:"08:00", duration:60, name:"Morning News",      genre:"news", channels:[{id:"UCCj956IF62FbT7Gouszaj9w",name:"BBC News"},{id:"UChqUTb7kYRX8-EiaN3XFrSQ",name:"Reuters"}] },
+      { id:"fri-global",     start:"09:00", duration:60, name:"Global Briefing",   genre:"news", channels:[{id:"UCbbS1GE942k3UVqpLklyhIA",name:"DW News"},{id:"UCfiwzLy-8yKzIbsmZTzxDgw",name:"Al Jazeera"}] },
+      { id:"fri-tech",       start:"10:00", duration:60, name:"Tech Hour",         genre:"tech", channels:[{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"},{id:"UC52X5wxOL_s5yw0dQk7NtgA",name:"Associated Press"}] },
+      { id:"fri-midday",     start:"12:00", duration:60, name:"Midday News",       genre:"news", channels:[{id:"UCkFclpi8U9VJjfxLYoms7Aw",name:"Sky News"},{id:"UChqUTb7kYRX8-EiaN3XFrSQ",name:"Reuters"}] },
+      { id:"fri-deep",       start:"14:00", duration:60, name:"Deep Dive",         genre:"news", channels:[{id:"UCbbS1GE942k3UVqpLklyhIA",name:"DW News"},{id:"UCfiwzLy-8yKzIbsmZTzxDgw",name:"Al Jazeera"}] },
+      { id:"fri-afternoon",  start:"16:00", duration:60, name:"Afternoon Update",  genre:"news", channels:[{id:"UC52X5wxOL_s5yw0dQk7NtgA",name:"Associated Press"},{id:"UCCj956IF62FbT7Gouszaj9w",name:"BBC News"}] },
+      { id:"fri-evening",    start:"18:00", duration:60, name:"Evening News",      genre:"news", channels:[{id:"UCCj956IF62FbT7Gouszaj9w",name:"BBC News"},{id:"UCkFclpi8U9VJjfxLYoms7Aw",name:"Sky News"},{id:"UChqUTb7kYRX8-EiaN3XFrSQ",name:"Reuters"}] },
+      { id:"fri-night",      start:"20:00", duration:60, name:"Night Watch",       genre:"news", channels:[{id:"UCfiwzLy-8yKzIbsmZTzxDgw",name:"Al Jazeera"},{id:"UCbbS1GE942k3UVqpLklyhIA",name:"DW News"}] },
+      { id:"fri-late",       start:"22:00", duration:60, name:"Late Edition",      genre:"news", channels:[{id:"UChqUTb7kYRX8-EiaN3XFrSQ",name:"Reuters"},{id:"UC52X5wxOL_s5yw0dQk7NtgA",name:"Associated Press"}] }
     ],
+    // ── Weekends: 5 slots each (Sat-Sun) ──
     saturday: [
-      { id:"sat-late", start:"09:00", duration:120, name:"Saturday Slow Start", genre:"education", channels:[{id:"UC_4NoVAkQxSq9E-6MkBun1g",name:"Vsauce"},{id:"UCsT0YIqwnpJCM-mx7-gSA4Q",name:"Tom Scott"},{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"}] },
-      { id:"sat-marathon", start:"13:00", duration:240, name:"Tech Marathon", genre:"tech", channels:[{id:"UCBJYsmdcv6S6kXEYnNAPQ0w",name:"MKBHD"},{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"}] },
-      { id:"sat-fun", start:"18:00", duration:180, name:"Saturday Fun", genre:"entertainment", channels:[{id:"UCsT0YIqwnpJCM-mx7-gSA4Q",name:"Tom Scott"},{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"}] }
+      { id:"sat-slow",       start:"09:00", duration:60, name:"Saturday Slow Start",   genre:"news", channels:[{id:"UCCj956IF62FbT7Gouszaj9w",name:"BBC News"},{id:"UChqUTb7kYRX8-EiaN3XFrSQ",name:"Reuters"}] },
+      { id:"sat-briefing",   start:"12:00", duration:60, name:"Weekend Briefing",      genre:"news", channels:[{id:"UCbbS1GE942k3UVqpLklyhIA",name:"DW News"},{id:"UCfiwzLy-8yKzIbsmZTzxDgw",name:"Al Jazeera"}] },
+      { id:"sat-watch",      start:"15:00", duration:60, name:"Weekend Watch",         genre:"news", channels:[{id:"UCkFclpi8U9VJjfxLYoms7Aw",name:"Sky News"},{id:"UC52X5wxOL_s5yw0dQk7NtgA",name:"Associated Press"}] },
+      { id:"sat-evening",    start:"18:00", duration:60, name:"Saturday Night News",   genre:"news", channels:[{id:"UCCj956IF62FbT7Gouszaj9w",name:"BBC News"},{id:"UChqUTb7kYRX8-EiaN3XFrSQ",name:"Reuters"}] },
+      { id:"sat-late",       start:"21:00", duration:60, name:"Late Weekend",          genre:"tech", channels:[{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"},{id:"UC52X5wxOL_s5yw0dQk7NtgA",name:"Associated Press"}] }
     ],
     sunday: [
-      { id:"sun-chill", start:"09:00", duration:180, name:"Sunday Chill", genre:"education", channels:[{id:"UC_4NoVAkQxSq9E-6MkBun1g",name:"Vsauce"},{id:"UCX6b17PVsYBQ0ip5gyeme-Q",name:"Johnny Harris"},{id:"UCsT0YIqwnpJCM-mx7-gSA4Q",name:"Tom Scott"}] },
-      { id:"sun-review", start:"14:00", duration:120, name:"Week Review", genre:"tech", channels:[{id:"UCBJYsmdcv6S6kXEYnNAPQ0w",name:"MKBHD"},{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"}] },
-      { id:"sun-wind", start:"19:00", duration:150, name:"Sunday Wind Down", genre:"entertainment", channels:[{id:"UCsT0YIqwnpJCM-mx7-gSA4Q",name:"Tom Scott"},{id:"UC_4NoVAkQxSq9E-6MkBun1g",name:"Vsauce"}] }
+      { id:"sun-slow",       start:"09:00", duration:60, name:"Sunday Slow Start",     genre:"news", channels:[{id:"UCCj956IF62FbT7Gouszaj9w",name:"BBC News"},{id:"UChqUTb7kYRX8-EiaN3XFrSQ",name:"Reuters"}] },
+      { id:"sun-briefing",   start:"12:00", duration:60, name:"Weekend Briefing",      genre:"news", channels:[{id:"UCbbS1GE942k3UVqpLklyhIA",name:"DW News"},{id:"UCfiwzLy-8yKzIbsmZTzxDgw",name:"Al Jazeera"}] },
+      { id:"sun-watch",      start:"15:00", duration:60, name:"Weekend Watch",         genre:"news", channels:[{id:"UCkFclpi8U9VJjfxLYoms7Aw",name:"Sky News"},{id:"UC52X5wxOL_s5yw0dQk7NtgA",name:"Associated Press"}] },
+      { id:"sun-evening",    start:"18:00", duration:60, name:"Sunday Evening News",   genre:"news", channels:[{id:"UCCj956IF62FbT7Gouszaj9w",name:"BBC News"},{id:"UChqUTb7kYRX8-EiaN3XFrSQ",name:"Reuters"}] },
+      { id:"sun-late",       start:"21:00", duration:60, name:"Late Weekend",          genre:"tech", channels:[{id:"UCsBjURrPoezykLs9EqgamOA",name:"Fireship"},{id:"UC52X5wxOL_s5yw0dQk7NtgA",name:"Associated Press"}] }
     ]
   }
 };
@@ -617,7 +646,7 @@ function freshnessClass(dateStr) {
 
 function getProxyUrl() {
   const params = new URLSearchParams(window.location.search);
-  return params.get('proxy') || 'https://api.allorigins.win/raw?url=';
+  return params.get('proxy') || 'http://127.0.0.1:8091/proxy?url=';
 }
 
 async function fetchLatestPublishDate(channelId) {
