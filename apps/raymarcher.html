@@ -198,14 +198,18 @@ body{
         <option value="mandelbrot">Mandelbrot</option>
         <option value="waves">Ocean Waves</option>
         <option value="neon-cube">Neon Cube</option>
+        <option value="seascape">Seascape</option>
+        <option value="galaxy">Galaxy</option>
+        <option value="reflective">Reflective Pool</option>
+        <option value="deep-fractal">Deep Fractal</option>
       </select>
     </div>
     <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
     <div id="toolbar">
-      <a class="back-link" href="/apps/">← back</a>
+      <span id="status">ready</span>
       <button class="primary" id="compile">Compile</button>
       <button id="reset">Reset</button>
-      <span id="status">ready</span>
+      <a class="back-link" href="/apps/">← back</a>
     </div>
     <div id="errors"></div>
   </div>
@@ -406,6 +410,135 @@ void main(){
   } else { col = vec3(0); }
   col *= 1.-.25*length(uv);
   o = vec4(col,1);
+}`,
+
+seascape: `#version 300 es
+precision highp float;
+out vec4 o;
+uniform vec2 r;
+uniform float t;
+
+void main(){
+  vec2 uv=(gl_FragCoord.xy-.5*r)/r.y;
+  float d=length(uv);
+  float w=sin(uv.x*10.+t)*.15+sin(uv.y*8.+t*1.3)*.1
+         +sin((uv.x+uv.y)*7.+t*.9)*.08;
+  float horizon=uv.y+w;
+  float skyMask=smoothstep(-.5,.4,horizon);
+  vec3 sky=mix(vec3(1.,.5,.1),vec3(.9,.2,.5),smoothstep(-.2,.5,uv.y));
+  sky=mix(sky,vec3(.08,.08,.35),smoothstep(.4,1.2,uv.y));
+  vec3 sea=vec3(.0,.12,.22);
+  sea=mix(sea,vec3(.0,.35,.45),smoothstep(0.,1.,uv.y*2.));
+  sea+=vec3(1.,.7,.3)*pow(max(0.,1.-d*2.5),6.)*(1.-skyMask);
+  float foam=smoothstep(.06,.0,abs(w));
+  sea+=vec3(.8,.9,1.)*foam*.4;
+  float sun=pow(max(0.,1.-d*1.2),12.);
+  vec3 col=mix(sea,sky,skyMask)+vec3(1.,.85,.4)*sun;
+  col*=1.-.3*d;
+  o=vec4(col,1);
+}`,
+
+galaxy: `#version 300 es
+precision highp float;
+out vec4 o;
+uniform vec2 r;
+uniform float t;
+
+float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+
+void main(){
+  vec2 uv=(gl_FragCoord.xy-.5*r)/r.y;
+  float a=atan(uv.y,uv.x)+t*.03;
+  float rad=length(uv);
+  float spiral=sin(rad*18.-a*3.+t*.2)*.5+.5;
+  float dens=smoothstep(.6,.05,abs(rad-.35))*(1.-smoothstep(0.,.9,rad));
+  vec3 col=mix(vec3(.4,.1,.3),vec3(.15,.25,.7),spiral);
+  col=mix(col,vec3(1.,.4,.1),sin(rad*6.+t*.4)*.5+.5);
+  col*=dens*1.8;
+  vec2 st=uv*80.;vec2 id=floor(st);
+  float star=step(.97,hash(id))*(1.-length(fract(st)-.5)*2.);
+  col+=vec3(1.)*star*max(0.,1.-rad);
+  col+=vec3(.2,.05,.4)*exp(-rad*2.5);
+  o=vec4(col,1);
+}`,
+
+reflective: `#version 300 es
+precision highp float;
+out vec4 o;
+uniform vec2 r;
+uniform float t;
+uniform vec3 eye,target;
+
+float sdBox(vec3 p,vec3 b){vec3 d=abs(p)-b;return min(max(d.x,max(d.y,d.z)),0.)+length(max(d,0.));}
+float sdPlane(vec3 p,float h){return p.y+h;}
+
+float scene(vec3 p){
+  float gnd=sdPlane(p,0.);
+  float box=sdBox(p-vec3(0,1.3,0),vec3(.8,1.3,.8));
+  float sp=length(p-vec3(1.5,.8,-1.2))-.7;
+  return min(min(gnd,box),sp);
+}
+
+vec3 norm(vec3 p){
+  vec2 e=vec2(.001,0);
+  return normalize(vec3(scene(p+e.xyy)-scene(p-e.xyy),
+                        scene(p+e.yxy)-scene(p-e.yxy),
+                        scene(p+e.yyx)-scene(p-e.yyx)));
+}
+
+void main(){
+  vec2 uv=(gl_FragCoord.xy-.5*r)/r.y;
+  vec3 fwd=normalize(target-eye);
+  vec3 rgt=normalize(cross(fwd,vec3(0,1,0)));
+  vec3 up=cross(rgt,fwd);
+  vec3 rd=normalize(uv.x*rgt+uv.y*up+fwd*1.8);
+  float th=.5,d;vec3 p;
+  for(int i=0;i<80;i++){p=eye+rd*th;d=scene(p);if(d<.001||th>30.)break;th+=d*.7;}
+  vec3 col;
+  if(th<30.){
+    vec3 n=norm(p);
+    vec3 L=normalize(vec3(4,7,5));
+    float dif=max(dot(n,L),0.)*.6+.25;
+    float occ=.5+.5*scene(p+n*.15);
+    vec3 c=vec3(.12,.4,.7);
+    if(abs(scene(p+vec3(0,.002,0))-d)<.01)c=vec3(.15,.55,1.);
+    if(abs(length(p-vec3(1.5,.8,-1.2))-.7-d)<.01)c=vec3(1.,.35,.6);
+    col=c*(dif+occ*.5);
+    col+=vec3(1.,.9,.7)*pow(max(dot(reflect(-L,n),-rd),0.),48.)*.7;
+    // floor reflection
+    if(d<.05){
+      vec3 rp=vec3(p.x,-p.y,p.z);
+      if(scene(rp)<10.)col=mix(col,vec3(.25,.45,.7),.35);
+    }
+  }else{col=vec3(.01,.02,.06);}
+  col*=1.-.25*length(uv);
+  o=vec4(col,1);
+}`,
+
+"deep-fractal": `#version 300 es
+precision highp float;
+out vec4 o;
+uniform vec2 r;
+uniform float t;
+
+void main(){
+  vec2 uv=(gl_FragCoord.xy-.5*r)/r.y;
+  vec2 c=vec2(uv.x*.5-.4,uv.y*.5);
+  vec2 z=vec2(0.);
+  float it=0.;
+  for(int i=0;i<300;i++){
+    z=vec2(abs(z.x),abs(z.y));
+    z=vec2(z.x*z.x-z.y*z.y,2.*z.x*z.y)+c;
+    if(length(z)>4.)break;
+    it=float(i);
+  }
+  float f=it/300.;
+  vec3 col;
+  float orbit=length(z);
+  col=.5+.5*cos(vec3(1.,2.,3.)*f*10.+orbit*.5+t*.1);
+  col=mix(col,vec3(1.),smoothstep(.95,1.,f));
+  col*=smoothstep(2.,0.,length(uv));
+  o=vec4(col,1);
 }`
 };
 
