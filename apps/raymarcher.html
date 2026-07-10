@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Shader Editor</title>
+<title>shader previewer</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{
@@ -29,16 +29,15 @@ body{
 #preview{
   flex:1;
   display:flex;
-  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  overflow:hidden;
   min-width:0
 }
 #preview canvas{
-  flex:1;
-  width:100%;
-  border-radius:.5rem;
-  background:#000;
   display:block;
-  image-rendering:auto
+  border-radius:.5rem;
+  background:#000
 }
 #panel{
   width:420px;
@@ -99,12 +98,6 @@ body{
   word-break:break-all
 }
 #errors.show{display:block}
-#help{
-  font-size:.7rem;
-  color:#52525b;
-  line-height:1.4;
-  padding:0 .25rem
-}
 @media(max-width:900px){
   body{padding:0;align-items:stretch}
   #app{flex-direction:column;height:100vh;width:100%;border-radius:0;border:none;padding:.5rem}
@@ -219,20 +212,24 @@ if(!gl){
   document.getElementById('app').innerHTML='<div style="color:red;padding:2rem;width:100%;text-align:center">WebGL2 not supported</div>';
 }
 
-// --- resize canvas to fill parent ---
+// --- resize canvas to fill preview container ---
 let W, H;
 function resize(){
   const rect = canvas.parentElement.getBoundingClientRect();
   const dpr = window.devicePixelRatio||1;
-  W = rect.width*dpr;
-  H = rect.height*dpr;
+  const w = Math.floor(rect.width);
+  const h = Math.floor(rect.height);
+  if(w === W/dpr && h === H/dpr) return; // skip if unchanged
+  W = w * dpr;
+  H = h * dpr;
   canvas.width = W;
   canvas.height = H;
-  canvas.style.width = rect.width+'px';
-  canvas.style.height = rect.height+'px';
+  canvas.style.width = w+'px';
+  canvas.style.height = h+'px';
   gl.viewport(0,0,W,H);
 }
 new ResizeObserver(resize).observe(canvas.parentElement);
+window.addEventListener('resize', resize);
 resize();
 
 // --- vertex shader (fixed) ---
@@ -301,32 +298,22 @@ function compileShader(){
   }
 }
 
-// --- orbital camera ---
+// --- orbital camera (drag only) ---
 let theta=0, phi=.6, dist=7;
 let targetPos = [0,1.2,0];
 let mx=0, my=0, down=false;
 
 canvas.onpointerdown=e=>{down=true;mx=e.clientX;my=e.clientY;};
-canvas.onpointermove=e=>{
+canvas.addEventListener('pointermove', e=>{
   if(!down)return;
-  let dx=e.clientX-mx, dy=e.clientY-my;
+  const dx=e.clientX-mx, dy=e.clientY-my;
   mx=e.clientX; my=e.clientY;
   theta-=dx*.008;
-  phi=Math.max(.1,Math.min(1.4,phi+dy*.008));
-};
-canvas.onpointerup=()=>{down=false;};
-canvas.onwheel=e=>{
-  dist=Math.max(2,Math.min(20,dist+e.deltaY*.008));
-  e.preventDefault();
-};
-canvas.addEventListener('touchstart',e=>{const t=e.touches[0];down=true;mx=t.clientX;my=t.clientY;});
-canvas.addEventListener('touchmove',e=>{
-  if(!down)return;
-  const t=e.touches[0];let dx=t.clientX-mx,dy=t.clientY-my;
-  mx=t.clientX;my=t.clientY;
-  theta-=dx*.008;phi=Math.max(.1,Math.min(1.4,phi+dy*.008));
+  phi=Math.max(.1,Math.min(Math.PI/2-.1,phi+dy*.008));
 });
-canvas.addEventListener('touchend',()=>{down=false;});
+canvas.addEventListener('pointerup',()=>{down=false;});
+canvas.addEventListener('pointerleave',()=>{down=false;});
+// touch support via pointer events fallback
 
 // --- render loop ---
 let start = performance.now();
