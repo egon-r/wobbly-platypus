@@ -16,7 +16,7 @@
     "created": "2026-07-09T04:12:05+09:00"
   },
   "raymarcher": {
-    "description": "Live GLSL shader previewer — edit code, orbit to view from any angle",
+    "description": "shader previewer/editor — live GLSL editing, shader presets, orbit + zoom camera",
     "created": "2026-07-10T01:05:04.471006+00:00"
   }
 }

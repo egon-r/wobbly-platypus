@@ -192,7 +192,6 @@ body{
   </div>
   <div id="panel">
     <div id="panel-header">
-      <a class="back-link" href="/apps/">← back</a>
       <select id="shader-select">
         <option value="raymarcher">Raymarcher Scene</option>
         <option value="plasma">Plasma</option>
@@ -203,6 +202,7 @@ body{
     </div>
     <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
     <div id="toolbar">
+      <a class="back-link" href="/apps/">← back</a>
       <button class="primary" id="compile">Compile</button>
       <button id="reset">Reset</button>
       <span id="status">ready</span>
@@ -508,6 +508,10 @@ canvas.addEventListener('pointermove',e=>{
 });
 canvas.addEventListener('pointerup',()=>{down=false;});
 canvas.addEventListener('pointercancel',()=>{down=false;});
+canvas.addEventListener('wheel',e=>{
+  dist=Math.max(2,Math.min(20,dist+e.deltaY*.008));
+  e.preventDefault();
+},{passive:false});
 
 // --- render loop ---
 let start = performance.now();
