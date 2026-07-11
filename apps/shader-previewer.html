@@ -835,7 +835,7 @@ code.addEventListener('keydown',e=>{
   if(e.ctrlKey&&e.key==='Enter')compileShader();
 });
 
-// --- fullscreen (CSS position:fixed primary, native API enhancement) ---
+// --- fullscreen (native API primary, CSS fallback when API unavailable) ---
 const fsBtn = document.getElementById('fs-btn');
 const preview = document.getElementById('preview');
 let fsActive = false;
@@ -848,17 +848,19 @@ function setFS(on){
 }
 
 function toggleFS(){
-  if(fsActive){
-    setFS(false);
-    if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+  if(document.fullscreenElement){
+    document.exitFullscreen().catch(()=>setFS(false));
   }else{
-    setFS(true);
-    preview.requestFullscreen().catch(()=>{});
+    preview.requestFullscreen().catch(()=>{
+      // Native API unavailable (iOS etc.) — CSS fallback
+      setFS(true);
+    });
   }
 }
 
 fsBtn.addEventListener('click', toggleFS);
 
+// CSS-only Escape handler — native fullscreen handles its own Escape
 document.addEventListener('keydown', function fsKeydown(e){
   if(e.key === 'Escape' && fsActive && !document.fullscreenElement){
     setFS(false);
@@ -866,11 +868,7 @@ document.addEventListener('keydown', function fsKeydown(e){
 });
 
 document.addEventListener('fullscreenchange', ()=>{
-  if(document.fullscreenElement){
-    if(!fsActive) setFS(true);
-  }else if(!document.fullscreenElement && fsActive){
-    setFS(false);
-  }
+  setFS(!!document.fullscreenElement);
 });
 
 // --- init ---
