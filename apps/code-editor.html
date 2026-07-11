@@ -165,6 +165,102 @@
   }
   #drag-overlay.active { display: block; }
 
+  /* ---- Template Drawer ---- */
+  .drawer-overlay {
+    display: none; position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.4);
+  }
+  .drawer-overlay.open { display: block; }
+
+  .drawer {
+    position: fixed; top: 0; right: 0; bottom: 0;
+    width: 280px; z-index: 101;
+    background: var(--surface); border-left: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    box-shadow: -4px 0 20px rgba(0,0,0,0.3);
+  }
+  .drawer.open { transform: translateX(0); }
+
+  .drawer-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .drawer-header h2 {
+    font-size: 14px; font-weight: 600;
+  }
+  .drawer-close {
+    background: none; border: none; color: var(--text-dim);
+    font-size: 22px; cursor: pointer; line-height: 1;
+    padding: 2px 6px; border-radius: 4px;
+  }
+  .drawer-close:hover { color: var(--text); background: rgba(255,255,255,0.1); }
+
+  .drawer-body {
+    flex: 1; overflow-y: auto; padding: 8px 0;
+  }
+
+  .drawer-footer {
+    display: flex; gap: 6px; padding: 10px 16px;
+    border-top: 1px solid var(--border); flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  .drawer-footer .btn { flex: 1; justify-content: center; }
+  #reset-templates-btn {
+    background: transparent; color: var(--text-dim); border-color: transparent;
+    font-size: 11px; text-decoration: underline;
+  }
+  #reset-templates-btn:hover { color: var(--danger); border-color: var(--danger); }
+
+  .tmpl-section {
+    padding: 6px 16px 4px;
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px;
+    color: var(--text-dim); font-weight: 600;
+  }
+  .tmpl-section-divider {
+    height: 1px; background: var(--border); margin: 4px 16px;
+  }
+
+  .tmpl-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 16px; cursor: pointer;
+    transition: background 0.15s;
+    position: relative;
+  }
+  .tmpl-item:hover { background: rgba(255,255,255,0.05); }
+  .tmpl-item .tmpl-info { flex: 1; min-width: 0; }
+  .tmpl-item .tmpl-name {
+    font-size: 13px; font-weight: 500; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .tmpl-item .tmpl-preview {
+    font-size: 11px; color: var(--text-dim);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-top: 1px;
+  }
+  .tmpl-item .tmpl-load-label {
+    display: none;
+    font-size: 10px; color: var(--accent); font-weight: 500;
+    white-space: nowrap;
+  }
+  .tmpl-item:hover .tmpl-load-label { display: inline; }
+  .tmpl-item .tmpl-delete {
+    display: none;
+    background: none; border: none; color: var(--text-dim);
+    font-size: 16px; cursor: pointer; padding: 0 4px; line-height: 1;
+    border-radius: 3px;
+  }
+  .tmpl-item:hover .tmpl-delete { display: block; }
+  .tmpl-item .tmpl-delete:hover { color: var(--danger); background: rgba(233,69,96,0.15); }
+
+  .tmpl-empty {
+    padding: 20px 16px; text-align: center; color: var(--text-dim);
+    font-size: 12px;
+  }
+
   /* ---- Responsive: stack vertically on narrow screens ---- */
   @media (max-width: 640px) {
     #main { flex-direction: column; }
@@ -191,6 +287,7 @@
     <div class="controls">
       <button class="btn btn-primary btn-sm" id="runBtn" title="Run / Refresh preview (Ctrl-Enter)">&#9654; Run</button>
       <button class="btn btn-sm btn-danger" id="clearBtn" title="Reset to template">Clear</button>
+      <button class="btn btn-sm" id="templatesBtn" title="Browse and manage templates">Templates</button>
       <label class="toggle-wrap">
         <input type="checkbox" id="autoRunToggle" checked>
         <span class="toggle-label">Auto-run</span>
@@ -222,6 +319,20 @@
 <!-- Drag overlay -->
 <div id="drag-overlay"></div>
 
+<!-- Template Drawer -->
+<div id="template-overlay" class="drawer-overlay"></div>
+<aside id="template-drawer" class="drawer">
+  <div class="drawer-header">
+    <h2>Templates</h2>
+    <button id="template-close" class="drawer-close" title="Close">&times;</button>
+  </div>
+  <div class="drawer-body" id="template-list"></div>
+  <div class="drawer-footer">
+    <button class="btn btn-primary btn-sm" id="save-template-btn">Save as Template</button>
+    <button class="btn btn-sm" id="reset-templates-btn">Reset Defaults</button>
+  </div>
+</aside>
+
 <script>
 (function() {
   'use strict';
@@ -245,6 +356,145 @@
   const LS_KEY_CODE = 'code-editor-content';
   const LS_KEY_AUTORUN = 'code-editor-autorun';
   const DEFAULT_TEMPLATE = '<!DOCTYPE html>\n<html lang="en">\n<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>My Code</title><style>body { font-family: sans-serif; padding: 2rem; }</style></head>\n<body><h1>Hello, World!</h1></body>\n</html>';
+
+  // ---- Template Definitions ----
+  const LS_KEY_TEMPLATES = 'code-editor-templates';
+
+  const BUILTIN_TEMPLATES = [
+    {
+      id: 'hello-world',
+      name: 'Hello World',
+      builtin: true,
+      content: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Hello World</title></head>
+<body><h1>Hello, World!</h1><p>Welcome to the code editor.</p></body>
+</html>`
+    },
+    {
+      id: 'styled-card',
+      name: 'Styled Card',
+      builtin: true,
+      content: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Styled Card</title><style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:sans-serif;background:#f0f2f5;display:flex;justify-content:center;align-items:center;min-height:100vh;}
+.card{background:white;border-radius:16px;padding:2rem;max-width:360px;box-shadow:0 4px 24px rgba(0,0,0,0.1);text-align:center;}
+.card h2{color:#1a1a2e;margin-bottom:0.5rem;}
+.card p{color:#555;line-height:1.6;margin-bottom:1rem;}
+.card .badge{display:inline-block;background:#4a6cf7;color:white;padding:4px 14px;border-radius:20px;font-size:0.85rem;}
+</style></head>
+<body><div class="card"><h2>Hello!</h2><p>This is a styled card with a soft shadow, rounded corners, and nice typography.</p><span class="badge">Click Me</span></div></body>
+</html>`
+    },
+    {
+      id: 'counter',
+      name: 'Interactive Counter',
+      builtin: true,
+      content: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Counter</title><style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:sans-serif;background:#1a1a2e;display:flex;justify-content:center;align-items:center;min-height:100vh;color:white;}
+.counter{text-align:center;}
+.counter h1{font-size:4rem;margin-bottom:1rem;font-variant-numeric:tabular-nums;}
+.btn-group{display:flex;gap:0.5rem;justify-content:center;}
+.btn{font-size:1.5rem;padding:0.5rem 1.5rem;border:none;border-radius:8px;cursor:pointer;transition:transform 0.1s;background:#4a6cf7;color:white;}
+.btn:hover{transform:scale(1.05);}
+.btn:active{transform:scale(0.95);}
+.btn.reset{background:#e94560;}
+</style></head>
+<body><div class="counter"><h1 id="count">0</h1><div class="btn-group"><button class="btn" id="dec">−</button><button class="btn reset" id="reset">Reset</button><button class="btn" id="inc">+</button></div></div><script>
+let c=0;const el=document.getElementById('count');
+document.getElementById('inc').onclick=()=>{c++;el.textContent=c;};
+document.getElementById('dec').onclick=()=>{c--;el.textContent=c;};
+document.getElementById('reset').onclick=()=>{c=0;el.textContent=c;};
+<\/script></body>
+</html>`
+    },
+    {
+      id: 'todo',
+      name: 'Todo List',
+      builtin: true,
+      content: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Todo List</title><style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:sans-serif;background:#f5f5f5;display:flex;justify-content:center;padding:3rem 1rem;}
+.todo{width:100%;max-width:400px;background:white;border-radius:12px;padding:1.5rem;box-shadow:0 2px 16px rgba(0,0,0,0.08);}
+.todo h2{margin-bottom:1rem;color:#333;}
+.todo .add-row{display:flex;gap:0.5rem;margin-bottom:1rem;}
+.todo .add-row input{flex:1;padding:0.5rem;border:1px solid #ddd;border-radius:6px;font-size:1rem;}
+.todo .add-row button{padding:0.5rem 1rem;background:#4a6cf7;color:white;border:none;border-radius:6px;cursor:pointer;}
+.todo ul{list-style:none;}
+.todo li{display:flex;justify-content:space-between;align-items:center;padding:0.5rem 0;border-bottom:1px solid #eee;}
+.todo li:last-child{border-bottom:none;}
+.todo li button{background:#e94560;color:white;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:0.8rem;}
+.todo .empty{color:#999;text-align:center;padding:1rem;}
+</style></head>
+<body><div class="todo"><h2>Todo List</h2><div class="add-row"><input id="todoInput" placeholder="Add a task..." /><button id="addBtn">Add</button></div><ul id="todoList"><li class="empty">No tasks yet</li></ul></div><script>
+const input=document.getElementById('todoInput'),list=document.getElementById('todoList');
+function addTask(){const t=input.value.trim();if(!t)return;const li=document.createElement('li');li.textContent=t;const btn=document.createElement('button');btn.textContent='\u00d7';btn.onclick=()=>li.remove();li.appendChild(btn);const empty=list.querySelector('.empty');if(empty)empty.remove();list.appendChild(li);input.value='';}
+document.getElementById('addBtn').onclick=addTask;input.addEventListener('keydown',e=>{if(e.key==='Enter')addTask();});
+<\/script></body>
+</html>`
+    },
+    {
+      id: 'color-grid',
+      name: 'Color Grid',
+      builtin: true,
+      content: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Color Grid</title><style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:sans-serif;background:#1e1e2e;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:1rem;}
+h2{color:#fff;margin-bottom:1rem;}
+.grid{display:grid;grid-template-columns:repeat(4,80px);gap:8px;}
+.cell{width:80px;height:80px;border-radius:8px;cursor:pointer;transition:transform 0.15s,opacity 0.15s;}
+.cell:hover{transform:scale(1.08);opacity:0.9;}
+.info{color:#aaa;margin-top:1rem;font-size:0.9rem;}
+</style></head>
+<body><h2>Color Grid</h2><div class="grid" id="grid"></div><p class="info">Click any box to cycle its color</p><script>
+const colors=['#e94560','#4a6cf7','#0f3460','#16c79a','#f5a623','#b83b5e','#08d9d6','#ff2e63','#222831','#00adb5','#ffd700','#7c3aed','#06d6a0','#ef476f','#118ab2','#ffb703'];
+const grid=document.getElementById('grid');
+for(let i=0;i<16;i++){const cell=document.createElement('div');cell.className='cell';cell.style.background=colors[i];cell.dataset.index=i;cell.onclick=function(){const idx=(parseInt(this.dataset.index)+1)%colors.length;this.dataset.index=idx;this.style.background=colors[idx];};grid.appendChild(cell);}
+<\/script></body>
+</html>`
+    },
+    {
+      id: 'stopwatch',
+      name: 'Stopwatch',
+      builtin: true,
+      content: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Stopwatch</title><style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Courier New',monospace;background:#0f0f23;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;color:#fff;}
+.timer{font-size:4rem;font-weight:bold;font-variant-numeric:tabular-nums;letter-spacing:2px;margin-bottom:2rem;}
+.btns{display:flex;gap:0.5rem;margin-bottom:2rem;}
+.btns button{font-family:inherit;font-size:1rem;padding:0.5rem 1.2rem;border:none;border-radius:6px;cursor:pointer;transition:background 0.15s;}
+.btns .start{background:#16c79a;color:#fff;}
+.btns .stop{background:#e94560;color:#fff;}
+.btns .lap{background:#4a6cf7;color:#fff;}
+.btns .reset{background:#555;color:#fff;}
+.btns button:disabled{opacity:0.4;cursor:default;}
+.laps{width:300px;max-height:200px;overflow-y:auto;}
+.laps div{padding:4px 8px;border-bottom:1px solid #333;display:flex;justify-content:space-between;font-size:0.9rem;color:#aaa;}
+</style></head>
+<body><div class="timer" id="display">00:00.0</div><div class="btns"><button class="start" id="startBtn">Start</button><button class="stop" id="stopBtn" disabled>Stop</button><button class="lap" id="lapBtn" disabled>Lap</button><button class="reset" id="resetBtn">Reset</button></div><div class="laps" id="laps"></div><script>
+let ms=0,running=false,interval=null;const d=document.getElementById('display'),laps=document.getElementById('laps');
+function fmt(){const m=Math.floor(ms/6000),s=Math.floor((ms%6000)/100),t=ms%100;return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+'.'+t;}
+function update(){d.textContent=fmt();}
+function tick(){ms++;update();}
+document.getElementById('startBtn').onclick=function(){if(running)return;running=true;interval=setInterval(tick,100);document.getElementById('startBtn').disabled=true;document.getElementById('stopBtn').disabled=false;document.getElementById('lapBtn').disabled=false;};
+document.getElementById('stopBtn').onclick=function(){if(!running)return;running=false;clearInterval(interval);document.getElementById('startBtn').disabled=false;document.getElementById('stopBtn').disabled=true;document.getElementById('lapBtn').disabled=true;};
+document.getElementById('lapBtn').onclick=function(){if(!running)return;const div=document.createElement('div');div.innerHTML='<span>Lap '+(laps.children.length+1)+'</span><span>'+fmt()+'</span>';laps.appendChild(div);};
+document.getElementById('resetBtn').onclick=function(){if(running){clearInterval(interval);running=false;}ms=0;update();laps.innerHTML='';document.getElementById('startBtn').disabled=false;document.getElementById('stopBtn').disabled=true;document.getElementById('lapBtn').disabled=true;};
+<\/script></body>
+</html>`
+    }
+  ];
 
   // ---- State ----
   let isDragging = false;
@@ -361,6 +611,154 @@
     document.body.style.userSelect = '';
   }
 
+  // ---- Template Manager ----
+  function getTemplates() {
+    const raw = localStorage.getItem(LS_KEY_TEMPLATES);
+    if (raw) {
+      try { return JSON.parse(raw); } catch(e) { /* fall through */ }
+    }
+    // First visit: seed with builtins
+    const tmpls = BUILTIN_TEMPLATES.map(function(t) { return Object.assign({}, t); });
+    localStorage.setItem(LS_KEY_TEMPLATES, JSON.stringify(tmpls));
+    return tmpls;
+  }
+
+  function saveTemplates(tmpls) {
+    localStorage.setItem(LS_KEY_TEMPLATES, JSON.stringify(tmpls));
+  }
+
+  function renderTemplateList() {
+    const tmpls = getTemplates();
+    const builtin = tmpls.filter(function(t) { return t.builtin; });
+    const custom = tmpls.filter(function(t) { return !t.builtin; });
+    const container = document.getElementById('template-list');
+    var html = '';
+
+    // Built-in section
+    if (builtin.length) {
+      html += '<div class="tmpl-section">Built-in</div>';
+      builtin.forEach(function(t) {
+        var preview = t.content.substring(0, 80).replace(/\n/g, ' ');
+        html += '<div class="tmpl-item" data-id="' + t.id + '">' +
+          '<div class="tmpl-info">' +
+            '<div class="tmpl-name">' + escHtml(t.name) + '</div>' +
+            '<div class="tmpl-preview">' + escHtml(preview) + '</div>' +
+          '</div>' +
+          '<span class="tmpl-load-label">Load</span>' +
+        '</div>';
+      });
+    }
+
+    // Divider if both exist
+    if (builtin.length && custom.length) {
+      html += '<div class="tmpl-section-divider"></div>';
+    }
+
+    // Custom section
+    html += '<div class="tmpl-section">Custom</div>';
+    if (custom.length) {
+      custom.forEach(function(t) {
+        var preview = t.content.substring(0, 80).replace(/\n/g, ' ');
+        html += '<div class="tmpl-item" data-id="' + t.id + '">' +
+          '<div class="tmpl-info">' +
+            '<div class="tmpl-name">' + escHtml(t.name) + '</div>' +
+            '<div class="tmpl-preview">' + escHtml(preview) + '</div>' +
+          '</div>' +
+          '<span class="tmpl-load-label">Load</span>' +
+          '<button class="tmpl-delete" title="Delete template">&times;</button>' +
+        '</div>';
+      });
+    } else {
+      html += '<div class="tmpl-empty">No custom templates yet.<br>Save your code as a template below.</div>';
+    }
+
+    container.innerHTML = html;
+
+    // Wire events
+    container.querySelectorAll('.tmpl-item').forEach(function(el) {
+      var id = el.dataset.id;
+      var tmpl = tmpls.find(function(t) { return t.id === id; });
+      // Click to load (if not clicking delete)
+      el.addEventListener('click', function(e) {
+        if (e.target.closest('.tmpl-delete')) return;
+        if (tmpl) loadTemplate(tmpl);
+      });
+      // Delete button
+      var delBtn = el.querySelector('.tmpl-delete');
+      if (delBtn) {
+        delBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          deleteTemplate(id);
+        });
+      }
+    });
+  }
+
+  function loadTemplate(tmpl) {
+    editor.value = tmpl.content;
+    updateChars();
+    // Save immediately
+    if (saveTimer) clearTimeout(saveTimer);
+    save();
+    updatePreview();
+    setStatus('Loaded: ' + tmpl.name, 'saved');
+    closeDrawer();
+  }
+
+  function deleteTemplate(id) {
+    var tmpls = getTemplates();
+    tmpls = tmpls.filter(function(t) { return t.id !== id; });
+    saveTemplates(tmpls);
+    renderTemplateList();
+  }
+
+  function saveAsTemplate() {
+    var content = editor.value.trim();
+    if (!content) {
+      setStatus('Nothing to save', 'error');
+      return;
+    }
+    var name = prompt('Template name:');
+    if (!name || !name.trim()) return;
+    var tmpls = getTemplates();
+    var id = 'custom-' + Date.now();
+    tmpls.unshift({ id: id, name: name.trim(), content: content, builtin: false });
+    saveTemplates(tmpls);
+    renderTemplateList();
+    setStatus('Template saved: ' + name.trim(), 'saved');
+  }
+
+  function resetDefaults() {
+    if (!confirm('Reset all custom templates? Built-in templates will be restored to defaults.')) return;
+    var tmpls = BUILTIN_TEMPLATES.map(function(t) { return Object.assign({}, t); });
+    saveTemplates(tmpls);
+    renderTemplateList();
+    setStatus('Defaults restored', 'saved');
+    closeDrawer();
+  }
+
+  function escHtml(str) {
+    var d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function openDrawer() {
+    renderTemplateList();
+    document.getElementById('template-overlay').classList.add('open');
+    document.getElementById('template-drawer').classList.add('open');
+  }
+
+  function closeDrawer() {
+    document.getElementById('template-overlay').classList.remove('open');
+    document.getElementById('template-drawer').classList.remove('open');
+  }
+
+  function initTemplates() {
+    // Ensure templates exist in localStorage (first visit seeds them)
+    getTemplates();
+  }
+
   // ---- Events ----
 
   // Editor input
@@ -424,6 +822,17 @@
 
   // ---- Init ----
   restore();
+  initTemplates();
+
+  // Wire template drawer
+  document.getElementById('templatesBtn').addEventListener('click', openDrawer);
+  document.getElementById('template-close').addEventListener('click', closeDrawer);
+  document.getElementById('template-overlay').addEventListener('click', closeDrawer);
+  document.getElementById('save-template-btn').addEventListener('click', saveAsTemplate);
+  document.getElementById('reset-templates-btn').addEventListener('click', resetDefaults);
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeDrawer();
+  });
 
 })();
 </script>
