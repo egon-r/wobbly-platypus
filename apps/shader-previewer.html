@@ -59,7 +59,14 @@ body{
   line-height:1
 }
 #fs-btn:hover{background:rgba(0,0,0,.8)}
-#preview.fullscreen{background:#000}
+#preview.fullscreen{
+  position:fixed;
+  inset:0;
+  width:100vw;
+  height:100vh;
+  z-index:9999;
+  background:#000
+}
 #preview.fullscreen canvas{border-radius:0}
 #preview.fullscreen #fs-btn{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.3)}
 #zoom-indicator{
@@ -824,25 +831,42 @@ code.addEventListener('keydown',e=>{
   if(e.ctrlKey&&e.key==='Enter')compileShader();
 });
 
-// --- fullscreen (standard API + CSS fallback) ---
+// --- fullscreen (CSS position:fixed primary, native API enhancement) ---
 const fsBtn = document.getElementById('fs-btn');
 const preview = document.getElementById('preview');
+let fsActive = false;
+
 function setFS(on){
-  preview.classList.toggle('fullscreen',on);
-  setTimeout(resize,300);
+  fsActive = on;
+  preview.classList.toggle('fullscreen', on);
+  document.body.style.overflow = on ? 'hidden' : '';
+  setTimeout(resize, 150);
 }
-fsBtn.addEventListener('click',()=>{
-  if(document.fullscreenElement){
-    document.exitFullscreen().catch(()=>setFS(false));
+
+function toggleFS(){
+  if(fsActive){
+    setFS(false);
+    if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
   }else{
-    preview.requestFullscreen().catch(()=>{
-      // CSS fallback when fullscreen API unavailable (iOS etc.)
-      setFS(true);
-    });
+    setFS(true);
+    preview.requestFullscreen().catch(()=>{});
+  }
+}
+
+fsBtn.addEventListener('click', toggleFS);
+
+document.addEventListener('keydown', function fsKeydown(e){
+  if(e.key === 'Escape' && fsActive && !document.fullscreenElement){
+    setFS(false);
   }
 });
-document.addEventListener('fullscreenchange',()=>{
-  setFS(!!document.fullscreenElement);
+
+document.addEventListener('fullscreenchange', ()=>{
+  if(document.fullscreenElement){
+    if(!fsActive) setFS(true);
+  }else if(!document.fullscreenElement && fsActive){
+    setFS(false);
+  }
 });
 
 // --- init ---
