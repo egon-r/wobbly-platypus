@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mandelbrot Set Viewer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a1a; }
+  canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+    cursor: crosshair;
+  }
+  #overlay {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 10px 18px;
+    color: #d0d0e0;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    white-space: nowrap;
+    user-select: none;
+    pointer-events: none;
+    z-index: 10;
+  }
+  #overlay .group {
+    display: flex;
+    gap: 16px;
+  }
+  #overlay .item { display: flex; align-items: center; gap: 4px; }
+  #overlay .label { color: #8888aa; }
+  #overlay .value { color: #f0f0ff; font-weight: bold; }
+  #overlay .sep { width: 1px; height: 20px; background: rgba(255,255,255,0.1); }
+  #rendering-badge {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    background: rgba(255, 180, 50, 0.15);
+    border: 1px solid rgba(255, 180, 50, 0.3);
+    border-radius: 8px;
+    padding: 6px 14px;
+    color: #ffb833;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    font-weight: bold;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+    z-index: 10;
+  }
+  #rendering-badge.visible { opacity: 1; }
+  @media (max-width: 700px) {
+    #overlay { flex-wrap: wrap; gap: 6px; padding: 8px 12px; font-size: 11px; white-space: normal; }
+    #overlay .group { flex-wrap: wrap; gap: 8px; }
+    #overlay .sep { display: none; }
+  }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<div id="rendering-badge">&#9679; Rendering...</div>
+<div id="overlay">
+  <div class="group">
+    <span class="item"><span class="label">X:</span><span class="value" id="cx">0.000000</span></span>
+    <span class="item"><span class="label">Y:</span><span class="value" id="cy">0.000000</span></span>
+    <span class="item"><span class="label">Zoom:</span><span class="value" id="zoom">1.00e0</span></span>
+  </div>
+  <div class="sep"></div>
+  <div class="group">
+    <span class="item"><span class="label">Iter:</span><span class="value" id="iters">256</span></span>
+    <span class="item"><span class="label">Time:</span><span class="value" id="time">0ms</span></span>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ---- state ----
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const badge = document.getElementById('rendering-badge');
+
+  let width = 0;
+  let height = 0;
+  let imageData = null;
+
+  // Complex plane bounds
+  let cx = -0.5;
+  let cy = 0;
+  let zoom = 1;   // pixels per unit; initial ~screen width in coords
+
+  const MAX_ITER = 256;
+  const MIN_ZOOM = 1e-14;
+  const MAX_ZOOM = 1e14;
+
+  // Mouse state
+  let isDragging = false;
+  let dragStartX = 0;
+  let dragStartY = 0;
+  let lastMX = 0;
+  let lastMY = 0;
+  let justClicked = false;
+  let clickTimer = null;
+
+  // Render state
+  let renderStartTime = 0;
+  let renderAbort = false;
+  let renderChunkId = 0;
+  let renderTimer = null;
+
+  // DOM refs
+  const elCx = document.getElementById('cx');
+  const elCy = document.getElementById('cy');
+  const elZoom = document.getElementById('zoom');
+  const elIters = document.getElementById('iters');
+  const elTime = document.getElementById('time');
+
+  // ---- resize ----
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    width = canvas.width;
+    height = canvas.height;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // Reset zoom to cover full range if first render
+    if (zoom === 1) {
+      zoom = Math.min(width, height) / 4;
+    }
+    imageData = ctx.createImageData(width, height);
+    scheduleRender();
+  }
+
+  // ---- coordinate helpers ----
+  function pixelToComplex(px, py) {
+    const halfW = width / 2;
+    const halfH = height / 2;
+    const x = (px - halfW) / zoom + cx;
+    const y = (py - halfH) / zoom + cy;
+    return [x, y];
+  }
+
+  function complexToPixel(x, y) {
+    const halfW = width / 2;
+    const halfH = height / 2;
+    const px = (x - cx) * zoom + halfW;
+    const py = (y - cy) * zoom + halfH;
+    return [px, py];
+  }
+
+  // ---- smooth coloring ----
+  function mandelbrot(cx0, cy0, maxIter) {
+    let x = 0;
+    let y = 0;
+    let x2 = 0;
+    let y2 = 0;
+    let iter = 0;
+    while (x2 + y2 <= 4 && iter < maxIter) {
+      y = 2 * x * y + cy0;
+      x = x2 - y2 + cx0;
+      x2 = x * x;
+      y2 = y * y;
+      iter++;
+    }
+    if (iter === maxIter) return -1; // in set
+    // smooth value
+    const log_zn = Math.log2(x2 + y2);
+    const nu = Math.log2(log_zn);
+    return iter + 1 - nu;
+  }
+
+  // ---- color palette ----
+  function smoothColor(t) {
+    // t in [0, 1] — map to beautiful gradient
+    // Deep blues -> purples -> hot pinks -> oranges -> yellows
+    const r = Math.sin(t * 5.0 + 0.0) * 0.5 + 0.5;
+    const g = Math.sin(t * 5.0 + 1.2) * 0.5 + 0.5;
+    const b = Math.sin(t * 5.0 + 2.5) * 0.5 + 0.5;
+    // Boost saturation with a curve
+    const sat = 0.7 + 0.3 * (1 - Math.abs(t - 0.5) * 2);
+    const lum = 0.4 + 0.6 * (1 - Math.abs(t - 0.5) * 1.5);
+    // Mix toward bright warm colors
+    const rr = Math.pow(r, 1.2) * 255 * lum;
+    const gg = Math.pow(g, 1.5) * 255 * lum;
+    const bb = Math.pow(b, 2.0) * 255 * lum;
+    // Boost reds/oranges in mid range
+    const boost = Math.max(0, Math.sin(t * Math.PI * 2 - 0.5) * 0.3 + 0.7);
+    return [
+      Math.min(255, Math.round(rr * (0.6 + 0.4 * boost))),
+      Math.min(255, Math.round(gg * (0.4 + 0.3 * boost))),
+      Math.min(255, Math.round(bb * (0.3 + 0.2 * boost)))
+    ];
+  }
+
+  // HSL-based palette for more control
+  function paletteHSL(t) {
+    // t in [0,1] -> hue from 240 (blue) through 0 (red) to 60 (yellow)
+    const hue = 240 - t * 240; // 240 -> 0
+    const sat = 80 + 20 * Math.sin(t * Math.PI);
+    const lig = 25 + 50 * (1 - Math.abs(t - 0.5) * 1.6);
+    return hslToRgb(hue / 360, sat / 100, Math.min(85, lig) / 100);
+  }
+
+  function hslToRgb(h, s, l) {
+    let r, g, b;
+    if (s === 0) {
+      r = g = b = l;
+    } else {
+      const hue2rgb = (p, q, t) => {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1/6) return p + (q - p) * 6 * t;
+        if (t < 1/2) return q;
+        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+        return p;
+      };
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      const p = 2 * l - q;
+      r = hue2rgb(p, q, h + 1/3);
+      g = hue2rgb(p, q, h);
+      b = hue2rgb(p, q, h - 1/3);
+    }
+    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+  }
+
+  // ---- render ----
+  function render(chunkFrom, chunkTo) {
+    if (renderAbort) return;
+    const data = imageData.data;
+    const maxIter = MAX_ITER;
+    const totalPixels = width * height;
+
+    const startIdx = chunkFrom !== undefined ? chunkFrom : 0;
+    const endIdx = chunkTo !== undefined ? chunkTo : totalPixels;
+
+    for (let i = startIdx; i < endIdx; i++) {
+      const px = i % width;
+      const py = Math.floor(i / width);
+      const [x, y] = pixelToComplex(px, py);
+      const sv = mandelbrot(x, y, maxIter);
+      const idx = i * 4;
+      if (sv < 0) {
+        // Inside set — deep black with slight blue tint
+        data[idx] = 0;
+        data[idx + 1] = 0;
+        data[idx + 2] = 6;
+        data[idx + 3] = 255;
+      } else {
+        const t = (sv % 1);
+        // [r, g, b] = paletteHSL(t);
+        // Mix smooth iteration layers for extra richness
+        const layer1 = paletteHSL(t);
+        const layer2 = paletteHSL((sv / 8) % 1);
+        const mix = 0.6 + 0.4 * Math.sin(sv * 0.3);
+        const r = Math.round(layer1[0] * mix + layer2[0] * (1 - mix));
+        const g = Math.round(layer1[1] * mix + layer2[1] * (1 - mix));
+        const b = Math.round(layer1[2] * mix + layer2[2] * (1 - mix));
+        data[idx] = r;
+        data[idx + 1] = g;
+        data[idx + 2] = b;
+        data[idx + 3] = 255;
+      }
+    }
+
+    // Put the modified chunk on screen
+    // For partial renders, putImageData handles the full buffer
+    // We just show whatever we have so far
+    ctx.putImageData(imageData, 0, 0);
+  }
+
+  function renderFull() {
+    renderAbort = false;
+    renderStartTime = performance.now();
+    badge.classList.add('visible');
+
+    const totalPixels = width * height;
+    const CHUNK_SIZE = Math.max(2000, Math.floor(totalPixels / 60));
+    let current = 0;
+    const chunkId = ++renderChunkId;
+
+    function nextChunk() {
+      if (renderAbort || chunkId !== renderChunkId) {
+        finishRender(false);
+        return;
+      }
+      const end = Math.min(current + CHUNK_SIZE, totalPixels);
+      render(current, end);
+      current = end;
+
+      if (current < totalPixels) {
+        requestAnimationFrame(nextChunk);
+      } else {
+        finishRender(true);
+      }
+    }
+
+    function finishRender(completed) {
+      renderAbort = false;
+      const elapsed = Math.round(performance.now() - renderStartTime);
+      elTime.textContent = elapsed + 'ms';
+      badge.classList.remove('visible');
+    }
+
+    // Render first chunk synchronously for immediate feedback
+    const firstEnd = Math.min(CHUNK_SIZE, totalPixels);
+    render(0, firstEnd);
+    current = firstEnd;
+
+    if (current < totalPixels) {
+      requestAnimationFrame(nextChunk);
+    } else {
+      finishRender(true);
+    }
+  }
+
+  function scheduleRender() {
+    renderAbort = true;
+    if (renderTimer) cancelAnimationFrame(renderTimer);
+    renderTimer = requestAnimationFrame(() => {
+      renderTimer = null;
+      renderAbort = false;
+      renderFull();
+    });
+  }
+
+  function updateInfo() {
+    elCx.textContent = cx.toFixed(8);
+    elCy.textContent = cy.toFixed(8);
+    elZoom.textContent = zoom < 0.01 ? zoom.toExponential(2) : zoom.toFixed(2);
+    elIters.textContent = MAX_ITER;
+  }
+
+  // ---- interaction ----
+  function getCanvasCoords(e) {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    return [
+      (e.clientX - rect.left) * dpr,
+      (e.clientY - rect.top) * dpr
+    ];
+  }
+
+  canvas.addEventListener('mousedown', function(e) {
+    if (e.button !== 0) return;
+    const [mx, my] = getCanvasCoords(e);
+    isDragging = true;
+    dragStartX = mx;
+    dragStartY = my;
+    lastMX = mx;
+    lastMY = my;
+    justClicked = true;
+    canvas.style.cursor = 'grabbing';
+  });
+
+  canvas.addEventListener('mousemove', function(e) {
+    const [mx, my] = getCanvasCoords(e);
+    lastMX = mx;
+    lastMY = my;
+    if (!isDragging) return;
+    justClicked = false;
+    // Pan
+    const dx = mx - dragStartX;
+    const dy = my - dragStartY;
+    cx -= dx / zoom;
+    cy -= dy / zoom;
+    dragStartX = mx;
+    dragStartY = my;
+    scheduleRender();
+    updateInfo();
+  });
+
+  canvas.addEventListener('mouseup', function(e) {
+    if (e.button !== 0) return;
+    isDragging = false;
+    canvas.style.cursor = 'crosshair';
+
+    if (justClicked) {
+      // Click without drag -> re-center
+      const [mx, my] = getCanvasCoords(e);
+      const [nx, ny] = pixelToComplex(mx, my);
+      cx = nx;
+      cy = ny;
+      scheduleRender();
+      updateInfo();
+    }
+    justClicked = false;
+  });
+
+  canvas.addEventListener('mouseleave', function() {
+    isDragging = false;
+    canvas.style.cursor = 'crosshair';
+    justClicked = false;
+  });
+
+  canvas.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    const [mx, my] = getCanvasCoords(e);
+
+    // Get the complex coordinate under the cursor before zoom
+    const [targetX, targetY] = pixelToComplex(mx, my);
+
+    // Zoom factor
+    const factor = e.deltaY > 0 ? 0.85 : 1 / 0.85;
+    const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom * factor));
+    if (newZoom === zoom) return;
+    zoom = newZoom;
+
+    // Adjust center so the point under cursor stays fixed
+    cx = targetX - (mx - width / 2) / zoom;
+    cy = targetY - (my - height / 2) / zoom;
+
+    scheduleRender();
+    updateInfo();
+    // Reset click prevention
+    justClicked = false;
+  }, { passive: false });
+
+  // Touch support for mobile
+  let lastTouchDist = 0;
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchPanX = 0;
+  let touchPanY = 0;
+  let isTouchPan = false;
+
+  canvas.addEventListener('touchstart', function(e) {
+    e.preventDefault();
+    if (e.touches.length === 1) {
+      const t = e.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      touchStartX = (t.clientX - rect.left) * dpr;
+      touchStartY = (t.clientY - rect.top) * dpr;
+      touchPanX = touchStartX;
+      touchPanY = touchStartY;
+      isTouchPan = true;
+      lastTouchDist = 0;
+    } else if (e.touches.length === 2) {
+      isTouchPan = false;
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const dx = t1.clientX - t2.clientX;
+      const dy = t1.clientY - t2.clientY;
+      lastTouchDist = Math.sqrt(dx * dx + dy * dy);
+    }
+  });
+
+  canvas.addEventListener('touchmove', function(e) {
+    e.preventDefault();
+    if (e.touches.length === 1 && isTouchPan) {
+      const t = e.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const mx = (t.clientX - rect.left) * dpr;
+      const my = (t.clientY - rect.top) * dpr;
+      const dx = mx - touchPanX;
+      const dy = my - touchPanY;
+      cx -= dx / zoom;
+      cy -= dy / zoom;
+      touchPanX = mx;
+      touchPanY = my;
+      scheduleRender();
+      updateInfo();
+    } else if (e.touches.length === 2) {
+      isTouchPan = false;
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const dx = t1.clientX - t2.clientX;
+      const dy = t1.clientY - t2.clientY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (lastTouchDist > 0) {
+        // Get center of pinch
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        const cx_px = ((t1.clientX + t2.clientX) / 2 - rect.left) * dpr;
+        const cy_px = ((t1.clientY + t2.clientY) / 2 - rect.top) * dpr;
+
+        const [targetX, targetY] = pixelToComplex(cx_px, cy_px);
+        const factor = dist / lastTouchDist;
+        const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom * factor));
+        if (newZoom !== zoom) {
+          zoom = newZoom;
+          cx = targetX - (cx_px - width / 2) / zoom;
+          cy = targetY - (cy_px - height / 2) / zoom;
+          scheduleRender();
+          updateInfo();
+        }
+      }
+      lastTouchDist = dist;
+    }
+  });
+
+  canvas.addEventListener('touchend', function(e) {
+    e.preventDefault();
+    if (e.touches.length === 0) {
+      if (isTouchPan && touchStartX === touchPanX && touchStartY === touchPanY) {
+        // Tap -> re-center
+        const [nx, ny] = pixelToComplex(touchStartX, touchStartY);
+        cx = nx;
+        cy = ny;
+        scheduleRender();
+        updateInfo();
+      }
+      isTouchPan = false;
+      lastTouchDist = 0;
+    }
+  });
+
+  // Keyboard
+  document.addEventListener('keydown', function(e) {
+    const step = 0.1 / zoom;
+    switch (e.key) {
+      case 'ArrowLeft': cx -= step; scheduleRender(); updateInfo(); e.preventDefault(); break;
+      case 'ArrowRight': cx += step; scheduleRender(); updateInfo(); e.preventDefault(); break;
+      case 'ArrowUp': cy -= step; scheduleRender(); updateInfo(); e.preventDefault(); break;
+      case 'ArrowDown': cy += step; scheduleRender(); updateInfo(); e.preventDefault(); break;
+      case '+': case '=': zoom *= 1.5; scheduleRender(); updateInfo(); e.preventDefault(); break;
+      case '-': zoom /= 1.5; scheduleRender(); updateInfo(); e.preventDefault(); break;
+    }
+  });
+
+  // ---- init ----
+  window.addEventListener('resize', resize);
+  resize();
+  // Show initial coordinates after resize sets zoom
+  updateInfo();
+
+  // Initial render will happen inside resize() -> scheduleRender()
+})();
+</script>
+</body>
+</html>

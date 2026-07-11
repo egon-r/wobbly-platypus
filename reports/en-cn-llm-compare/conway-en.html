@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conway's Game of Life</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a0f;
+  color: #c8d6e5;
+  font-family: 'Courier New', monospace;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+}
+canvas {
+  border: 1px solid #1a1a2e;
+  border-radius: 4px;
+  cursor: pointer;
+  display: block;
+}
+.controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.controls button {
+  background: #16213e;
+  color: #c8d6e5;
+  border: 1px solid #1a1a2e;
+  padding: 8px 18px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.controls button:hover {
+  background: #1a1a3e;
+  border-color: #00d4aa;
+}
+.controls button.active {
+  background: #00d4aa;
+  color: #0a0a0f;
+  border-color: #00d4aa;
+}
+.info {
+  font-size: 14px;
+  color: #576574;
+  display: flex;
+  gap: 24px;
+}
+.info span { color: #c8d6e5; }
+</style>
+</head>
+<body>
+<div class="container">
+  <canvas id="game"></canvas>
+  <div class="controls">
+    <button id="playBtn">Play</button>
+    <button id="stepBtn">Step</button>
+    <button id="clearBtn">Clear</button>
+    <button id="randomBtn">Random</button>
+  </div>
+  <div class="info">
+    Generation: <span id="genCount">0</span>
+    &middot;
+    Population: <span id="popCount">0</span>
+  </div>
+</div>
+<script>
+const COLS = 80;
+const ROWS = 60;
+const CELL_SIZE = 10;
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const playBtn = document.getElementById('playBtn');
+const stepBtn = document.getElementById('stepBtn');
+const clearBtn = document.getElementById('clearBtn');
+const randomBtn = document.getElementById('randomBtn');
+const genSpan = document.getElementById('genCount');
+const popSpan = document.getElementById('popCount');
+
+let grid = [];
+let generation = 0;
+let playing = false;
+let timer = null;
+
+function initGrid() {
+  grid = [];
+  for (let y = 0; y < ROWS; y++) {
+    grid[y] = new Uint8Array(COLS);
+  }
+}
+
+function randomize() {
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      grid[y][x] = Math.random() < 0.25 ? 1 : 0;
+    }
+  }
+  generation = 0;
+}
+
+function countNeighbors(x, y) {
+  let n = 0;
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) continue;
+      const nx = (x + dx + COLS) % COLS;
+      const ny = (y + dy + ROWS) % ROWS;
+      n += grid[ny][nx];
+    }
+  }
+  return n;
+}
+
+function step() {
+  const next = [];
+  for (let y = 0; y < ROWS; y++) {
+    next[y] = new Uint8Array(COLS);
+  }
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      const n = countNeighbors(x, y);
+      if (grid[y][x] === 1) {
+        next[y][x] = (n === 2 || n === 3) ? 1 : 0;
+      } else {
+        next[y][x] = (n === 3) ? 1 : 0;
+      }
+    }
+  }
+  grid = next;
+  generation++;
+}
+
+function draw() {
+  const w = COLS * CELL_SIZE;
+  const h = ROWS * CELL_SIZE;
+
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = '#00ff88';
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      if (grid[y][x]) {
+        const px = x * CELL_SIZE;
+        const py = y * CELL_SIZE;
+        ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
+      }
+    }
+  }
+
+  ctx.strokeStyle = '#151525';
+  ctx.lineWidth = 0.5;
+  for (let x = 0; x <= COLS; x++) {
+    ctx.beginPath();
+    ctx.moveTo(x * CELL_SIZE, 0);
+    ctx.lineTo(x * CELL_SIZE, h);
+    ctx.stroke();
+  }
+  for (let y = 0; y <= ROWS; y++) {
+    ctx.beginPath();
+    ctx.moveTo(0, y * CELL_SIZE);
+    ctx.lineTo(w, y * CELL_SIZE);
+    ctx.stroke();
+  }
+}
+
+function updateInfo() {
+  let pop = 0;
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      pop += grid[y][x];
+    }
+  }
+  genSpan.textContent = generation;
+  popSpan.textContent = pop;
+}
+
+function render() {
+  draw();
+  updateInfo();
+}
+
+function tick() {
+  step();
+  render();
+}
+
+function play() {
+  if (playing) return;
+  playing = true;
+  playBtn.textContent = 'Pause';
+  playBtn.classList.add('active');
+  timer = setInterval(tick, 100);
+}
+
+function pause() {
+  if (!playing) return;
+  playing = false;
+  playBtn.textContent = 'Play';
+  playBtn.classList.remove('active');
+  clearInterval(timer);
+  timer = null;
+}
+
+function togglePlay() {
+  if (playing) pause();
+  else play();
+}
+
+function clearGrid() {
+  if (playing) pause();
+  initGrid();
+  generation = 0;
+  render();
+}
+
+function randomizeGrid() {
+  if (playing) pause();
+  randomize();
+  render();
+}
+
+function handleClick(e) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const mx = (e.clientX - rect.left) * scaleX;
+  const my = (e.clientY - rect.top) * scaleY;
+  const x = Math.floor(mx / CELL_SIZE);
+  const y = Math.floor(my / CELL_SIZE);
+  if (x >= 0 && x < COLS && y >= 0 && y < ROWS) {
+    grid[y][x] = grid[y][x] ? 0 : 1;
+    if (!playing) render();
+  }
+}
+
+function resizeCanvas() {
+  const w = COLS * CELL_SIZE;
+  const h = ROWS * CELL_SIZE;
+  const maxW = window.innerWidth - 60;
+  const maxH = window.innerHeight - 180;
+  const scale = Math.min(1, Math.min(maxW / w, maxH / h));
+  canvas.width = w;
+  canvas.height = h;
+  canvas.style.width = (w * scale) + 'px';
+  canvas.style.height = (h * scale) + 'px';
+  if (!playing) render();
+}
+
+playBtn.addEventListener('click', togglePlay);
+stepBtn.addEventListener('click', () => { if (!playing) { step(); render(); } });
+clearBtn.addEventListener('click', clearGrid);
+randomBtn.addEventListener('click', randomizeGrid);
+canvas.addEventListener('click', handleClick);
+window.addEventListener('resize', resizeCanvas);
+
+initGrid();
+randomize();
+resizeCanvas();
+render();
+</script>
+</body>
+</html>

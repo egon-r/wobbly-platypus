@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mandelbrot Explorer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+  }
+  canvas:active { cursor: crosshair; }
+
+  #overlay {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    font: 13px/1.4 'Courier New', monospace;
+    color: rgba(255,255,255,0.7);
+    background: rgba(0,0,0,0.55);
+    padding: 8px 18px;
+    border-radius: 8px;
+    pointer-events: none;
+    user-select: none;
+    text-align: center;
+    white-space: nowrap;
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  #title {
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    font: 600 18px/1 'Inter', -apple-system, sans-serif;
+    color: rgba(255,255,255,0.15);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    pointer-events: none;
+    user-select: none;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+<div id="title">Mandelbrot · ∞</div>
+<div id="overlay">—</div>
+
+<script>
+(function() {
+  const canvas = document.getElementById('canvas');
+  const overlay = document.getElementById('overlay');
+  const ctx = canvas.getContext('2d');
+
+  // ─── viewport state ────────────────────────────────────────────────
+  const V = {
+    // visible range in complex plane (top-left corner + size)
+    x: -2.0,         // real start (center ≈ -0.5)
+    y: -1.5,         // imag start
+    w: 3.0,          // real width
+    h: 3.0           // imag height (will be adjusted to aspect ratio)
+  };
+
+  // ─── render params ─────────────────────────────────────────────────
+  const MAX_ITER = 400;
+  const ESCAPE_RADIUS = 2.0;
+  const ESCAPE_RADIUS_SQ = ESCAPE_RADIUS * ESCAPE_RADIUS;
+  const LOG_2 = Math.log(2);
+
+  // ─── resize ────────────────────────────────────────────────────────
+  let W, H;        // pixel dimensions of canvas buffer
+
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    W = Math.floor(canvas.clientWidth * dpr);
+    H = Math.floor(canvas.clientHeight * dpr);
+    canvas.width = W;
+    canvas.height = H;
+    // adjust viewport height to match aspect ratio, keep center
+    const aspect = W / H;
+    const cy = V.y + V.h / 2;
+    V.h = V.w / aspect;
+    V.y = cy - V.h / 2;
+    render();
+  }
+
+  // ─── smooth iteration count ────────────────────────────────────────
+  function iterate(cx, cy) {
+    let zx = 0, zy = 0;
+    let n = 0;
+    while (n < MAX_ITER) {
+      const zx2 = zx * zx;
+      const zy2 = zy * zy;
+      if (zx2 + zy2 > ESCAPE_RADIUS_SQ) {
+        // smooth: 1 + n - log(log(|z|)) / log(2)
+        const mag = zx2 + zy2;
+        const log_zn = Math.log(mag);
+        const nu = Math.log(log_zn / 2) / LOG_2;
+        return 1 + n - nu;
+      }
+      zy = 2 * zx * zy + cy;
+      zx = zx2 - zy2 + cx;
+      n++;
+    }
+    return -1; // inside set
+  }
+
+  // ─── palette ───────────────────────────────────────────────────────
+  // Build a lookup table for smooth value [0,1] → RGB
+  const PALETTE_SIZE = 2048;
+  const palette = new Uint32Array(PALETTE_SIZE);
+
+  function hsl(h, s, l) {
+    // h in [0,1], s,l in [0,1], returns 0xRRGGBB (integer)
+    const c = (1 - Math.abs(2 * l - 1)) * s;
+    const x = c * (1 - Math.abs((h * 6) % 2 - 1));
+    const m = l - c / 2;
+    let r, g, b;
+    const hi = Math.floor(h * 6);
+    switch (hi) {
+      case 0: r=c; g=x; b=0; break;
+      case 1: r=x; g=c; b=0; break;
+      case 2: r=0; g=c; b=x; break;
+      case 3: r=0; g=x; b=c; break;
+      case 4: r=x; g=0; b=c; break;
+      case 5: r=c; g=0; b=x; break;
+      default: r=0; g=0; b=0;
+    }
+    return ((Math.round((r + m) * 255)) << 16) |
+           ((Math.round((g + m) * 255)) << 8) |
+           (Math.round((b + m) * 255));
+  }
+
+  function buildPalette() {
+    for (let i = 0; i < PALETTE_SIZE; i++) {
+      const t = i / PALETTE_SIZE; // 0→1
+
+      // Custom multi-stage curve for deep-space-nebula feel
+      // Phase 0.0–0.15: deep blues/purples (inside boundary)
+      // Phase 0.15–0.40: cyans → greens
+      // Phase 0.40–0.65: yellows → oranges
+      // Phase 0.65–0.85: reds → magentas
+      // Phase 0.85–1.0: hot pinks → bright whites
+
+      let h, s, l;
+      if (t < 0.15) {
+        // deep blue → purple
+        const p = t / 0.15;
+        h = 0.68 + p * 0.12;
+        s = 0.7 + p * 0.2;
+        l = 0.08 + p * 0.20;
+      } else if (t < 0.40) {
+        // purple → cyan → green
+        const p = (t - 0.15) / 0.25;
+        h = 0.80 - p * 0.35;
+        s = 0.9 - p * 0.2;
+        l = 0.28 + p * 0.20;
+      } else if (t < 0.65) {
+        // green → yellow → orange
+        const p = (t - 0.40) / 0.25;
+        h = 0.45 - p * 0.20;
+        s = 0.7 + p * 0.3;
+        l = 0.48 + p * 0.15;
+      } else if (t < 0.85) {
+        // orange → red → magenta
+        const p = (t - 0.65) / 0.20;
+        h = 0.25 - p * 0.15;
+        s = 1.0;
+        l = 0.63 + p * 0.10;
+      } else {
+        // magenta → bright pink → white
+        const p = (t - 0.85) / 0.15;
+        h = 0.10 + p * 0.02;
+        s = 0.9 - p * 0.6;
+        l = 0.73 + p * 0.20;
+      }
+
+      palette[i] = hsl(h % 1, Math.min(s, 1), Math.min(l, 1));
+    }
+  }
+  buildPalette();
+
+  // ─── render ────────────────────────────────────────────────────────
+  let renderPending = false;
+
+  function render() {
+    if (renderPending) return;
+    renderPending = true;
+
+    // Use rAF to coalesce calls
+    requestAnimationFrame(() => {
+      const width = W, height = H;
+      const imageData = ctx.createImageData(width, height);
+      const pixels = imageData.data;
+      const buf32 = new Uint32Array(pixels.buffer);
+
+      const x0 = V.x, y0 = V.y;
+      const dx = V.w / width;
+      const dy = V.h / height;
+
+      let py = 0;
+      for (let row = 0; row < height; row++) {
+        const cy = y0 + row * dy;
+        let cx = x0;
+        for (let col = 0; col < width; col++, py++) {
+          const result = iterate(cx, cy);
+          cx += dx;
+
+          if (result < 0) {
+            buf32[py] = 0xFF000000; // black (ARGB)
+          } else {
+            // normalize to [0, 1)
+            const t = (result % MAX_ITER) / MAX_ITER;
+            const idx = Math.floor(t * (PALETTE_SIZE - 1));
+            buf32[py] = 0xFF000000 | palette[idx];
+          }
+        }
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+      renderPending = false;
+      updateOverlay();
+    });
+  }
+
+  // ─── overlay ───────────────────────────────────────────────────────
+  function updateOverlay() {
+    const cx = V.x + V.w / 2;
+    const cy = V.y + V.h / 2;
+    const zoom = 3.0 / V.w;
+    overlay.textContent = `Re: ${cx.toFixed(10)}  Im: ${cy.toFixed(10)}  Zoom: ${zoom.toFixed(2)}×`;
+  }
+
+  // ─── pan ───────────────────────────────────────────────────────────
+  let isDragging = false;
+  let dragStartX = 0, dragStartY = 0;
+  let dragVX = 0, dragVY = 0, dragVW = 0, dragVH = 0;
+
+  function screenToComplex(sx, sy) {
+    return {
+      r: V.x + (sx / canvas.clientWidth) * V.w,
+      i: V.y + (sy / canvas.clientHeight) * V.h
+    };
+  }
+
+  canvas.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    isDragging = true;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    dragVX = V.x;
+    dragVY = V.y;
+    dragVW = V.w;
+    dragVH = V.h;
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    const rx = (e.clientX - dragStartX) / canvas.clientWidth;
+    const ry = (e.clientY - dragStartY) / canvas.clientHeight;
+    V.x = dragVX - rx * V.w;
+    V.y = dragVY - ry * V.h;
+    // Don't render during drag — only on mouseup
+  });
+
+  window.addEventListener('mouseup', (e) => {
+    if (!isDragging) return;
+    isDragging = false;
+
+    const dx = e.clientX - dragStartX;
+    const dy = e.clientY - dragStartY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist < 5) {
+      // click (no significant movement) → re-center
+      const rect = canvas.getBoundingClientRect();
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+      const pos = screenToComplex(sx, sy);
+      V.x = pos.r - V.w / 2;
+      V.y = pos.i - V.h / 2;
+    }
+    render(); // render final position (pan or re-center)
+  });
+
+  // ─── zoom (scroll wheel) ───────────────────────────────────────────
+  canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+
+    const rect = canvas.getBoundingClientRect();
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+
+    // mouse position in complex plane (pre-zoom)
+    const pos = screenToComplex(sx, sy);
+
+    const factor = e.deltaY > 0 ? 1.1 : 1 / 1.1;
+    V.w *= factor;
+    V.h *= factor;
+
+    // re-center so the mouse-fixed point stays fixed
+    V.x = pos.r - (sx / canvas.clientWidth) * V.w;
+    V.y = pos.i - (sy / canvas.clientHeight) * V.h;
+
+    render();
+  }, { passive: false });
+
+  // ─── window resize ─────────────────────────────────────────────────
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(resize, 100);
+  });
+
+  // ─── init ──────────────────────────────────────────────────────────
+  // Ensure canvas client size matches window
+  canvas.style.width = '100%';
+  canvas.style.height = '100%';
+  resize();
+
+})();
+</script>
+</body>
+</html>

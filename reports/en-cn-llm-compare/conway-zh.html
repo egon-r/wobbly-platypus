@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conway's Game of Life</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:#1a1a2e;
+  color:#e0e0e0;
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+}
+.container{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:16px;
+  max-width:100%;
+}
+h1{
+  font-weight:300;
+  font-size:1.6rem;
+  letter-spacing:2px;
+  color:#a0a0c0;
+  text-transform:uppercase;
+}
+canvas{
+  border:1px solid #2a2a4a;
+  border-radius:8px;
+  cursor:pointer;
+  background:#16213e;
+  max-width:100%;
+  height:auto;
+  display:block;
+}
+.controls{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:center;
+  justify-content:center;
+}
+.btn{
+  background:#2a2a4e;
+  color:#c0c0e0;
+  border:1px solid #3a3a6e;
+  border-radius:6px;
+  padding:8px 18px;
+  font-size:0.85rem;
+  cursor:pointer;
+  transition:all 0.2s;
+  font-family:inherit;
+  letter-spacing:0.5px;
+  user-select:none;
+}
+.btn:hover{background:#3a3a6e;border-color:#5a5a9e;color:#fff}
+.btn:active{transform:scale(0.96)}
+.btn.active{background:#0f3460;border-color:#00d2ff;color:#00d2ff;box-shadow:0 0 12px rgba(0,210,255,0.3)}
+.btn.danger:hover{background:#5a1a2e;border-color:#e94560;color:#e94560}
+.btn.primary{background:#0f3460;border-color:#00d2ff;color:#00d2ff}
+.btn.primary:hover{background:#1a4a7a;box-shadow:0 0 10px rgba(0,210,255,0.25)}
+.info-bar{
+  display:flex;
+  gap:24px;
+  font-size:0.85rem;
+  color:#8080a0;
+  align-items:center;
+}
+.info-bar span{display:flex;align-items:center;gap:6px}
+.info-bar .num{color:#00d2ff;font-weight:600;font-variant-numeric:tabular-nums}
+.info-bar .num.alive-count{color:#e94560}
+.speed-control{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:#8080a0;
+  font-size:0.85rem;
+}
+.speed-control input[type=range]{
+  -webkit-appearance:none;
+  appearance:none;
+  width:80px;
+  height:4px;
+  border-radius:2px;
+  background:#2a2a4e;
+  outline:none;
+}
+.speed-control input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  appearance:none;
+  width:14px;
+  height:14px;
+  border-radius:50%;
+  background:#00d2ff;
+  cursor:pointer;
+  border:2px solid #1a1a2e;
+}
+.speed-control input[type=range]::-moz-range-thumb{
+  width:14px;
+  height:14px;
+  border-radius:50%;
+  background:#00d2ff;
+  cursor:pointer;
+  border:2px solid #1a1a2e;
+}
+.footer{color:#404060;font-size:0.7rem;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Game of Life</h1>
+  <canvas id="gol"></canvas>
+  <div class="controls">
+    <button class="btn primary" id="btnStart">▶ Start</button>
+    <button class="btn" id="btnStep">⏭ Step</button>
+    <button class="btn" id="btnClear">✕ Clear</button>
+    <button class="btn" id="btnRandom">🎲 Random</button>
+  </div>
+  <div class="info-bar">
+    <span>Generation <span class="num" id="genCount">0</span></span>
+    <span>Alive <span class="num alive-count" id="aliveCount">0</span></span>
+    <span class="speed-control">
+      Speed
+      <input type="range" id="speedRange" min="30" max="500" value="150">
+      <span class="num" id="speedLabel">150ms</span>
+    </span>
+  </div>
+  <div class="footer">B3/S23 · click cells to toggle</div>
+</div>
+<script>
+(function(){
+  const canvas=document.getElementById('gol');
+  const ctx=canvas.getContext('2d');
+  const genSpan=document.getElementById('genCount');
+  const aliveSpan=document.getElementById('aliveCount');
+  const btnStart=document.getElementById('btnStart');
+  const btnStep=document.getElementById('btnStep');
+  const btnClear=document.getElementById('btnClear');
+  const btnRandom=document.getElementById('btnRandom');
+  const speedRange=document.getElementById('speedRange');
+  const speedLabel=document.getElementById('speedLabel');
+
+  const COLS=50,ROWS=30;
+  const DEAD_COLOR='#16213e';
+  const ALIVE_COLOR='#00d2ff';
+  const GRID_COLOR='#1f2a4a';
+  const GLOW_COLOR='rgba(0,210,255,0.15)';
+
+  let grid=[];
+  let next=[];
+  let running=false;
+  let generation=0;
+  let rafId=null;
+  let lastTick=0;
+  let tickInterval=150;
+
+  function initGrid(){
+    grid=Array.from({length:ROWS},()=>Array(COLS).fill(0));
+    next=Array.from({length:ROWS},()=>Array(COLS).fill(0));
+    generation=0;
+  }
+  initGrid();
+
+  function resizeCanvas(){
+    const maxW=Math.min(window.innerWidth-40,800);
+    const cellSize=Math.floor(maxW/COLS);
+    const w=cellSize*COLS;
+    const h=cellSize*ROWS;
+    canvas.width=w;
+    canvas.height=h;
+    canvas.style.width=w+'px';
+    canvas.style.height=h+'px';
+    render();
+  }
+
+  function countNeighbors(r,c){
+    let n=0;
+    for(let dr=-1;dr<=1;dr++){
+      for(let dc=-1;dc<=1;dc++){
+        if(dr===0&&dc===0) continue;
+        const nr=r+dr,nc=c+dc;
+        if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS&&grid[nr][nc]) n++;
+      }
+    }
+    return n;
+  }
+
+  function step(){
+    let alive=0;
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        const n=countNeighbors(r,c);
+        if(grid[r][c]){
+          next[r][c]= (n===2||n===3)?1:0;
+        }else{
+          next[r][c]= (n===3)?1:0;
+        }
+        if(next[r][c]) alive++;
+      }
+    }
+    [grid,next]=[next,grid];
+    generation++;
+    updateInfo(alive);
+    render();
+    return alive;
+  }
+
+  function updateInfo(alive){
+    genSpan.textContent=generation;
+    aliveSpan.textContent=alive;
+  }
+
+  function render(){
+    const w=canvas.width;
+    const h=canvas.height;
+    const cellW=w/COLS;
+    const cellH=h/ROWS;
+
+    ctx.clearRect(0,0,w,h);
+
+    // draw cells
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        const x=c*cellW,y=r*cellH;
+        if(grid[r][c]){
+          // glowing alive cell
+          ctx.shadowColor=GLOW_COLOR;
+          ctx.shadowBlur=8;
+          ctx.fillStyle=ALIVE_COLOR;
+          ctx.fillRect(x+0.5,y+0.5,cellW-1,cellH-1);
+          ctx.shadowBlur=0;
+        }else{
+          ctx.fillStyle=DEAD_COLOR;
+          ctx.fillRect(x+0.5,y+0.5,cellW-1,cellH-1);
+        }
+      }
+    }
+
+    // grid lines
+    ctx.strokeStyle=GRID_COLOR;
+    ctx.lineWidth=0.5;
+    ctx.beginPath();
+    for(let c=1;c<COLS;c++){
+      const x=c*cellW;
+      ctx.moveTo(x,0);
+      ctx.lineTo(x,h);
+    }
+    for(let r=1;r<ROWS;r++){
+      const y=r*cellH;
+      ctx.moveTo(0,y);
+      ctx.lineTo(w,y);
+    }
+    ctx.stroke();
+  }
+
+  function toggleCell(clientX,clientY){
+    const rect=canvas.getBoundingClientRect();
+    const scaleX=canvas.width/rect.width;
+    const scaleY=canvas.height/rect.height;
+    const mx=(clientX-rect.left)*scaleX;
+    const my=(clientY-rect.top)*scaleY;
+    const cellW=canvas.width/COLS;
+    const cellH=canvas.height/ROWS;
+    const c=Math.floor(mx/cellW);
+    const r=Math.floor(my/cellH);
+    if(r>=0&&r<ROWS&&c>=0&&c<COLS){
+      grid[r][c]=grid[r][c]?0:1;
+      const alive=grid.flat().reduce((a,b)=>a+b,0);
+      updateInfo(alive);
+      render();
+    }
+  }
+
+  function randomFill(){
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        grid[r][c]=Math.random()<0.3?1:0;
+      }
+    }
+    generation=0;
+    const alive=grid.flat().reduce((a,b)=>a+b,0);
+    updateInfo(alive);
+    render();
+  }
+
+  function clearGrid(){
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        grid[r][c]=0;
+      }
+    }
+    generation=0;
+    updateInfo(0);
+    render();
+  }
+
+  function tick(now){
+    if(!running) return;
+    if(now-lastTick>=tickInterval){
+      lastTick=now;
+      const alive=step();
+      if(alive===0){
+        stop();
+        return;
+      }
+    }
+    rafId=requestAnimationFrame(tick);
+  }
+
+  function start(){
+    if(running) return;
+    running=true;
+    btnStart.textContent='⏸ Pause';
+    btnStart.classList.add('active');
+    lastTick=performance.now();
+    rafId=requestAnimationFrame(tick);
+  }
+
+  function stop(){
+    running=false;
+    if(rafId){cancelAnimationFrame(rafId);rafId=null;}
+    btnStart.textContent='▶ Start';
+    btnStart.classList.remove('active');
+  }
+
+  function toggleRun(){
+    running?stop():start();
+  }
+
+  // events
+  canvas.addEventListener('click',(e)=>toggleCell(e.clientX,e.clientY));
+  btnStart.addEventListener('click',toggleRun);
+  btnStep.addEventListener('click',()=>{
+    if(running) stop();
+    step();
+  });
+  btnClear.addEventListener('click',()=>{
+    if(running) stop();
+    clearGrid();
+  });
+  btnRandom.addEventListener('click',()=>{
+    if(running) stop();
+    randomFill();
+  });
+  speedRange.addEventListener('input',()=>{
+    tickInterval=parseInt(speedRange.value,10);
+    speedLabel.textContent=tickInterval+'ms';
+  });
+
+  window.addEventListener('resize',resizeCanvas);
+
+  // keyboard shortcuts
+  document.addEventListener('keydown',(e)=>{
+    if(e.target.tagName==='INPUT') return;
+    switch(e.key){
+      case ' ':
+      case 'k': e.preventDefault();toggleRun();break;
+      case 's': case 'Enter': if(!running) step();break;
+      case 'c': if(running) stop();clearGrid();break;
+      case 'r': if(running) stop();randomFill();break;
+    }
+  });
+
+  // boot
+  resizeCanvas();
+  randomFill();
+
+  // responsive recalc on orientation change
+  window.addEventListener('orientationchange',()=>setTimeout(resizeCanvas,200));
+})();
+</script>
+</body>
+</html>

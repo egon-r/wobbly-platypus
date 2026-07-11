@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mandelbrot Set Viewer</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a0f; }
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      cursor: crosshair;
+    }
+    #ui {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 13px;
+      color: rgba(255,255,255,0.6);
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(8px);
+      padding: 10px 18px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.08);
+      pointer-events: none;
+      user-select: none;
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+    #ui .sep { width: 1px; height: 16px; background: rgba(255,255,255,0.12); }
+    #status {
+      color: rgba(255,255,255,0.45);
+      font-size: 12px;
+    }
+    #spinner {
+      width: 12px; height: 12px;
+      border: 2px solid rgba(255,255,255,0.1);
+      border-top-color: rgba(255,255,255,0.6);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: none;
+    }
+    #spinner.active { display: block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <div id="ui">
+    <span id="coords">Center: -0.5000 + 0.0000i</span>
+    <div class="sep"></div>
+    <span id="zoom">Zoom: 1.00×</span>
+    <div class="sep"></div>
+    <span id="iterations">Iter: 100</span>
+    <div class="sep"></div>
+    <span id="status">Ready</span>
+    <div id="spinner"></div>
+  </div>
+  <script>
+    (() => {
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      const coordsEl = document.getElementById('coords');
+      const zoomEl = document.getElementById('zoom');
+      const iterEl = document.getElementById('iterations');
+      const statusEl = document.getElementById('status');
+      const spinner = document.getElementById('spinner');
+
+      // -- View state --------------------------------------------------------
+      const state = {
+        centerX: -0.5,
+        centerY: 0,
+        zoom: 1,
+        maxIter: 100,
+        width: 0,
+        height: 0,
+      };
+
+      // -- Constants ---------------------------------------------------------
+      const MAX_ZOOM = 1e14;
+      const MIN_ZOOM = 1e-14;
+      const BASE_ZOOM = 3.5;  // full-set visible width at zoom=1
+      const MAX_ITER_CAP = 2000;
+
+      // -- Color palette -----------------------------------------------------
+      // Build a smooth gradient palette: deep blue → cyan → green → yellow → orange → red
+      const PALETTE_SIZE = 2048;
+      const palette = new Uint32Array(PALETTE_SIZE);
+
+      function hslToRgba(h, s, l) {
+        // returns 0xRRGGBBAA
+        const c = (1 - Math.abs(2 * l - 1)) * s;
+        const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+        const m = l - c / 2;
+        let r, g, b;
+        if (h < 60)      { r=c; g=x; b=0; }
+        else if (h < 120){ r=x; g=c; b=0; }
+        else if (h < 180){ r=0; g=c; b=x; }
+        else if (h < 240){ r=0; g=x; b=c; }
+        else if (h < 300){ r=x; g=0; b=c; }
+        else             { r=c; g=0; b=x; }
+        return ((Math.round((r + m) * 255)) << 0 |
+                (Math.round((g + m) * 255)) << 8 |
+                (Math.round((b + m) * 255)) << 16 |
+                0xFF << 24) >>> 0;
+      }
+
+      // Fill palette with a multi-stop gradient
+      for (let i = 0; i < PALETTE_SIZE; i++) {
+        const t = i / PALETTE_SIZE;
+        // Map t through a curve for nicer color distribution
+        const u = t;
+        let h, s, l;
+        if (u < 0.15) {
+          // deep blue-purple
+          const p = u / 0.15;
+          h = 240 + 20 * p;
+          s = 0.7 + 0.2 * p;
+          l = 0.08 + 0.20 * p;
+        } else if (u < 0.35) {
+          // purple → cyan
+          const p = (u - 0.15) / 0.20;
+          h = 260 - 80 * p;
+          s = 0.9 - 0.1 * p;
+          l = 0.28 + 0.15 * p;
+        } else if (u < 0.55) {
+          // cyan → green
+          const p = (u - 0.35) / 0.20;
+          h = 180 - 60 * p;
+          s = 0.8 + 0.1 * p;
+          l = 0.43 + 0.15 * p;
+        } else if (u < 0.75) {
+          // green → yellow
+          const p = (u - 0.55) / 0.20;
+          h = 120 - 40 * p;
+          s = 0.9;
+          l = 0.58 + 0.15 * p;
+        } else {
+          // yellow → orange → red
+          const p = (u - 0.75) / 0.25;
+          h = 80 - 70 * p;
+          s = 0.9 + 0.1 * p;
+          l = 0.73 - 0.13 * p;
+        }
+        palette[i] = hslToRgba(h, s, l);
+      }
+
+      // -- Resize handler ----------------------------------------------------
+      function resize() {
+        const dpr = window.devicePixelRatio || 1;
+        state.width = Math.floor(window.innerWidth * dpr);
+        state.height = Math.floor(window.innerHeight * dpr);
+        canvas.width = state.width;
+        canvas.height = state.height;
+        canvas.style.width = window.innerWidth + 'px';
+        canvas.style.height = window.innerHeight + 'px';
+        render();
+      }
+
+      // -- Mandelbrot calculation per pixel ----------------------------------
+      function mandelbrot(px, py) {
+        const aspect = state.width / state.height;
+        const viewWidth = BASE_ZOOM / state.zoom;
+        const viewHeight = viewWidth / aspect;
+
+        const cx = state.centerX + (px / state.width - 0.5) * viewWidth;
+        const cy = state.centerY + (py / state.height - 0.5) * viewHeight;
+
+        let zx = 0, zy = 0;
+        let iter = 0;
+        const maxIter = state.maxIter;
+
+        while (iter < maxIter) {
+          const zx2 = zx * zx;
+          const zy2 = zy * zy;
+          if (zx2 + zy2 > 4) {
+            // Smooth normalized iteration count: n + 1 - log₂(log(|z|))
+            const log_zn = Math.log(zx2 + zy2) / 2;
+            const nu = Math.log(log_zn) / Math.LN2;
+            const smooth = iter + 1 - nu;
+            return smooth / maxIter; // 0..1 divergent
+          }
+          zy = 2 * zx * zy + cy;
+          zx = zx2 - zy2 + cx;
+          iter++;
+        }
+        return -1; // interior
+      }
+
+      // -- Render in chunks to keep UI responsive ----------------------------
+      let renderAbort = false;
+      let renderQueued = false;
+
+      function render() {
+        if (renderQueued) return;
+        renderQueued = true;
+        // Use a microtask delay so rapid calls batch
+        Promise.resolve().then(() => {
+          renderQueued = false;
+          doRender();
+        });
+      }
+
+      function doRender() {
+        renderAbort = true;
+        // Wait a tick for previous chunk to abort
+        requestAnimationFrame(() => {
+          const w = state.width, h = state.height;
+          if (w === 0 || h === 0) return;
+
+          statusEl.textContent = 'Rendering...';
+          spinner.classList.add('active');
+
+          const imageData = ctx.createImageData(w, h);
+          const data = imageData.data;
+
+          // Divide work into chunks (scanline bands)
+          const CHUNK_SIZE = Math.max(1, Math.floor(h / 16));
+          let currentChunk = 0;
+          const totalChunks = Math.ceil(h / CHUNK_SIZE);
+          let aborted = false;
+
+          renderAbort = false;
+
+          function processChunk() {
+            if (renderAbort) { aborted = true; finish(); return; }
+
+            const yStart = currentChunk * CHUNK_SIZE;
+            const yEnd = Math.min(yStart + CHUNK_SIZE, h);
+
+            for (let py = yStart; py < yEnd; py++) {
+              for (let px = 0; px < w; px++) {
+                const t = mandelbrot(px, py);
+                const idx = (py * w + px) * 4;
+                if (t < 0) {
+                  // Interior — solid dark
+                  data[idx]     = 0;
+                  data[idx + 1] = 0;
+                  data[idx + 2] = 2;
+                  data[idx + 3] = 255;
+                } else {
+                  // Exterior — map to palette
+                  const pIdx = Math.floor(t * PALETTE_SIZE);
+                  const ci = palette[Math.min(pIdx, PALETTE_SIZE - 1)];
+                  data[idx]     = (ci >>> 0)  & 0xFF;
+                  data[idx + 1] = (ci >>> 8)  & 0xFF;
+                  data[idx + 2] = (ci >>> 16) & 0xFF;
+                  data[idx + 3] = 0xFF;
+                }
+              }
+            }
+
+            currentChunk++;
+            if (currentChunk < totalChunks) {
+              // Progress update
+              statusEl.textContent = `Rendering ${Math.round(currentChunk / totalChunks * 100)}%`;
+              requestAnimationFrame(processChunk);
+            } else {
+              finish();
+            }
+          }
+
+          function finish() {
+            if (!aborted) {
+              ctx.putImageData(imageData, 0, 0);
+              statusEl.textContent = 'Ready';
+            }
+            spinner.classList.remove('active');
+            updateUI();
+          }
+
+          processChunk();
+        });
+      }
+
+      // -- UI update ---------------------------------------------------------
+      function updateUI() {
+        const ySign = state.centerY >= 0 ? '+' : '-';
+        coordsEl.textContent = `Center: ${state.centerX.toFixed(4)} ${ySign} ${Math.abs(state.centerY).toFixed(4)}i`;
+        const zoomFactor = state.zoom;
+        zoomEl.textContent = `Zoom: ${zoomFactor < 1 ? zoomFactor.toFixed(6) + '×' : zoomFactor.toFixed(2) + '×'}`;
+        iterEl.textContent = `Iter: ${state.maxIter}`;
+      }
+
+      // -- Coordinate helpers ------------------------------------------------
+      function pixelToComplex(px, py) {
+        const aspect = state.width / state.height;
+        const viewWidth = BASE_ZOOM / state.zoom;
+        const viewHeight = viewWidth / aspect;
+        const cx = state.centerX + (px / state.width - 0.5) * viewWidth;
+        const cy = state.centerY + (py / state.height - 0.5) * viewHeight;
+        return [cx, cy];
+      }
+
+      // -- Event handling: click to re-center --------------------------------
+      canvas.addEventListener('click', (e) => {
+        if (isDragging) return; // ignore click after drag
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        const px = (e.clientX - rect.left) * dpr;
+        const py = (e.clientY - rect.top) * dpr;
+        const [cx, cy] = pixelToComplex(px, py);
+        state.centerX = cx;
+        state.centerY = cy;
+        render();
+      });
+
+      // -- Event handling: drag to pan ---------------------------------------
+      let isDragging = false;
+      let dragStartX = 0, dragStartY = 0;
+      let dragCenterX = 0, dragCenterY = 0;
+
+      canvas.addEventListener('mousedown', (e) => {
+        isDragging = false; // reset, will set true on move
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        dragStartX = (e.clientX - rect.left) * dpr;
+        dragStartY = (e.clientY - rect.top) * dpr;
+        dragCenterX = state.centerX;
+        dragCenterY = state.centerY;
+      });
+
+      canvas.addEventListener('mousemove', (e) => {
+        if (e.buttons === 0) { isDragging = false; return; }
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        const px = (e.clientX - rect.left) * dpr;
+        const py = (e.clientY - rect.top) * dpr;
+
+        const dx = px - dragStartX;
+        const dy = py - dragStartY;
+
+        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+          isDragging = true;
+        }
+
+        if (!isDragging) return;
+
+        const aspect = state.width / state.height;
+        const viewWidth = BASE_ZOOM / state.zoom;
+        const viewHeight = viewWidth / aspect;
+
+        const cx = dragCenterX - (dx / state.width) * viewWidth;
+        const cy = dragCenterY - (dy / state.height) * viewHeight;
+
+        state.centerX = cx;
+        state.centerY = cy;
+        render();
+      });
+
+      canvas.addEventListener('mouseup', () => {
+        // isDragging flag used by click handler
+      });
+
+      canvas.addEventListener('mouseleave', () => {
+        isDragging = false;
+      });
+
+      // -- Event handling: scroll to zoom ------------------------------------
+      canvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        const mx = (e.clientX - rect.left) * dpr;
+        const my = (e.clientY - rect.top) * dpr;
+
+        const zoomFactor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+        const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, state.zoom * zoomFactor));
+
+        // Zoom towards cursor position
+        const aspect = state.width / state.height;
+        const viewWidth = BASE_ZOOM / state.zoom;
+        const viewHeight = viewWidth / aspect;
+        const worldX = state.centerX + (mx / state.width - 0.5) * viewWidth;
+        const worldY = state.centerY + (my / state.height - 0.5) * viewHeight;
+
+        state.zoom = newZoom;
+
+        const newViewWidth = BASE_ZOOM / state.zoom;
+        const newViewHeight = newViewWidth / aspect;
+        state.centerX = worldX - (mx / state.width - 0.5) * newViewWidth;
+        state.centerY = worldY - (my / state.height - 0.5) * newViewHeight;
+
+        // Adjust max iterations based on zoom level
+        state.maxIter = Math.min(MAX_ITER_CAP, Math.max(50, Math.round(100 + Math.log2(state.zoom) * 35)));
+
+        render();
+      }, { passive: false });
+
+      // -- Touch support for mobile ------------------------------------------
+      let lastTouchDist = 0;
+      let touchCenterX = 0, touchCenterY = 0;
+      let touchZoom = 1;
+
+      canvas.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+          // Re-center on tap
+          const touch = e.touches[0];
+          const rect = canvas.getBoundingClientRect();
+          const dpr = window.devicePixelRatio || 1;
+          const px = (touch.clientX - rect.left) * dpr;
+          const py = (touch.clientY - rect.top) * dpr;
+          const [cx, cy] = pixelToComplex(px, py);
+          state.centerX = cx;
+          state.centerY = cy;
+          // We'll render after potential pinch
+        } else if (e.touches.length === 2) {
+          const t1 = e.touches[0], t2 = e.touches[1];
+          lastTouchDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+          touchCenterX = state.centerX;
+          touchCenterY = state.centerY;
+          touchZoom = state.zoom;
+        }
+      }, { passive: true });
+
+      canvas.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        if (e.touches.length === 2) {
+          const t1 = e.touches[0], t2 = e.touches[1];
+          const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+          const scale = dist / lastTouchDist;
+          const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, touchZoom * scale));
+          state.zoom = newZoom;
+          state.maxIter = Math.min(MAX_ITER_CAP, Math.max(50, Math.round(100 + Math.log2(state.zoom) * 35)));
+          render();
+        }
+      }, { passive: false });
+
+      canvas.addEventListener('touchend', (e) => {
+        if (e.touches.length === 0) {
+          render();
+        }
+      }, { passive: true });
+
+      // -- Window resize -----------------------------------------------------
+      let resizeTimeout;
+      window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(resize, 150);
+      });
+
+      // -- Keyboard shortcuts ------------------------------------------------
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'r' || e.key === 'R') {
+          state.centerX = -0.5;
+          state.centerY = 0;
+          state.zoom = 1;
+          state.maxIter = 100;
+          render();
+        }
+      });
+
+      // -- Init --------------------------------------------------------------
+      resize();
+    })();
+  </script>
+</body>
+</html>
