@@ -61,9 +61,10 @@ body{
 #fs-btn:hover{background:rgba(0,0,0,.8)}
 #preview.fullscreen{
   position:fixed;
-  inset:0;
-  width:100vw;
-  height:100vh;
+  top:0;
+  right:0;
+  bottom:0;
+  left:0;
   z-index:9999;
   background:#000
 }
@@ -851,10 +852,16 @@ function toggleFS(){
   if(document.fullscreenElement){
     document.exitFullscreen().catch(()=>setFS(false));
   }else{
-    preview.requestFullscreen().catch(()=>{
-      // Native API unavailable (iOS etc.) — CSS fallback
+    // iOS Safari: requestFullscreen may not exist on <div>, or promise hangs.
+    // Guard existence, fall back to CSS after 300ms timeout.
+    if(typeof preview.requestFullscreen !== 'function'){
       setFS(true);
-    });
+      return;
+    }
+    preview.requestFullscreen().catch(()=>setFS(true));
+    setTimeout(() => {
+      if(!document.fullscreenElement && !fsActive) setFS(true);
+    }, 300);
   }
 }
 
