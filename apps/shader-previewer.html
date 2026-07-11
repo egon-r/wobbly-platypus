@@ -722,20 +722,14 @@ canvas.addEventListener('pointermove',e=>{
 });
 canvas.addEventListener('pointerup',()=>{down=false;});
 canvas.addEventListener('pointercancel',()=>{down=false;});
-// scroll accumulation for smooth zoom across mice & trackpads
-let scrollAccum=0;
+// smooth zoom via exp() — consistent on mice & trackpads
 canvas.addEventListener('wheel',e=>{
-  scrollAccum+=e.deltaY;
-  const step=30;
-  const steps=Math.round(scrollAccum/step);
-  if(steps){
-    scrollAccum-=steps*step;
-    if(THREE_D_SHADERS.has(select.value)){
-      dist=Math.max(2,Math.min(20,dist*Math.pow(1.06,-steps)));
-    }else{
-      zoomLevel*=Math.pow(1.06,-steps);
-      zoomLevel=Math.max(0.0001,Math.min(100000,zoomLevel));
-    }
+  const k=.002;
+  if(THREE_D_SHADERS.has(select.value)){
+    dist=Math.max(2,Math.min(20,dist*Math.exp(e.deltaY*k)));
+  }else{
+    zoomLevel*=Math.exp(-e.deltaY*k);
+    zoomLevel=Math.max(0.0001,Math.min(100000,zoomLevel));
   }
   e.preventDefault();
 },{passive:false});
@@ -767,9 +761,9 @@ canvas.addEventListener('touchmove',e=>{
     if(pinchStart.dist>0){
       const ratio=cur/pinchStart.dist;
       if(THREE_D_SHADERS.has(select.value)){
-        dist=Math.max(2,Math.min(20,pinchStart.dist3D*ratio));
+        dist=Math.max(2,Math.min(20,pinchStart.dist3D/ratio));
       } else {
-        zoomLevel=Math.max(0.0001,Math.min(100000,pinchStart.zoom/ratio));
+        zoomLevel=Math.max(0.0001,Math.min(100000,pinchStart.zoom*ratio));
       }
     }
   }
@@ -830,22 +824,26 @@ code.addEventListener('keydown',e=>{
   if(e.ctrlKey&&e.key==='Enter')compileShader();
 });
 
-// --- fullscreen ---
+// --- fullscreen (standard API + CSS fallback) ---
 const fsBtn = document.getElementById('fs-btn');
 const preview = document.getElementById('preview');
+function setFS(on){
+  preview.classList.toggle('fullscreen',on);
+  setTimeout(resize,300);
+}
 fsBtn.addEventListener('click',()=>{
-  if(!document.fullscreenElement&&!document.webkitFullscreenElement){
-    preview.requestFullscreen().catch(e=>console.error('fs error:',e));
+  if(document.fullscreenElement){
+    document.exitFullscreen().catch(()=>setFS(false));
   }else{
-    (document.exitFullscreen||document.webkitExitFullscreen)().catch(e=>console.error('fs exit error:',e));
+    preview.requestFullscreen().catch(()=>{
+      // CSS fallback when fullscreen API unavailable (iOS etc.)
+      setFS(true);
+    });
   }
 });
-function onFSChange(){
-  preview.classList.toggle('fullscreen',!!(document.fullscreenElement||document.webkitFullscreenElement));
-  setTimeout(resize,200);
-}
-document.addEventListener('fullscreenchange',onFSChange);
-document.addEventListener('webkitfullscreenchange',onFSChange);
+document.addEventListener('fullscreenchange',()=>{
+  setFS(!!document.fullscreenElement);
+});
 
 // --- init ---
 loadShader('raymarcher');
