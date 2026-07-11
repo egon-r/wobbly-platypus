@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Code Editor</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #1e1e1e;
+    --surface: #252526;
+    --border: #3c3c3c;
+    --text: #d4d4d4;
+    --text-dim: #6e6e6e;
+    --accent: #0078d4;
+    --accent-hover: #1a8ae8;
+    --danger: #d32f2f;
+    --danger-hover: #e53935;
+    --success: #4caf50;
+    --font-mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --header-h: 48px;
+    --footer-h: 28px;
+    --divider-w: 6px;
+  }
+
+  html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font-sans); }
+
+  /* ---- Layout ---- */
+  #app { display: flex; flex-direction: column; height: 100vh; }
+
+  /* ---- Header ---- */
+  #header {
+    height: var(--header-h);
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 12px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    user-select: none;
+  }
+  #header h1 {
+    font-size: 14px; font-weight: 600; color: var(--text);
+    margin-right: auto; white-space: nowrap;
+  }
+  #header .controls { display: flex; align-items: center; gap: 6px; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 12px; border: 1px solid var(--border); border-radius: 4px;
+    background: #333; color: var(--text);
+    font-size: 12px; font-family: var(--font-sans); cursor: pointer;
+    white-space: nowrap; transition: background 0.15s, border-color 0.15s;
+  }
+  .btn:hover { background: #444; border-color: #555; }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+  .btn-danger { color: var(--danger); }
+  .btn-danger:hover { color: #fff; background: var(--danger); border-color: var(--danger); }
+  .btn-sm { padding: 2px 8px; font-size: 11px; }
+
+  /* Toggle switch */
+  .toggle-wrap {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--text-dim); user-select: none; cursor: pointer;
+  }
+  .toggle-wrap input[type="checkbox"] {
+    appearance: none; -webkit-appearance: none;
+    width: 32px; height: 16px; border-radius: 10px;
+    background: #555; border: 1px solid #666;
+    position: relative; transition: background 0.2s; cursor: pointer; flex-shrink: 0;
+  }
+  .toggle-wrap input[type="checkbox"]::after {
+    content: ''; position: absolute; top: 1px; left: 1px;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: #ccc; transition: transform 0.2s, background 0.2s;
+  }
+  .toggle-wrap input[type="checkbox"]:checked { background: var(--accent); border-color: var(--accent); }
+  .toggle-wrap input[type="checkbox"]:checked::after {
+    transform: translateX(16px); background: #fff;
+  }
+  .toggle-label { white-space: nowrap; }
+
+  /* ---- Main area (two panes + divider) ---- */
+  #main {
+    flex: 1; display: flex; overflow: hidden;
+    position: relative; min-height: 0;
+  }
+
+  #editor-pane, #preview-pane {
+    overflow: hidden; position: relative;
+    display: flex; flex-direction: column;
+  }
+
+  #editor-pane { background: #1e1e1e; }
+  #preview-pane { background: #fff; flex: 1; }
+
+  .pane-label {
+    position: absolute; top: 4px; right: 8px;
+    font-size: 10px; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.5px;
+    pointer-events: none; z-index: 2;
+    background: rgba(30,30,30,0.7); padding: 1px 6px; border-radius: 3px;
+  }
+  #preview-pane .pane-label {
+    color: #999; background: rgba(255,255,255,0.8);
+  }
+
+  /* ---- Textarea / Editor ---- */
+  #editor {
+    width: 100%; height: 100%; resize: none; border: none; outline: none;
+    padding: 12px; padding-right: 52px;
+    font-family: var(--font-mono); font-size: 13px; line-height: 1.6;
+    background: transparent; color: #d4d4d4; tab-size: 2;
+    white-space: pre; overflow-wrap: normal; overflow-x: auto;
+  }
+  #editor::placeholder { color: #555; }
+
+  /* ---- Preview iframe ---- */
+  #preview {
+    width: 100%; height: 100%; border: none;
+    background: #fff;
+  }
+  #preview-error {
+    display: none; position: absolute; bottom: 8px; left: 8px; right: 8px;
+    padding: 6px 10px; background: #fdecea; color: #b71c1c;
+    border: 1px solid #ef9a9a; border-radius: 4px;
+    font-size: 12px; font-family: var(--font-mono); z-index: 3;
+  }
+
+  /* ---- Divider ---- */
+  #divider {
+    width: var(--divider-w); cursor: col-resize;
+    background: var(--border); flex-shrink: 0;
+    position: relative; z-index: 5;
+    transition: background 0.15s;
+  }
+  #divider:hover, #divider.active { background: var(--accent); }
+  #divider::after {
+    content: ''; position: absolute; top: 50%; left: 50%;
+    width: 2px; height: 24px; background: rgba(255,255,255,0.15);
+    transform: translate(-50%, -50%); border-radius: 1px;
+  }
+  #divider.active::after { background: rgba(255,255,255,0.4); }
+
+  /* ---- Footer ---- */
+  #footer {
+    height: var(--footer-h);
+    display: flex; align-items: center; justify-content: flex-end;
+    padding: 0 12px; gap: 12px;
+    background: var(--surface); border-top: 1px solid var(--border);
+    font-size: 11px; color: var(--text-dim); flex-shrink: 0;
+    user-select: none;
+  }
+  #status { transition: color 0.3s; }
+  #status.saved { color: var(--success); }
+  #status.unsaved { color: #ffa726; }
+  #status.error { color: var(--danger); }
+
+  /* ---- Resize overlay (captures mouse during drag) ---- */
+  #drag-overlay {
+    display: none; position: fixed; inset: 0; z-index: 999;
+    cursor: col-resize;
+  }
+  #drag-overlay.active { display: block; }
+
+  /* ---- Responsive: stack vertically on narrow screens ---- */
+  @media (max-width: 640px) {
+    #main { flex-direction: column; }
+    #editor-pane, #preview-pane { width: 100% !important; }
+    #editor-pane { height: 50%; }
+    #preview-pane { flex: 1; }
+    #divider { width: 100% !important; height: var(--divider-w); cursor: row-resize; }
+    #divider::after { width: 24px; height: 2px; }
+    #drag-overlay.active { cursor: row-resize; }
+    #header h1 { font-size: 13px; }
+    .btn { font-size: 11px; padding: 3px 8px; }
+    #header .controls { gap: 4px; }
+    #editor { padding-right: 12px; }
+    .pane-label { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- Header -->
+  <header id="header">
+    <h1>Code Editor</h1>
+    <div class="controls">
+      <button class="btn btn-primary btn-sm" id="runBtn" title="Run / Refresh preview (Ctrl-Enter)">&#9654; Run</button>
+      <button class="btn btn-sm btn-danger" id="clearBtn" title="Reset to template">Clear</button>
+      <label class="toggle-wrap">
+        <input type="checkbox" id="autoRunToggle" checked>
+        <span class="toggle-label">Auto-run</span>
+      </label>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <div id="main">
+    <div id="editor-pane">
+      <span class="pane-label">HTML</span>
+      <textarea id="editor" placeholder="&lt;!-- Write HTML here --&gt;" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off"></textarea>
+    </div>
+    <div id="divider"></div>
+    <div id="preview-pane">
+      <span class="pane-label">Preview</span>
+      <iframe id="preview" sandbox="allow-scripts allow-same-origin"></iframe>
+      <div id="preview-error"></div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer id="footer">
+    <span id="chars"></span>
+    <span id="status">Ready</span>
+  </footer>
+</div>
+
+<!-- Drag overlay -->
+<div id="drag-overlay"></div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ---- DOM refs ----
+  const editor = document.getElementById('editor');
+  const preview = document.getElementById('preview');
+  const previewError = document.getElementById('preview-error');
+  const runBtn = document.getElementById('runBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const autoRunToggle = document.getElementById('autoRunToggle');
+  const statusEl = document.getElementById('status');
+  const charsEl = document.getElementById('chars');
+  const divider = document.getElementById('divider');
+  const dragOverlay = document.getElementById('drag-overlay');
+  const editorPane = document.getElementById('editor-pane');
+
+  // ---- Constants ----
+  const SAVE_DEBOUNCE = 500;
+  const RUN_DEBOUNCE = 300;
+  const LS_KEY_CODE = 'code-editor-content';
+  const LS_KEY_AUTORUN = 'code-editor-autorun';
+  const DEFAULT_TEMPLATE = '<!DOCTYPE html>\n<html lang="en">\n<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>My Code</title><style>body { font-family: sans-serif; padding: 2rem; }</style></head>\n<body><h1>Hello, World!</h1></body>\n</html>';
+
+  // ---- State ----
+  let isDragging = false;
+  let dirty = false;
+  let saveTimer = null;
+  let runTimer = null;
+
+  // ---- Restore state ----
+  function restore() {
+    const saved = localStorage.getItem(LS_KEY_CODE);
+    editor.value = saved !== null ? saved : DEFAULT_TEMPLATE;
+
+    const autorun = localStorage.getItem(LS_KEY_AUTORUN);
+    autoRunToggle.checked = autorun !== null ? (autorun === 'true') : true;
+
+    updateChars();
+    updatePreview();
+    setStatus('Saved', 'saved');
+    dirty = false;
+  }
+
+  // ---- Preview ----
+  function updatePreview() {
+    const code = editor.value;
+    try {
+      preview.srcdoc = code;
+      previewError.style.display = 'none';
+    } catch (e) {
+      previewError.textContent = 'Error: ' + e.message;
+      previewError.style.display = 'block';
+    }
+  }
+
+  // ---- Save ----
+  function save() {
+    try {
+      localStorage.setItem(LS_KEY_CODE, editor.value);
+      dirty = false;
+      setStatus('Saved', 'saved');
+    } catch (e) {
+      setStatus('Storage error', 'error');
+    }
+  }
+
+  // ---- Debounced save ----
+  function debouncedSave() {
+    if (saveTimer) clearTimeout(saveTimer);
+    if (!dirty) {
+      dirty = true;
+      setStatus('Unsaved changes', 'unsaved');
+    }
+    saveTimer = setTimeout(save, SAVE_DEBOUNCE);
+  }
+
+  // ---- Debounced run ----
+  function debouncedRun() {
+    if (runTimer) clearTimeout(runTimer);
+    runTimer = setTimeout(() => {
+      if (autoRunToggle.checked) updatePreview();
+    }, RUN_DEBOUNCE);
+  }
+
+  // ---- Status ----
+  function setStatus(text, cls) {
+    statusEl.textContent = text;
+    statusEl.className = cls || '';
+  }
+
+  // ---- Char count ----
+  function updateChars() {
+    const len = editor.value.length;
+    charsEl.textContent = len + ' chars';
+  }
+
+  // ---- Clear ----
+  function clearEditor() {
+    if (editor.value === DEFAULT_TEMPLATE) return;
+    editor.value = DEFAULT_TEMPLATE;
+    updateChars();
+    debouncedSave();
+    if (autoRunToggle.checked) updatePreview();
+  }
+
+  // ---- Divider drag (horizontal) ----
+  let startX = 0, startWidth = 0;
+
+  function startDrag(e) {
+    isDragging = true;
+    const rect = editorPane.getBoundingClientRect();
+    startWidth = rect.width;
+    startX = e.clientX;
+    dragOverlay.classList.add('active');
+    divider.classList.add('active');
+    document.body.style.userSelect = 'none';
+  }
+
+  function onDrag(e) {
+    if (!isDragging) return;
+    const dx = e.clientX - startX;
+    const newWidth = startWidth + dx;
+    const container = document.getElementById('main').getBoundingClientRect();
+    const minW = 100;
+    const maxW = container.width - minW - divider.offsetWidth;
+    const clamped = Math.max(minW, Math.min(newWidth, maxW));
+    editorPane.style.width = clamped + 'px';
+    editorPane.style.flex = 'none';
+  }
+
+  function stopDrag() {
+    if (!isDragging) return;
+    isDragging = false;
+    dragOverlay.classList.remove('active');
+    divider.classList.remove('active');
+    document.body.style.userSelect = '';
+  }
+
+  // ---- Events ----
+
+  // Editor input
+  editor.addEventListener('input', function() {
+    updateChars();
+    debouncedSave();
+    debouncedRun();
+  });
+
+  // Keyboard shortcut: Ctrl-Enter to run
+  editor.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      updatePreview();
+      save();
+    }
+  });
+
+  // Run button
+  runBtn.addEventListener('click', function() {
+    updatePreview();
+    save();
+    setStatus('Saved', 'saved');
+  });
+
+  // Clear button
+  clearBtn.addEventListener('click', function() {
+    clearEditor();
+  });
+
+  // Auto-run toggle
+  autoRunToggle.addEventListener('change', function() {
+    localStorage.setItem(LS_KEY_AUTORUN, autoRunToggle.checked);
+    if (autoRunToggle.checked) {
+      updatePreview();
+    }
+  });
+
+  // Divider drag
+  divider.addEventListener('mousedown', startDrag);
+  document.addEventListener('mousemove', onDrag);
+  document.addEventListener('mouseup', stopDrag);
+
+  // Touch support for divider
+  divider.addEventListener('touchstart', function(e) {
+    const touch = e.touches[0];
+    startDrag({ clientX: touch.clientX, preventDefault: () => e.preventDefault() });
+  }, { passive: true });
+  document.addEventListener('touchmove', function(e) {
+    if (!isDragging) return;
+    const touch = e.touches[0];
+    onDrag({ clientX: touch.clientX });
+  }, { passive: true });
+  document.addEventListener('touchend', stopDrag);
+
+  // Save on page unload
+  window.addEventListener('beforeunload', function() {
+    if (saveTimer) clearTimeout(saveTimer);
+    if (dirty) save();
+  });
+
+  // ---- Init ----
+  restore();
+
+})();
+</script>
+</body>
+</html>

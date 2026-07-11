@@ -22,5 +22,9 @@
   "sensors": {
     "description": "Real-time device sensor monitor \u2014 gyroscope, accelerometer, geolocation, battery, network, screen, ambient light",
     "created": "2026-07-11T12:00:00+00:00"
+  },
+  "code-editor": {
+    "description": "Local-first HTML/CSS/JS playground with live preview \u2014 like CodePen, no backend",
+    "created": "2026-07-11T17:15:54.339450+00:00"
   }
 }
