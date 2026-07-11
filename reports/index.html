@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>reports</title>
+<style>
+  body { background: #09090b; color: #e4e4e7; font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 4rem 1rem; }
+  h1 { font-weight: 300; font-size: 2rem; margin-bottom: 2rem; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+  .card {
+    background: #18181b;
+    border: 1px solid #27272a;
+    border-radius: 0.75rem;
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    transition: border-color .15s, background .15s;
+    text-decoration: none;
+    color: inherit;
+  }
+  .card:hover { border-color: #52525b; background: #1f1f23; }
+  .card-name { font-size: 1.125rem; font-weight: 500; }
+  .card-desc { font-size: 0.8rem; color: #71717a; margin-top: 0.15rem; flex: 1; }
+  .card-date { font-size: 0.7rem; color: #52525b; margin-top: 0.5rem; }
+  .back { color: #52525b; font-size: 0.875rem; margin-top: 3rem; display: inline-block; }
+  .back:hover { color: #a1a1aa; }
+  @media (max-width: 599px) { .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+  <h1>reports</h1>
+  <div class="grid" id="reportGrid"></div>
+  <p><a class="back" href="/">back</a></p>
+<script>
+var reports = [
+  { name: "en-cn-llm-compare", title: "Language Comparison Experiment", created: "2026-07-12T00:00:00+00:00" }
+];
+
+(function() {
+  var pad = function(n) { return String(n).padStart(2, '0'); };
+  var fmtRel = function(ts) {
+    var d = new Date(ts);
+    var now = new Date();
+    var diff = (now - d) / 1000;
+    var days = Math.floor(diff / 86400);
+    var timeStr = pad(d.getHours()) + ':' + pad(d.getMinutes());
+    if (days === 0) return 'today at ' + timeStr;
+    if (days === 1) return 'yesterday at ' + timeStr;
+    if (days < 7) return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()] + ' at ' + timeStr;
+    return d.toLocaleDateString() + ' at ' + timeStr;
+  };
+
+  var grid = document.getElementById('reportGrid');
+
+  reports.forEach(function(r) {
+    var card = document.createElement('a');
+    card.className = 'card';
+    card.href = '/reports/' + r.name + '/';
+
+    var nameEl = document.createElement('div');
+    nameEl.className = 'card-name';
+    nameEl.textContent = r.title;
+
+    var descEl = document.createElement('div');
+    descEl.className = 'card-desc';
+    descEl.textContent = r.desc || '';
+
+    var dateEl = document.createElement('div');
+    dateEl.className = 'card-date';
+    dateEl.textContent = fmtRel(r.created);
+
+    card.appendChild(nameEl);
+    card.appendChild(descEl);
+    card.appendChild(dateEl);
+    grid.appendChild(card);
+  });
+})();
+</script>
+</body>
+</html>
