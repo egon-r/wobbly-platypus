@@ -1,0 +1,1536 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<!-- iOS Safari 支持 -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="PWA 演示">
+<link rel="apple-touch-icon" href="icons/icon-192.svg">
+<link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
+<!-- PWA Manifest -->
+<link rel="manifest" href="manifest.json">
+<!-- 主题色 -->
+<meta name="theme-color" content="#6366f1">
+<title>PWA 演示应用</title>
+<style>
+/* ============================================================
+ *  CSS 自定义属性（主题变量）
+ *  通过变量统一管理颜色、间距、圆角等设计 token
+ * ============================================================ */
+:root {
+  --color-primary: #6366f1;
+  --color-primary-hover: #4f46e5;
+  --color-primary-light: #e0e7ff;
+  --color-primary-dark: #4338ca;
+  --color-success: #22c55e;
+  --color-success-light: #dcfce7;
+  --color-warning: #f59e0b;
+  --color-warning-light: #fef3c7;
+  --color-error: #ef4444;
+  --color-error-light: #fee2e2;
+  --color-info: #3b82f6;
+  --color-info-light: #dbeafe;
+
+  --color-bg: #f8fafc;
+  --color-bg-card: #ffffff;
+  --color-bg-input: #f1f5f9;
+  --color-text: #1e293b;
+  --color-text-secondary: #64748b;
+  --color-text-muted: #94a3b8;
+  --color-border: #e2e8f0;
+  --color-border-focus: #6366f1;
+
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-lg: 0 4px 6px rgba(0,0,0,0.07), 0 10px 15px rgba(0,0,0,0.1);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+
+  --transition-fast: 0.15s ease;
+  --transition: 0.2s ease;
+}
+
+/* ---- 暗色模式 ----
+ *  根据系统偏好自动切换
+ *  所有颜色通过变量管理，深色模式下只需修改变量值
+ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-primary-light: #1e1b4b;
+    --color-success-light: #052e16;
+    --color-warning-light: #451a03;
+    --color-error-light: #450a0a;
+    --color-info-light: #172554;
+
+    --color-bg: #0f172a;
+    --color-bg-card: #1e293b;
+    --color-bg-input: #334155;
+    --color-text: #e2e8f0;
+    --color-text-secondary: #94a3b8;
+    --color-text-muted: #64748b;
+    --color-border: #334155;
+    --color-border-focus: #818cf8;
+
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+    --shadow: 0 1px 3px rgba(0,0,0,0.4);
+    --shadow-lg: 0 4px 6px rgba(0,0,0,0.4), 0 10px 15px rgba(0,0,0,0.5);
+  }
+}
+
+/* ---- 基础重置 ----
+ *  确保各浏览器表现一致
+ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%; /* iOS Safari 文字大小适配 */
+  -webkit-tap-highlight-color: transparent; /* 移动端点击高亮 */
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.6;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================================
+ *  布局
+ * ============================================================ */
+.app-container {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--spacing-lg) var(--spacing-md);
+}
+
+/* ---- 页面头部 ---- */
+.app-header {
+  text-align: center;
+  padding: var(--spacing-xl) 0 var(--spacing-lg);
+}
+
+.app-header h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--color-primary), #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: var(--spacing-xs);
+}
+
+.app-header p {
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+/* ---- 卡片组件 ---- */
+.card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+  transition: box-shadow var(--transition);
+}
+
+.card:target {
+  box-shadow: var(--shadow-lg);
+  border-color: var(--color-primary);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.card-header h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  flex: 1;
+}
+
+.card-header .icon {
+  font-size: 1.3rem;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary-light);
+  border-radius: var(--radius-sm);
+}
+
+/* ---- 状态指示器 ---- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.7rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.badge-success {
+  background: var(--color-success-light);
+  color: var(--color-success);
+}
+
+.badge-warning {
+  background: var(--color-warning-light);
+  color: var(--color-warning);
+}
+
+.badge-error {
+  background: var(--color-error-light);
+  color: var(--color-error);
+}
+
+.badge-info {
+  background: var(--color-info-light);
+  color: var(--color-info);
+}
+
+/* ---- 按钮 ----
+ *  触控友好：最小高度 44px
+ *  -webkit- 前缀确保 iOS Safari 兼容性
+ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.65rem 1.25rem;
+  min-height: 44px; /* 触控友好最小高度 */
+  font-size: 0.9rem;
+  font-weight: 500;
+  font-family: inherit;
+  line-height: 1.2;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-appearance: none; /* iOS Safari 按钮样式重置 */
+  appearance: none;
+  user-select: none;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: var(--color-primary-light);
+}
+
+.btn-sm {
+  padding: 0.4rem 0.85rem;
+  min-height: 36px;
+  font-size: 0.8rem;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* ---- 表单控件 ---- */
+.form-group {
+  margin-bottom: var(--spacing-md);
+}
+
+.form-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  min-height: 44px; /* 触控友好 */
+  font-size: 0.95rem;
+  font-family: inherit;
+  color: var(--color-text);
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.form-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.form-row {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.form-row .form-input {
+  flex: 1;
+}
+
+/* ---- 待办事项列表 ---- */
+.todo-list {
+  list-style: none;
+  margin-top: var(--spacing-md);
+}
+
+.todo-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--color-border);
+  animation: fadeIn 0.3s ease;
+}
+
+.todo-item:last-child {
+  border-bottom: none;
+}
+
+.todo-item .todo-title {
+  flex: 1;
+  font-size: 0.9rem;
+}
+
+.todo-item .todo-status {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 10px;
+}
+
+.todo-item .todo-delete {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 0.3rem;
+  min-height: 36px;
+  min-width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.todo-item .todo-delete:hover {
+  background: var(--color-error-light);
+  color: var(--color-error);
+}
+
+/* ---- 状态消息 ---- */
+.status-msg {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  margin-top: var(--spacing-sm);
+}
+
+.status-msg-info {
+  background: var(--color-info-light);
+  color: var(--color-info);
+}
+
+.status-msg-success {
+  background: var(--color-success-light);
+  color: var(--color-success);
+}
+
+.status-msg-error {
+  background: var(--color-error-light);
+  color: var(--color-error);
+}
+
+.status-msg-warning {
+  background: var(--color-warning-light);
+  color: var(--color-warning);
+}
+
+/* ---- 网络状态条 ---- */
+.network-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  padding: 0.4rem;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: transform var(--transition);
+  transform: translateY(-100%);
+}
+
+.network-bar.online {
+  background: var(--color-success-light);
+  color: var(--color-success);
+  transform: translateY(0);
+}
+
+.network-bar.offline {
+  background: var(--color-error-light);
+  color: var(--color-error);
+  transform: translateY(0);
+}
+
+/* ---- 统计网格 ---- */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+}
+
+.stat-box {
+  background: var(--color-bg-input);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-md);
+  text-align: center;
+}
+
+.stat-box .stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  line-height: 1.2;
+}
+
+.stat-box .stat-label {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-top: 0.2rem;
+}
+
+/* ---- 空状态 ---- */
+.empty-state {
+  text-align: center;
+  padding: var(--spacing-lg);
+  color: var(--color-text-muted);
+}
+
+.empty-state p {
+  font-size: 0.9rem;
+}
+
+/* ---- 页脚 ---- */
+.app-footer {
+  text-align: center;
+  padding: var(--spacing-xl) 0;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+.app-footer a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.app-footer a:hover {
+  text-decoration: underline;
+}
+
+/* ---- 动画 ---- */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- 响应式 ----
+ *  移动优先：大屏幕下的增强
+ */
+@media (min-width: 768px) {
+  .app-container {
+    padding: var(--spacing-xl) var(--spacing-lg);
+  }
+
+  .app-header h1 {
+    font-size: 2rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* ---- iOS Safari 安全区域适配 ---- */
+@supports (padding: max(0px)) {
+  .app-container {
+    padding-left: max(var(--spacing-md), env(safe-area-inset-left));
+    padding-right: max(var(--spacing-md), env(safe-area-inset-right));
+    padding-bottom: max(var(--spacing-lg), env(safe-area-inset-bottom));
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+ *  网络状态提示条（固定在顶部）
+ * ============================================================ -->
+<div class="network-bar" id="networkBar"></div>
+
+<!-- ============================================================
+ *  主容器
+ * ============================================================ -->
+<div class="app-container">
+
+  <!-- ========== 页面头部 ========== -->
+  <header class="app-header">
+    <h1>📱 PWA 演示</h1>
+    <p>渐进式 Web 应用功能全展示</p>
+  </header>
+
+  <!-- ============================================================
+   *  一、Service Worker 状态
+   *  显示 SW 注册状态并提供手动更新按钮
+   * ============================================================ -->
+  <section class="card" id="section-sw">
+    <div class="card-header">
+      <span class="icon">⚙️</span>
+      <h2>Service Worker</h2>
+      <span class="badge badge-warning" id="swStatus">注册中...</span>
+    </div>
+
+    <div class="status-msg status-msg-info" id="swDetail">
+      正在注册 Service Worker...
+    </div>
+
+    <div style="margin-top: var(--spacing-md); display: flex; gap: var(--spacing-sm); flex-wrap: wrap;">
+      <button class="btn btn-outline btn-sm" id="updateSwBtn" disabled>
+        🔄 更新 SW（skipWaiting）
+      </button>
+    </div>
+  </section>
+
+  <!-- ============================================================
+   *  二、安装应用（添加到主屏幕）
+   *  监听 beforeinstallprompt 事件
+   * ============================================================ -->
+  <section class="card" id="section-install">
+    <div class="card-header">
+      <span class="icon">📲</span>
+      <h2>安装应用</h2>
+      <span class="badge badge-info" id="installStatus">可安装</span>
+    </div>
+
+    <p style="color: var(--color-text-secondary); font-size: 0.9rem; margin-bottom: var(--spacing-md);">
+      将本应用添加到主屏幕，获得原生应用般的使用体验。
+    </p>
+
+    <button class="btn btn-primary btn-block" id="installBtn" disabled style="display: none;">
+      📲 添加到主屏幕
+    </button>
+
+    <div id="installMsg"></div>
+  </section>
+
+  <!-- ============================================================
+   *  三、离线状态检测
+   *  显示当前网络状态和缓存信息
+   * ============================================================ -->
+  <section class="card" id="section-offline">
+    <div class="card-header">
+      <span class="icon">🌐</span>
+      <h2>离线支持</h2>
+      <span class="badge badge-success" id="netStatus">在线</span>
+    </div>
+
+    <p style="color: var(--color-text-secondary); font-size: 0.9rem;">
+      当前网络状态：<strong id="netLabel">在线</strong>
+    </p>
+
+    <div class="status-msg status-msg-info" style="margin-top: var(--spacing-sm);">
+      💡 断开网络后刷新页面，将显示离线回退页面
+    </div>
+  </section>
+
+  <!-- ============================================================
+   *  四、待办事项 & 后台同步
+   *  使用 IndexedDB 存储数据，后台同步注册
+   * ============================================================ -->
+  <section class="card" id="section-todos">
+    <div class="card-header">
+      <span class="icon">📋</span>
+      <h2>待办事项</h2>
+      <span class="badge badge-info" id="syncStatus">未注册同步</span>
+    </div>
+
+    <!-- 添加待办表单 -->
+    <form id="todoForm" class="form-row" autocomplete="off">
+      <input
+        type="text"
+        class="form-input"
+        id="todoInput"
+        placeholder="输入待办事项..."
+        required
+        maxlength="200"
+      >
+      <button type="submit" class="btn btn-primary" id="addTodoBtn">
+        添加
+      </button>
+    </form>
+
+    <!-- 待办列表 -->
+    <div id="todoListContainer">
+      <div class="empty-state">
+        <p>暂无待办事项，在上方添加一条吧</p>
+      </div>
+    </div>
+
+    <!-- 同步状态 -->
+    <div id="syncMsg"></div>
+  </section>
+
+  <!-- ============================================================
+   *  五、推送通知
+   *  Push API 订阅 + 本地模拟推送
+   * ============================================================ -->
+  <section class="card" id="section-push">
+    <div class="card-header">
+      <span class="icon">🔔</span>
+      <h2>推送通知</h2>
+      <span class="badge badge-warning" id="pushStatus">未订阅</span>
+    </div>
+
+    <p style="color: var(--color-text-secondary); font-size: 0.9rem; margin-bottom: var(--spacing-md);">
+      订阅推送通知后可接收消息。<br>
+      <small>（因本地开发环境，使用「模拟推送」按钮测试通知效果）</small>
+    </p>
+
+    <div style="display: flex; gap: var(--spacing-sm); flex-wrap: wrap;">
+      <button class="btn btn-primary" id="subscribePushBtn">
+        🔔 订阅推送通知
+      </button>
+      <button class="btn btn-outline" id="simulatePushBtn" disabled>
+        📨 模拟推送
+      </button>
+      <button class="btn btn-outline btn-sm" id="unsubscribePushBtn" style="display:none;">
+        取消订阅
+      </button>
+    </div>
+
+    <div id="pushMsg"></div>
+  </section>
+
+  <!-- ============================================================
+   *  六、IndexedDB 存储统计
+   * ============================================================ -->
+  <section class="card" id="section-db">
+    <div class="card-header">
+      <span class="icon">💾</span>
+      <h2>本地存储</h2>
+      <span class="badge badge-success">IndexedDB</span>
+    </div>
+
+    <div class="stats-grid" id="dbStats">
+      <div class="stat-box">
+        <div class="stat-value" id="todoCount">0</div>
+        <div class="stat-label">待办总数</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="syncedCount">0</div>
+        <div class="stat-label">已同步</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="pendingCount">0</div>
+        <div class="stat-label">待同步</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="swStatusCount">-</div>
+        <div class="stat-label">SW 状态</div>
+      </div>
+    </div>
+
+    <div style="margin-top: var(--spacing-sm);">
+      <button class="btn btn-outline btn-sm" id="clearTodosBtn">
+        🗑️ 清空所有待办
+      </button>
+    </div>
+  </section>
+
+  <!-- ========== 页脚 ========== -->
+  <footer class="app-footer">
+    <p>
+      <a href="https://developer.mozilla.org/zh-CN/docs/Web/Progressive_web_apps" target="_blank" rel="noopener">PWA 文档</a>
+      ·
+      <a href="/apps/">返回应用列表</a>
+    </p>
+    <p style="margin-top: 0.3rem;">
+      离线就绪 · 后台同步 · 推送通知
+    </p>
+  </footer>
+</div>
+
+<!-- ============================================================
+ *  JavaScript 主逻辑
+ *  全部使用 ES6+，无外部依赖
+ * ============================================================ -->
+<script>
+(function() {
+  'use strict';
+
+  /* ============================================================
+   *  IndexedDB 数据库工具
+   *  数据库名: PWADemoDB，版本: 1
+   *  对象存储: todos（主键: id）
+   * ============================================================ */
+  var DB_NAME = 'PWADemoDB';
+  var DB_VERSION = 1;
+  var STORE_NAME = 'todos';
+
+  /**
+   * 打开/创建 IndexedDB 数据库
+   * @returns {Promise<IDBDatabase>}
+   */
+  function openDB() {
+    return new Promise(function(resolve, reject) {
+      var request = indexedDB.open(DB_NAME, DB_VERSION);
+
+      // 数据库首次创建或版本升级时创建对象存储
+      request.onupgradeneeded = function(event) {
+        var db = event.target.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          // 创建 todos 对象存储，使用 id 作为主键（自动生成）
+          db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+          console.log('[DB] 创建对象存储:', STORE_NAME);
+        }
+      };
+
+      request.onsuccess = function(event) {
+        resolve(event.target.result);
+      };
+
+      request.onerror = function(event) {
+        console.error('[DB] 打开数据库失败:', event.target.error);
+        reject(event.target.error);
+      };
+    });
+  }
+
+  /**
+   * 添加一条待办事项
+   * @param {string} title - 待办标题
+   * @returns {Promise<Object>} 添加的记录
+   */
+  function addTodo(title) {
+    return openDB().then(function(db) {
+      return new Promise(function(resolve, reject) {
+        var transaction = db.transaction([STORE_NAME], 'readwrite');
+        var store = transaction.objectStore(STORE_NAME);
+
+        // 创建待办记录
+        var todo = {
+          id: Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+          title: title.trim(),
+          createdAt: new Date().toISOString(),
+          synced: false,    // 是否已同步到服务器
+          syncedAt: null    // 同步时间
+        };
+
+        var request = store.add(todo);
+
+        request.onsuccess = function() {
+          resolve(todo);
+        };
+
+        request.onerror = function(event) {
+          reject(event.target.error);
+        };
+
+        transaction.oncomplete = function() {
+          db.close();
+        };
+      });
+    });
+  }
+
+  /**
+   * 获取所有待办事项
+   * @returns {Promise<Array>} 待办列表
+   */
+  function getAllTodos() {
+    return openDB().then(function(db) {
+      return new Promise(function(resolve, reject) {
+        var transaction = db.transaction([STORE_NAME], 'readonly');
+        var store = transaction.objectStore(STORE_NAME);
+        var request = store.getAll();
+
+        request.onsuccess = function() {
+          resolve(request.result || []);
+        };
+
+        request.onerror = function(event) {
+          reject(event.target.error);
+        };
+
+        transaction.oncomplete = function() {
+          db.close();
+        };
+      });
+    });
+  }
+
+  /**
+   * 删除一条待办事项
+   * @param {string} id - 待办 ID
+   * @returns {Promise<void>}
+   */
+  function deleteTodo(id) {
+    return openDB().then(function(db) {
+      return new Promise(function(resolve, reject) {
+        var transaction = db.transaction([STORE_NAME], 'readwrite');
+        var store = transaction.objectStore(STORE_NAME);
+        var request = store.delete(id);
+
+        request.onsuccess = function() {
+          resolve();
+        };
+
+        request.onerror = function(event) {
+          reject(event.target.error);
+        };
+
+        transaction.oncomplete = function() {
+          db.close();
+        };
+      });
+    });
+  }
+
+  /**
+   * 清空所有待办事项
+   * @returns {Promise<void>}
+   */
+  function clearAllTodos() {
+    return openDB().then(function(db) {
+      return new Promise(function(resolve, reject) {
+        var transaction = db.transaction([STORE_NAME], 'readwrite');
+        var store = transaction.objectStore(STORE_NAME);
+        var request = store.clear();
+
+        request.onsuccess = function() {
+          resolve();
+        };
+
+        request.onerror = function(event) {
+          reject(event.target.error);
+        };
+
+        transaction.oncomplete = function() {
+          db.close();
+        };
+      });
+    });
+  }
+
+  /* ============================================================
+   *  渲染待办列表
+   * ============================================================ */
+  function renderTodoList() {
+    getAllTodos().then(function(todos) {
+      var container = document.getElementById('todoListContainer');
+      var statsTodo = document.getElementById('todoCount');
+      var statsSynced = document.getElementById('syncedCount');
+      var statsPending = document.getElementById('pendingCount');
+
+      // 更新统计
+      statsTodo.textContent = todos.length;
+      statsSynced.textContent = todos.filter(function(t) { return t.synced; }).length;
+      statsPending.textContent = todos.filter(function(t) { return !t.synced; }).length;
+
+      if (todos.length === 0) {
+        container.innerHTML =
+          '<div class="empty-state"><p>暂无待办事项，在上方添加一条吧</p></div>';
+        return;
+      }
+
+      // 生成列表 HTML
+      var html = '<ul class="todo-list">';
+      // 按创建时间倒序排列
+      todos.sort(function(a, b) {
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      });
+
+      todos.forEach(function(todo) {
+        var statusClass = todo.synced ? 'badge-success' : 'badge-warning';
+        var statusText = todo.synced ? '已同步' : '待同步';
+        html +=
+          '<li class="todo-item" data-id="' + todo.id + '">' +
+            '<span class="todo-title">' + escapeHtml(todo.title) + '</span>' +
+            '<span class="todo-status badge ' + statusClass + '">' + statusText + '</span>' +
+            '<button class="todo-delete" data-id="' + todo.id + '" title="删除">✕</button>' +
+          '</li>';
+      });
+      html += '</ul>';
+      container.innerHTML = html;
+
+      // 绑定删除事件
+      container.querySelectorAll('.todo-delete').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var id = this.getAttribute('data-id');
+          deleteTodo(id).then(function() {
+            renderTodoList();
+            updateSyncStatus();
+          }).catch(function(err) {
+            console.error('[UI] 删除失败:', err);
+          });
+        });
+      });
+    }).catch(function(err) {
+      console.error('[UI] 加载待办列表失败:', err);
+    });
+  }
+
+  /**
+   * HTML 转义（防止 XSS）
+   */
+  function escapeHtml(str) {
+    var div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+  }
+
+  /* ============================================================
+   *  后台同步状态更新与注册
+   * ============================================================ */
+  var syncRegistered = false;
+  var syncMsgEl = document.getElementById('syncMsg');
+  var syncStatusEl = document.getElementById('syncStatus');
+
+  /**
+   * 注册后台同步事件
+   * 当网络恢复时，SW 会自动触发 sync 事件
+   */
+  function registerSync() {
+    if (syncRegistered) return;
+
+    // 检查浏览器是否支持后台同步
+    if (!('SyncManager' in window)) {
+      syncStatusEl.textContent = '不支持同步';
+      syncStatusEl.className = 'badge badge-error';
+      showSyncMsg('⚠️ 当前浏览器不支持 Background Sync API', 'warning');
+      return;
+    }
+
+    navigator.serviceWorker.ready.then(function(registration) {
+      // 注册 'sync-todos' 标签的同步事件
+      return registration.sync.register('sync-todos');
+    }).then(function() {
+      syncRegistered = true;
+      syncStatusEl.textContent = '√ 已注册';
+      syncStatusEl.className = 'badge badge-success';
+      showSyncMsg('✅ 后台同步已注册，网络恢复时将自动同步数据', 'success');
+    }).catch(function(err) {
+      console.error('[Sync] 注册失败:', err);
+      syncStatusEl.textContent = '注册失败';
+      syncStatusEl.className = 'badge badge-error';
+      showSyncMsg('❌ 后台同步注册失败: ' + err.message, 'error');
+    });
+  }
+
+  /**
+   * 更新同步状态显示
+   */
+  function updateSyncStatus() {
+    getAllTodos().then(function(todos) {
+      var pending = todos.filter(function(t) { return !t.synced; });
+      if (pending.length > 0) {
+        syncStatusEl.textContent = pending.length + ' 条待同步';
+        syncStatusEl.className = 'badge badge-warning';
+      } else {
+        syncStatusEl.textContent = '√ 全部已同步';
+        syncStatusEl.className = 'badge badge-success';
+      }
+    });
+  }
+
+  function showSyncMsg(msg, type) {
+    if (!syncMsgEl) return;
+    var className = 'status-msg status-msg-' + (type || 'info');
+    syncMsgEl.innerHTML = '<div class="' + className + '">' + msg + '</div>';
+    // 3秒后自动清除
+    clearTimeout(syncMsgEl._timer);
+    syncMsgEl._timer = setTimeout(function() {
+      syncMsgEl.innerHTML = '';
+    }, 5000);
+  }
+
+  /* ============================================================
+   *  Service Worker 注册与管理
+   * ============================================================ */
+  var swStatusEl = document.getElementById('swStatus');
+  var swDetailEl = document.getElementById('swDetail');
+  var updateSwBtn = document.getElementById('updateSwBtn');
+  var swRegistration = null;
+  var isSwControlling = false;
+
+  /**
+   * 注册 Service Worker
+   */
+  function registerSW() {
+    if (!('serviceWorker' in navigator)) {
+      swStatusEl.textContent = '不支持';
+      swStatusEl.className = 'badge badge-error';
+      swDetailEl.textContent = '❌ 当前浏览器不支持 Service Worker';
+      return;
+    }
+
+    // 注册 sw.js
+    navigator.serviceWorker.register('sw.js')
+      .then(function(registration) {
+        swRegistration = registration;
+        console.log('[SW] 注册成功:', registration);
+
+        // 监听 SW 状态变化
+        updateSWStatus(registration);
+
+        // 当 SW 状态发生变化时更新显示
+        registration.addEventListener('updatefound', function() {
+          updateSWStatus(registration);
+        });
+
+        // 监听来自 SW 的消息
+        navigator.serviceWorker.addEventListener('message', function(event) {
+          console.log('[Page] 收到 SW 消息:', event.data);
+          if (event.data && event.data.type === 'SW_UPDATED') {
+            swDetailEl.textContent = '✅ SW 已更新，请刷新页面';
+            swStatusEl.textContent = '已更新';
+            swStatusEl.className = 'badge badge-success';
+          }
+          if (event.data && event.data.type === 'SYNC_COMPLETE') {
+            showSyncMsg('✅ 已同步 ' + event.data.count + ' 条待办事项', 'success');
+            renderTodoList();
+            updateSyncStatus();
+          }
+        });
+
+        // 监听 controllerchange（新 SW 接管页面）
+        navigator.serviceWorker.addEventListener('controllerchange', function() {
+          console.log('[SW] 控制器已变更');
+          isSwControlling = true;
+        });
+
+        // 检查是否有等待中的 SW（需要更新）
+        checkWaitingSW(registration);
+
+      })
+      .catch(function(error) {
+        console.error('[SW] 注册失败:', error);
+        swStatusEl.textContent = '错误';
+        swStatusEl.className = 'badge badge-error';
+        swDetailEl.textContent = '❌ 注册失败: ' + error.message;
+      });
+  }
+
+  /**
+   * 更新 SW 状态显示
+   */
+  function updateSWStatus(registration) {
+    var sw = registration.installing || registration.waiting || registration.active;
+    if (!sw) return;
+
+    swStatusEl.textContent = sw.state;
+    swStatusEl.className = 'badge badge-' + (sw.state === 'activated' ? 'success' : 'warning');
+
+    switch (sw.state) {
+      case 'installing':
+        swDetailEl.textContent = '⏳ Service Worker 正在安装...';
+        break;
+      case 'activated':
+        swDetailEl.textContent = '✅ Service Worker 已激活，离线功能就绪';
+        updateSwBtn.disabled = true;
+        // SW 就绪后注册后台同步
+        registerSync();
+        break;
+      case 'waiting':
+        swDetailEl.textContent = '⏸️ 新版本 Service Worker 正在等待，点击"更新 SW"激活';
+        updateSwBtn.disabled = false;
+        break;
+      default:
+        swDetailEl.textContent = 'SW 状态: ' + sw.state;
+    }
+  }
+
+  /**
+   * 检查是否有等待中的 SW
+   */
+  function checkWaitingSW(registration) {
+    if (registration.waiting) {
+      updateSWStatus(registration);
+    }
+
+    registration.addEventListener('updatefound', function() {
+      var newSW = registration.installing;
+      newSW.addEventListener('statechange', function() {
+        updateSWStatus(registration);
+      });
+    });
+  }
+
+  /**
+   * 手动更新 SW（skipWaiting + 刷新）
+   */
+  function updateSW() {
+    if (!swRegistration || !swRegistration.waiting) {
+      swDetailEl.textContent = '⚠️ 没有等待中的 SW 更新';
+      return;
+    }
+
+    // 发送 SKIP_WAITING 消息给 SW
+    swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+    swDetailEl.textContent = '🔄 正在更新 Service Worker...';
+    updateSwBtn.disabled = true;
+
+    // 等待 controllerchange 后刷新
+    navigator.serviceWorker.addEventListener('controllerchange', function() {
+      window.location.reload();
+    });
+
+    // 如果 3 秒后未触发 controllerchange，强制刷新
+    setTimeout(function() {
+      window.location.reload();
+    }, 3000);
+  }
+
+  /* ============================================================
+   *  beforeinstallprompt — 添加到主屏幕
+   * ============================================================ */
+  var deferredPrompt = null;
+  var installBtn = document.getElementById('installBtn');
+  var installStatus = document.getElementById('installStatus');
+  var installMsgEl = document.getElementById('installMsg');
+
+  // 监听 beforeinstallprompt 事件
+  window.addEventListener('beforeinstallprompt', function(event) {
+    // 阻止 Chrome 自动显示安装提示
+    event.preventDefault();
+    // 保存事件以便后续触发
+    deferredPrompt = event;
+    // 显示安装按钮
+    installBtn.style.display = 'flex';
+    installBtn.disabled = false;
+    installStatus.textContent = '可安装';
+    installStatus.className = 'badge badge-success';
+    console.log('[Install] 已捕获 beforeinstallprompt 事件');
+  });
+
+  // 安装按钮点击处理
+  installBtn.addEventListener('click', function() {
+    if (!deferredPrompt) {
+      installMsgEl.innerHTML =
+        '<div class="status-msg status-msg-warning">⚠️ 安装提示不可用，请检查浏览器设置</div>';
+      return;
+    }
+
+    // 触发安装弹窗
+    deferredPrompt.prompt();
+
+    // 等待用户响应
+    deferredPrompt.userChoice.then(function(choiceResult) {
+      if (choiceResult.outcome === 'accepted') {
+        console.log('[Install] 用户接受了安装');
+        installMsgEl.innerHTML =
+          '<div class="status-msg status-msg-success">✅ 应用已安装到主屏幕</div>';
+        installBtn.style.display = 'none';
+        installStatus.textContent = '已安装';
+        installStatus.className = 'badge badge-success';
+      } else {
+        console.log('[Install] 用户拒绝了安装');
+        installMsgEl.innerHTML =
+          '<div class="status-msg status-msg-info">⏳ 您可以在需要时再次安装</div>';
+      }
+      deferredPrompt = null;
+      installBtn.disabled = true;
+    });
+  });
+
+  // 监听 appinstalled 事件
+  window.addEventListener('appinstalled', function() {
+    console.log('[Install] 应用已安装');
+    installMsgEl.innerHTML =
+      '<div class="status-msg status-msg-success">🎉 应用已成功安装到主屏幕！</div>';
+    installBtn.style.display = 'none';
+    installStatus.textContent = '已安装';
+    installStatus.className = 'badge badge-success';
+  });
+
+  /* ============================================================
+   *  推送通知订阅
+   * ============================================================ */
+  var subscribeBtn = document.getElementById('subscribePushBtn');
+  var simulateBtn = document.getElementById('simulatePushBtn');
+  var unsubscribeBtn = document.getElementById('unsubscribePushBtn');
+  var pushStatusEl = document.getElementById('pushStatus');
+  var pushMsgEl = document.getElementById('pushMsg');
+
+  // 测试用 VAPID 公钥（Base64 URL 编码）
+  // 注意：实际生产环境需要替换为服务端生成的密钥对
+  // 生成方式：npx web-push generate-vapid-keys
+  var VAPID_PUBLIC_KEY = 'BIsdfPHJ4vWqJ_6mF7QgKfGcP0yLxkBzRjTnX8V3wYmEo9qZ5uN2aRpSdKfHbWcLvMxYz1A4bC7DeFgHiJkLmNoP';
+
+  /**
+   * 将 Base64 字符串转换为 Uint8Array
+   * （VAPID 密钥需要 Uint8Array 格式）
+   */
+  function urlBase64ToUint8Array(base64String) {
+    var padding = '='.repeat((4 - base64String.length % 4) % 4);
+    var base64 = (base64String + padding)
+      .replace(/-/g, '+')
+      .replace(/_/g, '/');
+
+    var rawData = window.atob(base64);
+    var output = new Uint8Array(rawData.length);
+
+    for (var i = 0; i < rawData.length; ++i) {
+      output[i] = rawData.charCodeAt(i);
+    }
+    return output;
+  }
+
+  /**
+   * 订阅推送通知
+   */
+  function subscribePush() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      showPushMsg('❌ 当前浏览器不支持推送通知', 'error');
+      return;
+    }
+
+    subscribeBtn.disabled = true;
+    subscribeBtn.textContent = '⏳ 订阅中...';
+
+    // 先生成 VAPID 密钥（模拟）
+    // 实际项目中应从服务器获取
+    var applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+
+    navigator.serviceWorker.ready.then(function(registration) {
+      return registration.pushManager.subscribe({
+        userVisibleOnly: true,  // 必须设置为 true
+        applicationServerKey: applicationServerKey
+      });
+    }).then(function(subscription) {
+      console.log('[Push] 订阅成功:', subscription);
+      pushStatusEl.textContent = '√ 已订阅';
+      pushStatusEl.className = 'badge badge-success';
+      showPushMsg('✅ 推送通知订阅成功！点击"模拟推送"测试', 'success');
+
+      subscribeBtn.style.display = 'none';
+      simulateBtn.disabled = false;
+      unsubscribeBtn.style.display = 'inline-flex';
+
+      // 保存订阅信息到 localStorage（模拟）
+      localStorage.setItem('pushSubscription', JSON.stringify(subscription));
+
+    }).catch(function(err) {
+      console.error('[Push] 订阅失败:', err);
+      pushStatusEl.textContent = '订阅失败';
+      pushStatusEl.className = 'badge badge-error';
+      showPushMsg('❌ 订阅失败: ' + err.message + '<br><small>提示：推送功能需要 HTTPS 或 localhost</small>', 'error');
+      subscribeBtn.disabled = false;
+      subscribeBtn.textContent = '🔔 订阅推送通知';
+    });
+  }
+
+  /**
+   * 取消订阅推送通知
+   */
+  function unsubscribePush() {
+    navigator.serviceWorker.ready.then(function(registration) {
+      return registration.pushManager.getSubscription();
+    }).then(function(subscription) {
+      if (subscription) {
+        return subscription.unsubscribe();
+      }
+    }).then(function() {
+      pushStatusEl.textContent = '未订阅';
+      pushStatusEl.className = 'badge badge-warning';
+      showPushMsg('📴 已取消推送订阅', 'info');
+
+      subscribeBtn.style.display = 'inline-flex';
+      subscribeBtn.disabled = false;
+      subscribeBtn.textContent = '🔔 订阅推送通知';
+      simulateBtn.disabled = true;
+      unsubscribeBtn.style.display = 'none';
+
+      localStorage.removeItem('pushSubscription');
+    }).catch(function(err) {
+      console.error('[Push] 取消订阅失败:', err);
+    });
+  }
+
+  /**
+   * 模拟推送通知
+   * 使用 registration.showNotification() 直接显示
+   */
+  function simulatePush() {
+    if (!('Notification' in window)) {
+      showPushMsg('❌ 当前浏览器不支持通知', 'error');
+      return;
+    }
+
+    // 检查通知权限
+    if (Notification.permission === 'denied') {
+      showPushMsg('⚠️ 通知权限已被拒绝，请在浏览器设置中开启', 'warning');
+      return;
+    }
+
+    navigator.serviceWorker.ready.then(function(registration) {
+      // 使用 SW 的 showNotification 方法显示通知
+      // 这样即使用户关闭了页面，通知也能显示
+      registration.showNotification('📬 PWA 演示 - 模拟推送', {
+        body: '这是一条模拟的推送消息，时间: ' + new Date().toLocaleTimeString('zh-CN'),
+        icon: '/wobbly-platypus/apps/pwa-demo/icons/icon-192.svg',
+        badge: '/wobbly-platypus/apps/pwa-demo/icons/favicon.svg',
+        vibrate: [200, 100, 200],
+        tag: 'pwa-demo-simulated',
+        data: {
+          url: '/wobbly-platypus/apps/pwa-demo/',
+          simulated: true,
+          timestamp: Date.now()
+        },
+        actions: [
+          { action: 'open', title: '打开' },
+          { action: 'close', title: '关闭' }
+        ]
+      }).then(function() {
+        showPushMsg('📨 模拟推送已发送！请查看系统通知', 'success');
+      }).catch(function(err) {
+        console.error('[Push] 模拟推送失败:', err);
+        showPushMsg('❌ 模拟推送失败: ' + err.message, 'error');
+      });
+    });
+  }
+
+  function showPushMsg(msg, type) {
+    if (!pushMsgEl) return;
+    var className = 'status-msg status-msg-' + (type || 'info');
+    pushMsgEl.innerHTML = '<div class="' + className + '">' + msg + '</div>';
+    clearTimeout(pushMsgEl._timer);
+    pushMsgEl._timer = setTimeout(function() {
+      pushMsgEl.innerHTML = '';
+    }, 8000);
+  }
+
+  // 检查已有的推送订阅状态
+  function checkExistingPushSubscription() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+    navigator.serviceWorker.ready.then(function(registration) {
+      return registration.pushManager.getSubscription();
+    }).then(function(subscription) {
+      if (subscription) {
+        pushStatusEl.textContent = '√ 已订阅';
+        pushStatusEl.className = 'badge badge-success';
+        subscribeBtn.style.display = 'none';
+        simulateBtn.disabled = false;
+        unsubscribeBtn.style.display = 'inline-flex';
+        showPushMsg('✅ 推送通知已订阅，可点击"模拟推送"测试', 'success');
+      }
+    }).catch(function(err) {
+      console.log('[Push] 检查订阅状态失败:', err);
+    });
+  }
+
+  /* ============================================================
+   *  网络状态检测
+   * ============================================================ */
+  var netStatusEl = document.getElementById('netStatus');
+  var netLabelEl = document.getElementById('netLabel');
+  var networkBar = document.getElementById('networkBar');
+
+  function updateNetworkStatus() {
+    var online = navigator.onLine;
+
+    if (online) {
+      netStatusEl.textContent = '在线';
+      netStatusEl.className = 'badge badge-success';
+      netLabelEl.textContent = '在线';
+      networkBar.className = 'network-bar';
+      networkBar.textContent = '';
+    } else {
+      netStatusEl.textContent = '离线';
+      netStatusEl.className = 'badge badge-error';
+      netLabelEl.textContent = '离线';
+      networkBar.className = 'network-bar offline';
+      networkBar.textContent = '📡 您当前处于离线状态';
+    }
+  }
+
+  // 监听网络状态变化
+  window.addEventListener('online', function() {
+    updateNetworkStatus();
+    // 网络恢复时尝试后台同步
+    registerSync();
+  });
+
+  window.addEventListener('offline', updateNetworkStatus);
+
+  /* ============================================================
+   *  清空所有待办
+   * ============================================================ */
+  document.getElementById('clearTodosBtn').addEventListener('click', function() {
+    if (confirm('确定要清空所有待办事项吗？此操作不可撤销。')) {
+      clearAllTodos().then(function() {
+        renderTodoList();
+        updateSyncStatus();
+        showSyncMsg('🗑️ 已清空所有待办事项', 'info');
+      }).catch(function(err) {
+        console.error('[UI] 清空失败:', err);
+        showSyncMsg('❌ 清空失败', 'error');
+      });
+    }
+  });
+
+  /* ============================================================
+   *  事件绑定
+   * ============================================================ */
+
+  // 更新 SW 按钮
+  updateSwBtn.addEventListener('click', updateSW);
+
+  // 待办表单提交
+  document.getElementById('todoForm').addEventListener('submit', function(event) {
+    event.preventDefault();
+    var input = document.getElementById('todoInput');
+    var title = input.value.trim();
+
+    if (!title) return;
+
+    addTodo(title).then(function(todo) {
+      console.log('[Todo] 添加成功:', todo);
+      input.value = '';
+      input.focus();
+      renderTodoList();
+      updateSyncStatus();
+      showSyncMsg('📝 已添加待办事项: ' + escapeHtml(todo.title), 'success');
+    }).catch(function(err) {
+      console.error('[Todo] 添加失败:', err);
+      showSyncMsg('❌ 添加失败: ' + err.message, 'error');
+    });
+  });
+
+  // 推送订阅按钮
+  subscribeBtn.addEventListener('click', subscribePush);
+
+  // 模拟推送按钮
+  simulateBtn.addEventListener('click', simulatePush);
+
+  // 取消订阅按钮
+  unsubscribeBtn.addEventListener('click', unsubscribePush);
+
+  /* ============================================================
+   *  初始化
+   * ============================================================ */
+  function init() {
+    console.log('[App] PWA 演示应用初始化');
+
+    // 1. 注册 Service Worker
+    registerSW();
+
+    // 2. 设置初始网络状态
+    updateNetworkStatus();
+
+    // 3. 加载待办列表
+    renderTodoList();
+
+    // 4. 检查推送订阅状态
+    checkExistingPushSubscription();
+
+    // 5. 定期刷新待办列表和 SW 统计（每 5 秒）
+    setInterval(function() {
+      renderTodoList();
+      if (swRegistration) {
+        updateSWStatus(swRegistration);
+      }
+      var swStatEl = document.getElementById('swStatusCount');
+      if (swStatEl) {
+        swStatEl.textContent = swStatusEl.textContent;
+      }
+    }, 5000);
+  }
+
+  // 页面加载完成后初始化
+  if (document.readyState === 'complete') {
+    init();
+  } else {
+    window.addEventListener('load', init);
+  }
+
+})();
+</script>
+
+</body>
+</html>

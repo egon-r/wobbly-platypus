@@ -53,7 +53,8 @@ var apps = [
   { name: "dice", desc: "3D CSS cube roller", created: "2026-07-09T04:12:05+09:00" },
   { name: "shader-previewer", desc: "shader preview — live GLSL editing, shader presets, orbit + zoom camera", created: "2026-07-10T01:05:04.471006+00:00" },
   { name: "sensors", desc: "Real-time device sensor monitor — gyroscope, accelerometer, geolocation, battery, network, screen, ambient light", created: "2026-07-11T12:00:00+00:00" },
-  { name: "code-editor", desc: "Local-first HTML/CSS/JS playground with live preview — no backend", created: "2026-07-11T17:15:54.339450+00:00" }
+  { name: "code-editor", desc: "Local-first HTML/CSS/JS playground with live preview — no backend", created: "2026-07-11T17:15:54.339450+00:00" },
+  { name: "pwa-demo", desc: "Full PWA demo — offline support, background sync, push notifications, IndexedDB storage", url: "/wobbly-platypus/apps/pwa-demo/", created: "2026-07-12T00:00:00+00:00" }
 ];
 
 (function() {
@@ -90,7 +91,7 @@ var apps = [
     var isFav = !!favSet[app.name];
     var card = document.createElement('a');
     card.className = 'card';
-    card.href = '/apps/' + app.name + '.html';
+    card.href = app.url || '/apps/' + app.name + '.html';
 
     var star = document.createElement('span');
     star.className = 'star' + (isFav ? ' filled' : '');

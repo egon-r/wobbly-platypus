@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- 背景：圆角矩形渐变 -->
+  <defs>
+    <linearGradient id="bg512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#bg512)"/>
+  <!-- 装饰圆环 -->
+  <circle cx="256" cy="256" r="192" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="4"/>
+  <circle cx="256" cy="256" r="140" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="2"/>
+  <!-- "PWA" 文字 -->
+  <text x="256" y="300" font-family="system-ui, -apple-system, sans-serif" font-size="150" font-weight="700" fill="white" text-anchor="middle" letter-spacing="6">PWA</text>
+  <!-- 底部小装饰条 -->
+  <rect x="160" y="355" width="192" height="8" rx="4" fill="rgba(255,255,255,0.5)"/>
+</svg>

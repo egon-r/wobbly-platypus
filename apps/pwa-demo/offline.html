@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>离线 - PWA 演示</title>
+<style>
+  /* ===== CSS 自定义属性（主题变量） ===== */
+  :root {
+    --color-primary: #6366f1;
+    --color-primary-light: #818cf8;
+    --color-bg: #f8fafc;
+    --color-bg-card: #ffffff;
+    --color-text: #1e293b;
+    --color-text-secondary: #64748b;
+    --color-border: #e2e8f0;
+    --color-offline: #ef4444;
+    --radius: 12px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  /* 暗色模式 */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-bg: #0f172a;
+      --color-bg-card: #1e293b;
+      --color-text: #e2e8f0;
+      --color-text-secondary: #94a3b8;
+      --color-border: #334155;
+      --shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: var(--color-bg);
+    color: var(--color-text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 1rem;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .card {
+    background: var(--color-bg-card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 2rem;
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+  }
+
+  /* 离线图标 */
+  .offline-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1.5rem;
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    color: white;
+  }
+
+  h1 {
+    font-size: 1.4rem;
+    margin-bottom: 0.75rem;
+    color: var(--color-offline);
+  }
+
+  p {
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+  }
+
+  /* 缓存页面列表 */
+  .cached-list {
+    text-align: left;
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .cached-list h3 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-secondary);
+    margin-bottom: 0.75rem;
+  }
+
+  .cached-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0;
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+  }
+
+  .cached-item::before {
+    content: "✓";
+    color: #22c55e;
+    font-weight: bold;
+  }
+
+  /* 重试按钮 */
+  .retry-btn {
+    display: inline-block;
+    margin-top: 1rem;
+    padding: 0.75rem 2rem;
+    background: var(--color-primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    min-height: 44px;  /* 触控友好 */
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .retry-btn:hover { background: var(--color-primary-light); }
+  .retry-btn:active { transform: scale(0.97); }
+
+  .retry-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+</style>
+</head>
+<body>
+
+<div class="card" role="alert">
+  <!-- 离线图标 -->
+  <div class="offline-icon" aria-hidden="true">📡</div>
+
+  <h1>您当前处于离线状态</h1>
+  <p>网络连接已断开，部分功能可能受限。<br>但您仍可以查看已缓存的内容。</p>
+  <p>请检查您的网络连接后重试。</p>
+
+  <!-- 缓存页面列表 -->
+  <div class="cached-list">
+    <h3>📦 已缓存的内容</h3>
+    <div class="cached-item">PWA 演示主页</div>
+    <div class="cached-item">应用图标</div>
+    <div class="cached-item">样式与脚本资源</div>
+  </div>
+
+  <!-- 重试按钮 -->
+  <button class="retry-btn" id="retryBtn" onclick="window.location.reload()">
+    重新连接
+  </button>
+</div>
+
+<script>
+  // 页面加载后尝试检查网络状态
+  (function() {
+    var retryBtn = document.getElementById('retryBtn');
+
+    // 监听网络恢复
+    window.addEventListener('online', function() {
+      retryBtn.textContent = '✓ 网络已恢复，正在刷新...';
+      retryBtn.disabled = true;
+      setTimeout(function() { window.location.reload(); }, 800);
+    });
+  })();
+</script>
+
+</body>
+</html>

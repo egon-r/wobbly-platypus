@@ -1,0 +1,31 @@
+{
+  "name": "PWA 演示应用",
+  "short_name": "PWA 演示",
+  "description": "一个功能完善的渐进式 Web 应用（PWA）演示，包含离线支持、后台同步和推送通知",
+  "start_url": "/wobbly-platypus/apps/pwa-demo/index.html",
+  "scope": "/wobbly-platypus/apps/pwa-demo/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8fafc",
+  "theme_color": "#6366f1",
+  "categories": ["demo", "utilities"],
+  "lang": "zh-CN",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "related_applications": [],
+  "prefer_related_applications": false
+}
