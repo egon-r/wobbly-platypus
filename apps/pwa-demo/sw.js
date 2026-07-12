@@ -10,13 +10,13 @@ var CACHE_PREFIX = 'pwa-demo-cache-';
 
 // ---- Precached resource list ----
 var PRECACHE_URLS = [
-  '/wobbly-platypus/apps/pwa-demo/',
-  '/wobbly-platypus/apps/pwa-demo/index.html',
-  '/wobbly-platypus/apps/pwa-demo/offline.html',
-  '/wobbly-platypus/apps/pwa-demo/manifest.json',
-  '/wobbly-platypus/apps/pwa-demo/icons/icon-192.svg',
-  '/wobbly-platypus/apps/pwa-demo/icons/icon-512.svg',
-  '/wobbly-platypus/apps/pwa-demo/icons/favicon.svg'
+  '/apps/pwa-demo/',
+  '/apps/pwa-demo/index.html',
+  '/apps/pwa-demo/offline.html',
+  '/apps/pwa-demo/manifest.json',
+  '/apps/pwa-demo/icons/icon-192.svg',
+  '/apps/pwa-demo/icons/icon-512.svg',
+  '/apps/pwa-demo/icons/favicon.svg'
 ];
 
 /* ============================================================
@@ -98,7 +98,7 @@ self.addEventListener('fetch', function(event) {
 
         // If it's a navigation request (HTML page), return the offline page
         if (event.request.mode === 'navigate') {
-          return caches.match('/wobbly-platypus/apps/pwa-demo/offline.html');
+          return caches.match('/apps/pwa-demo/offline.html');
         }
 
         // For image requests, return a simple offline placeholder
@@ -249,12 +249,12 @@ self.addEventListener('push', function(event) {
   var title = 'PWA Demo';
   var options = {
     body: 'You have a new push notification',
-    icon: '/wobbly-platypus/apps/pwa-demo/icons/icon-192.svg',
-    badge: '/wobbly-platypus/apps/pwa-demo/icons/favicon.svg',
+    icon: '/apps/pwa-demo/icons/icon-192.svg',
+    badge: '/apps/pwa-demo/icons/favicon.svg',
     vibrate: [200, 100, 200],
     tag: 'pwa-demo-push',
     data: {
-      url: '/wobbly-platypus/apps/pwa-demo/',
+      url: '/apps/pwa-demo/',
       timestamp: Date.now()
     },
     actions: [
@@ -291,7 +291,7 @@ self.addEventListener('notificationclick', function(event) {
   event.notification.close(); // Close the notification
 
   // Execute different behavior based on which action button was clicked
-  var urlToOpen = '/wobbly-platypus/apps/pwa-demo/';
+  var urlToOpen = '/apps/pwa-demo/';
 
   if (event.action === 'open' || !event.action) {
     // Open the main page or the URL specified in the notification
@@ -307,7 +307,7 @@ self.addEventListener('notificationclick', function(event) {
         // If a page is already open, focus it
         for (var i = 0; i < windowClients.length; i++) {
           var client = windowClients[i];
-          if (client.url.includes('/wobbly-platypus/apps/pwa-demo/') && 'focus' in client) {
+          if (client.url.includes('/apps/pwa-demo/') && 'focus' in client) {
             return client.focus();
           }
         }

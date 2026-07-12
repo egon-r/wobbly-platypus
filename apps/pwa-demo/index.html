@@ -1352,12 +1352,12 @@ body {
       // This works even if the page is closed
       registration.showNotification('📬 PWA Demo - Simulated Push', {
         body: 'This is a simulated push message. Time: ' + new Date().toLocaleTimeString('en-US'),
-        icon: '/wobbly-platypus/apps/pwa-demo/icons/icon-192.svg',
-        badge: '/wobbly-platypus/apps/pwa-demo/icons/favicon.svg',
+        icon: '/apps/pwa-demo/icons/icon-192.svg',
+        badge: '/apps/pwa-demo/icons/favicon.svg',
         vibrate: [200, 100, 200],
         tag: 'pwa-demo-simulated',
         data: {
-          url: '/wobbly-platypus/apps/pwa-demo/',
+          url: '/apps/pwa-demo/',
           simulated: true,
           timestamp: Date.now()
         },
