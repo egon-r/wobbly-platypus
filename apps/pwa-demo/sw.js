@@ -1,14 +1,14 @@
 /* ============================================================
- *  PWA 演示 - Service Worker
- *  版本: v2.0.0
- *  功能: 预缓存资源、离线回退、后台同步、推送通知
+ *  PWA Demo - Service Worker
+ *  Version: v2.0.0
+ *  Features: precache resources, offline fallback, background sync, push notifications
  * ============================================================ */
 
-// ---- 缓存名称（版本化，便于更新） ----
+// ---- Cache name (versioned for easy updates) ----
 var CACHE_NAME = 'pwa-demo-cache-v2';
 var CACHE_PREFIX = 'pwa-demo-cache-';
 
-// ---- 预缓存资源列表 ----
+// ---- Precached resource list ----
 var PRECACHE_URLS = [
   '/wobbly-platypus/apps/pwa-demo/',
   '/wobbly-platypus/apps/pwa-demo/index.html',
@@ -20,71 +20,71 @@ var PRECACHE_URLS = [
 ];
 
 /* ============================================================
- *  安装事件：预缓存关键资源
+ *  Install event: precache critical resources
  * ============================================================ */
 self.addEventListener('install', function(event) {
-  console.log('[SW] 安装事件触发');
+  console.log('[SW] Install event triggered');
 
-  // 强制等待中的 SW 变为激活状态（跳过 waiting 阶段）
-  // 这样新版本的 SW 安装后立即生效
+  // Force the waiting service worker to become active (skip waiting phase)
+  // This allows new SW versions to take effect immediately
   self.skipWaiting();
 
   event.waitUntil(
     caches.open(CACHE_NAME).then(function(cache) {
-      console.log('[SW] 预缓存资源:', PRECACHE_URLS);
+      console.log('[SW] Precaching resources:', PRECACHE_URLS);
       return cache.addAll(PRECACHE_URLS).catch(function(error) {
-        console.error('[SW] 预缓存失败:', error);
-        // 部分资源缓存失败不阻塞安装
+        console.error('[SW] Precaching failed:', error);
+        // Partial cache failure does not block installation
       });
     })
   );
 });
 
 /* ============================================================
- *  激活事件：清理旧版本缓存
+ *  Activate event: clean up old cache versions
  * ============================================================ */
 self.addEventListener('activate', function(event) {
-  console.log('[SW] 激活事件触发');
+  console.log('[SW] Activate event triggered');
 
   event.waitUntil(
     caches.keys().then(function(cacheNames) {
       return Promise.all(
         cacheNames.map(function(name) {
-          // 删除不属于当前版本的缓存
+          // Delete caches that don't match the current version
           if (name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME) {
-            console.log('[SW] 清理旧缓存:', name);
+            console.log('[SW] Cleaning old cache:', name);
             return caches.delete(name);
           }
         })
       );
     }).then(function() {
-      // 立即控制所有客户端（包括已打开的页面）
+      // Immediately claim all clients (including already open pages)
       return self.clients.claim();
     })
   );
 });
 
 /* ============================================================
- *  请求拦截：缓存优先策略 + 离线回退
+ *  Fetch interception: cache-first strategy + offline fallback
  * ============================================================ */
 self.addEventListener('fetch', function(event) {
-  // 仅处理 GET 请求
+  // Only handle GET requests
   if (event.request.method !== 'GET') return;
 
-  // 不处理非 HTTP(S) 请求（如 chrome-extension://）
+  // Skip non-HTTP(S) requests (e.g. chrome-extension://)
   if (!event.request.url.startsWith('http')) return;
 
-  // ---- 缓存优先策略 ----
+  // ---- Cache-first strategy ----
   event.respondWith(
     caches.match(event.request).then(function(cachedResponse) {
-      // 缓存命中 → 返回缓存内容
+      // Cache hit → return cached response
       if (cachedResponse) {
         return cachedResponse;
       }
 
-      // 缓存未命中 → 发起网络请求
+      // Cache miss → make network request
       return fetch(event.request).then(function(networkResponse) {
-        // 只缓存同源的成功响应
+        // Only cache same-origin successful responses
         if (networkResponse && networkResponse.status === 200) {
           var clonedResponse = networkResponse.clone();
           caches.open(CACHE_NAME).then(function(cache) {
@@ -93,42 +93,42 @@ self.addEventListener('fetch', function(event) {
         }
         return networkResponse;
       }).catch(function(error) {
-        // ---- 网络请求失败时返回离线回退页面 ----
-        console.log('[SW] 网络请求失败，返回离线页面:', event.request.url);
+        // ---- Network request failed → return offline fallback page ----
+        console.log('[SW] Network request failed, returning offline page:', event.request.url);
 
-        // 如果是导航请求（HTML 页面），返回离线页面
+        // If it's a navigation request (HTML page), return the offline page
         if (event.request.mode === 'navigate') {
           return caches.match('/wobbly-platypus/apps/pwa-demo/offline.html');
         }
 
-        // 对于图片等资源请求，返回一个简单的离线占位
+        // For image requests, return a simple offline placeholder
         if (event.request.destination === 'image') {
           return new Response(
             '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">' +
             '<rect width="200" height="200" fill="#f1f5f9"/>' +
-            '<text x="100" y="105" font-family="sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">离线</text>' +
+            '<text x="100" y="105" font-family="sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">Offline</text>' +
             '</svg>',
             { headers: { 'Content-Type': 'image/svg+xml' } }
           );
         }
 
-        // 其他资源：返回空响应
-        return new Response('离线模式', { status: 503, statusText: 'Service Unavailable' });
+        // Other resources: return empty response
+        return new Response('Offline mode', { status: 503, statusText: 'Service Unavailable' });
       });
     })
   );
 });
 
 /* ============================================================
- *  消息事件：处理来自页面的指令
+ *  Message event: handle instructions from the page
  * ============================================================ */
 self.addEventListener('message', function(event) {
-  console.log('[SW] 收到消息:', event.data);
+  console.log('[SW] Received message:', event.data);
 
   if (event.data && event.data.type === 'SKIP_WAITING') {
-    // 跳过 waiting，激活新版本 SW
+    // Skip waiting, activate new SW version
     self.skipWaiting();
-    // 通知所有客户端 SW 已更新
+    // Notify all clients that SW has been updated
     self.clients.matchAll().then(function(clients) {
       clients.forEach(function(client) {
         client.postMessage({
@@ -141,11 +141,11 @@ self.addEventListener('message', function(event) {
 });
 
 /* ============================================================
- *  后台同步事件
- *  当网络恢复时，自动同步待办事项数据
+ *  Background sync event
+ *  Automatically syncs todo data when network is restored
  * ============================================================ */
 self.addEventListener('sync', function(event) {
-  console.log('[SW] 后台同步事件:', event.tag);
+  console.log('[SW] Background sync event:', event.tag);
 
   if (event.tag === 'sync-todos') {
     event.waitUntil(syncTodos());
@@ -153,18 +153,18 @@ self.addEventListener('sync', function(event) {
 });
 
 /**
- *  执行待办事项同步
- *  从 IndexedDB 读取待同步的数据，发送到服务器（模拟）
+ *  Execute todo sync
+ *  Reads pending data from IndexedDB and sends to server (simulated)
  */
 function syncTodos() {
   return new Promise(function(resolve, reject) {
-    console.log('[SW] 开始同步待办事项...');
+    console.log('[SW] Starting todo sync...');
 
-    // ---- 打开 IndexedDB ----
+    // ---- Open IndexedDB ----
     var request = indexedDB.open('PWADemoDB', 1);
 
     request.onerror = function() {
-      console.error('[SW] 打开 IndexedDB 失败');
+      console.error('[SW] Failed to open IndexedDB');
       reject();
     };
 
@@ -179,21 +179,21 @@ function syncTodos() {
         var pendingTodos = todos.filter(function(t) { return !t.synced; });
 
         if (pendingTodos.length === 0) {
-          console.log('[SW] 没有待同步的数据');
+          console.log('[SW] No pending data to sync');
           resolve();
           return;
         }
 
-        console.log('[SW] 待同步数据:', pendingTodos.length, '条');
+        console.log('[SW] Pending items to sync:', pendingTodos.length);
 
-        // ---- 模拟发送到服务器 ----
-        // 实际项目中，这里应使用 fetch() 发送到后端 API
+        // ---- Simulate sending to server ----
+        // In production, this would use fetch() to POST to a backend API
         var syncPromises = pendingTodos.map(function(todo) {
-          // 模拟网络请求延迟
+          // Simulate network request delay
           return new Promise(function(resolveSync) {
             setTimeout(function() {
-              console.log('[SW] 同步完成:', todo.id, todo.title);
-              // 标记为已同步（在实际项目中由服务器响应确认）
+              console.log('[SW] Sync complete:', todo.id, todo.title);
+              // Mark as synced (in production, confirmed by server response)
               var updateTx = db.transaction(['todos'], 'readwrite');
               var updateStore = updateTx.objectStore('todos');
               todo.synced = true;
@@ -205,8 +205,8 @@ function syncTodos() {
         });
 
         Promise.all(syncPromises).then(function() {
-          console.log('[SW] 所有待办事项同步完成');
-          // 通知页面同步完成
+          console.log('[SW] All todos synced successfully');
+          // Notify page that sync is complete
           self.clients.matchAll().then(function(clients) {
             clients.forEach(function(client) {
               client.postMessage({
@@ -218,19 +218,19 @@ function syncTodos() {
           });
           resolve();
         }).catch(function(error) {
-          console.error('[SW] 同步失败:', error);
+          console.error('[SW] Sync failed:', error);
           reject();
         });
       };
 
       getAll.onerror = function() {
-        console.error('[SW] 读取待办事项失败');
+        console.error('[SW] Failed to read todos');
         reject();
       };
     };
 
     request.onupgradeneeded = function(event) {
-      // 如果数据库不存在，确保结构创建（在页面中已创建）
+      // Ensure object store exists (created by the page)
       var db = event.target.result;
       if (!db.objectStoreNames.contains('todos')) {
         db.createObjectStore('todos', { keyPath: 'id' });
@@ -240,15 +240,15 @@ function syncTodos() {
 }
 
 /* ============================================================
- *  推送通知事件
- *  处理来自服务器的推送消息
+ *  Push notification event
+ *  Handle push messages from the server
  * ============================================================ */
 self.addEventListener('push', function(event) {
-  console.log('[SW] 收到推送消息');
+  console.log('[SW] Push message received');
 
-  var title = 'PWA 演示';
+  var title = 'PWA Demo';
   var options = {
-    body: '您收到一条新的推送消息',
+    body: 'You have a new push notification',
     icon: '/wobbly-platypus/apps/pwa-demo/icons/icon-192.svg',
     badge: '/wobbly-platypus/apps/pwa-demo/icons/favicon.svg',
     vibrate: [200, 100, 200],
@@ -258,12 +258,12 @@ self.addEventListener('push', function(event) {
       timestamp: Date.now()
     },
     actions: [
-      { action: 'open', title: '打开应用' },
-      { action: 'close', title: '关闭' }
+      { action: 'open', title: 'Open App' },
+      { action: 'close', title: 'Close' }
     ]
   };
 
-  // 如果推送消息包含数据，使用自定义内容
+  // If push message contains data, use custom content
   if (event.data) {
     try {
       var payload = event.data.json();
@@ -272,7 +272,7 @@ self.addEventListener('push', function(event) {
       if (payload.icon) options.icon = payload.icon;
       if (payload.data) options.data = Object.assign(options.data, payload.data);
     } catch (e) {
-      // 非 JSON 格式，使用文本
+      // Not JSON format, use as plain text
       options.body = event.data.text();
     }
   }
@@ -283,18 +283,18 @@ self.addEventListener('push', function(event) {
 });
 
 /* ============================================================
- *  通知点击事件
- *  用户点击通知时的处理
+ *  Notification click event
+ *  Handle user clicking on a notification
  * ============================================================ */
 self.addEventListener('notificationclick', function(event) {
-  console.log('[SW] 通知被点击:', event.action);
-  event.notification.close(); // 关闭通知
+  console.log('[SW] Notification clicked:', event.action);
+  event.notification.close(); // Close the notification
 
-  // 根据用户点击的操作按钮执行不同行为
+  // Execute different behavior based on which action button was clicked
   var urlToOpen = '/wobbly-platypus/apps/pwa-demo/';
 
   if (event.action === 'open' || !event.action) {
-    // 打开主页面或通知中指定的 URL
+    // Open the main page or the URL specified in the notification
     if (event.notification.data && event.notification.data.url) {
       urlToOpen = event.notification.data.url;
     }
@@ -304,14 +304,14 @@ self.addEventListener('notificationclick', function(event) {
         type: 'window',
         includeUncontrolled: true
       }).then(function(windowClients) {
-        // 如果已有打开的页面，聚焦到它
+        // If a page is already open, focus it
         for (var i = 0; i < windowClients.length; i++) {
           var client = windowClients[i];
           if (client.url.includes('/wobbly-platypus/apps/pwa-demo/') && 'focus' in client) {
             return client.focus();
           }
         }
-        // 否则打开新窗口
+        // Otherwise open a new window
         if (clients.openWindow) {
           return clients.openWindow(urlToOpen);
         }

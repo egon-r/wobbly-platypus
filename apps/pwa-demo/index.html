@@ -1,23 +1,23 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<!-- iOS Safari 支持 -->
+<!-- iOS Safari support -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="PWA 演示">
+<meta name="apple-mobile-web-app-title" content="PWA Demo">
 <link rel="apple-touch-icon" href="icons/icon-192.svg">
 <link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
 <!-- PWA Manifest -->
 <link rel="manifest" href="manifest.json">
-<!-- 主题色 -->
+<!-- Theme color -->
 <meta name="theme-color" content="#6366f1">
-<title>PWA 演示应用</title>
+<title>PWA Demo</title>
 <style>
 /* ============================================================
- *  CSS 自定义属性（主题变量）
- *  通过变量统一管理颜色、间距、圆角等设计 token
+ *  CSS Custom Properties (Theme Variables)
+ *  Centralized design tokens for colors, spacing, radii, etc.
  * ============================================================ */
 :root {
   --color-primary: #6366f1;
@@ -63,9 +63,9 @@
   --transition: 0.2s ease;
 }
 
-/* ---- 暗色模式 ----
- *  根据系统偏好自动切换
- *  所有颜色通过变量管理，深色模式下只需修改变量值
+/* ---- Dark mode ----
+ *  Automatically switches based on system preference
+ *  All colors managed via variables — dark mode only overrides variable values
  */
 @media (prefers-color-scheme: dark) {
   :root {
@@ -90,8 +90,8 @@
   }
 }
 
-/* ---- 基础重置 ----
- *  确保各浏览器表现一致
+/* ---- Base reset ----
+ *  Ensures consistent rendering across browsers
  */
 *,
 *::before,
@@ -102,8 +102,8 @@
 }
 
 html {
-  -webkit-text-size-adjust: 100%; /* iOS Safari 文字大小适配 */
-  -webkit-tap-highlight-color: transparent; /* 移动端点击高亮 */
+  -webkit-text-size-adjust: 100%; /* iOS Safari text size adjustment */
+  -webkit-tap-highlight-color: transparent; /* Mobile tap highlight */
 }
 
 body {
@@ -117,7 +117,7 @@ body {
 }
 
 /* ============================================================
- *  布局
+ *  Layout
  * ============================================================ */
 .app-container {
   max-width: 640px;
@@ -125,7 +125,7 @@ body {
   padding: var(--spacing-lg) var(--spacing-md);
 }
 
-/* ---- 页面头部 ---- */
+/* ---- Page header ---- */
 .app-header {
   text-align: center;
   padding: var(--spacing-xl) 0 var(--spacing-lg);
@@ -146,7 +146,7 @@ body {
   font-size: 0.9rem;
 }
 
-/* ---- 卡片组件 ---- */
+/* ---- Card component ---- */
 .card {
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
@@ -186,7 +186,7 @@ body {
   border-radius: var(--radius-sm);
 }
 
-/* ---- 状态指示器 ---- */
+/* ---- Status indicator ---- */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -218,9 +218,9 @@ body {
   color: var(--color-info);
 }
 
-/* ---- 按钮 ----
- *  触控友好：最小高度 44px
- *  -webkit- 前缀确保 iOS Safari 兼容性
+/* ---- Buttons ----
+ *  Touch-friendly: minimum 44px height
+ *  -webkit- prefixes for iOS Safari compatibility
  */
 .btn {
   display: inline-flex;
@@ -228,7 +228,7 @@ body {
   justify-content: center;
   gap: 0.4rem;
   padding: 0.65rem 1.25rem;
-  min-height: 44px; /* 触控友好最小高度 */
+  min-height: 44px; /* Touch-friendly minimum */
   font-size: 0.9rem;
   font-weight: 500;
   font-family: inherit;
@@ -238,7 +238,7 @@ body {
   cursor: pointer;
   transition: all var(--transition-fast);
   -webkit-tap-highlight-color: transparent;
-  -webkit-appearance: none; /* iOS Safari 按钮样式重置 */
+  -webkit-appearance: none; /* iOS Safari button style reset */
   appearance: none;
   user-select: none;
   text-decoration: none;
@@ -284,7 +284,7 @@ body {
   width: 100%;
 }
 
-/* ---- 表单控件 ---- */
+/* ---- Form controls ---- */
 .form-group {
   margin-bottom: var(--spacing-md);
 }
@@ -300,7 +300,7 @@ body {
 .form-input {
   width: 100%;
   padding: 0.65rem 0.85rem;
-  min-height: 44px; /* 触控友好 */
+  min-height: 44px; /* Touch-friendly */
   font-size: 0.95rem;
   font-family: inherit;
   color: var(--color-text);
@@ -331,7 +331,7 @@ body {
   flex: 1;
 }
 
-/* ---- 待办事项列表 ---- */
+/* ---- Todo list ---- */
 .todo-list {
   list-style: none;
   margin-top: var(--spacing-md);
@@ -383,7 +383,7 @@ body {
   color: var(--color-error);
 }
 
-/* ---- 状态消息 ---- */
+/* ---- Status messages ---- */
 .status-msg {
   display: flex;
   align-items: center;
@@ -414,7 +414,7 @@ body {
   color: var(--color-warning);
 }
 
-/* ---- 网络状态条 ---- */
+/* ---- Network status bar ---- */
 .network-bar {
   position: fixed;
   top: 0;
@@ -441,7 +441,7 @@ body {
   transform: translateY(0);
 }
 
-/* ---- 统计网格 ---- */
+/* ---- Stats grid ---- */
 .stats-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -469,7 +469,7 @@ body {
   margin-top: 0.2rem;
 }
 
-/* ---- 空状态 ---- */
+/* ---- Empty state ---- */
 .empty-state {
   text-align: center;
   padding: var(--spacing-lg);
@@ -480,7 +480,7 @@ body {
   font-size: 0.9rem;
 }
 
-/* ---- 页脚 ---- */
+/* ---- Footer ---- */
 .app-footer {
   text-align: center;
   padding: var(--spacing-xl) 0;
@@ -497,7 +497,7 @@ body {
   text-decoration: underline;
 }
 
-/* ---- 动画 ---- */
+/* ---- Animations ---- */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
@@ -508,8 +508,8 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ---- 响应式 ----
- *  移动优先：大屏幕下的增强
+/* ---- Responsive ----
+ *  Mobile-first: enhancements for larger screens
  */
 @media (min-width: 768px) {
   .app-container {
@@ -525,7 +525,7 @@ body {
   }
 }
 
-/* ---- iOS Safari 安全区域适配 ---- */
+/* ---- iOS Safari safe area adaptation ---- */
 @supports (padding: max(0px)) {
   .app-container {
     padding-left: max(var(--spacing-md), env(safe-area-inset-left));
@@ -538,147 +538,147 @@ body {
 <body>
 
 <!-- ============================================================
- *  网络状态提示条（固定在顶部）
+ *  Network status bar (fixed at top)
  * ============================================================ -->
 <div class="network-bar" id="networkBar"></div>
 
 <!-- ============================================================
- *  主容器
+ *  Main container
  * ============================================================ -->
 <div class="app-container">
 
-  <!-- ========== 页面头部 ========== -->
+  <!-- ========== Page Header ========== -->
   <header class="app-header">
-    <h1>📱 PWA 演示</h1>
-    <p>渐进式 Web 应用功能全展示</p>
+    <h1>📱 PWA Demo</h1>
+    <p>Full Progressive Web App feature showcase</p>
   </header>
 
   <!-- ============================================================
-   *  一、Service Worker 状态
-   *  显示 SW 注册状态并提供手动更新按钮
+   *  1. Service Worker Status
+   *  Displays SW registration status and provides manual update button
    * ============================================================ -->
   <section class="card" id="section-sw">
     <div class="card-header">
       <span class="icon">⚙️</span>
       <h2>Service Worker</h2>
-      <span class="badge badge-warning" id="swStatus">注册中...</span>
+      <span class="badge badge-warning" id="swStatus">Registering...</span>
     </div>
 
     <div class="status-msg status-msg-info" id="swDetail">
-      正在注册 Service Worker...
+      Registering Service Worker...
     </div>
 
     <div style="margin-top: var(--spacing-md); display: flex; gap: var(--spacing-sm); flex-wrap: wrap;">
       <button class="btn btn-outline btn-sm" id="updateSwBtn" disabled>
-        🔄 更新 SW（skipWaiting）
+        🔄 Update SW (skipWaiting)
       </button>
     </div>
   </section>
 
   <!-- ============================================================
-   *  二、安装应用（添加到主屏幕）
-   *  监听 beforeinstallprompt 事件
+   *  2. Install App (Add to Home Screen)
+   *  Listens for beforeinstallprompt event
    * ============================================================ -->
   <section class="card" id="section-install">
     <div class="card-header">
       <span class="icon">📲</span>
-      <h2>安装应用</h2>
-      <span class="badge badge-info" id="installStatus">可安装</span>
+      <h2>Install App</h2>
+      <span class="badge badge-info" id="installStatus">Installable</span>
     </div>
 
     <p style="color: var(--color-text-secondary); font-size: 0.9rem; margin-bottom: var(--spacing-md);">
-      将本应用添加到主屏幕，获得原生应用般的使用体验。
+      Add this app to your home screen for a native app-like experience.
     </p>
 
     <button class="btn btn-primary btn-block" id="installBtn" disabled style="display: none;">
-      📲 添加到主屏幕
+      📲 Add to Home Screen
     </button>
 
     <div id="installMsg"></div>
   </section>
 
   <!-- ============================================================
-   *  三、离线状态检测
-   *  显示当前网络状态和缓存信息
+   *  3. Offline Status Detection
+   *  Shows current network status and cache info
    * ============================================================ -->
   <section class="card" id="section-offline">
     <div class="card-header">
       <span class="icon">🌐</span>
-      <h2>离线支持</h2>
-      <span class="badge badge-success" id="netStatus">在线</span>
+      <h2>Offline Support</h2>
+      <span class="badge badge-success" id="netStatus">Online</span>
     </div>
 
     <p style="color: var(--color-text-secondary); font-size: 0.9rem;">
-      当前网络状态：<strong id="netLabel">在线</strong>
+      Current network status: <strong id="netLabel">Online</strong>
     </p>
 
     <div class="status-msg status-msg-info" style="margin-top: var(--spacing-sm);">
-      💡 断开网络后刷新页面，将显示离线回退页面
+      💡 Disconnect your network and refresh to see the offline fallback page
     </div>
   </section>
 
   <!-- ============================================================
-   *  四、待办事项 & 后台同步
-   *  使用 IndexedDB 存储数据，后台同步注册
+   *  4. Todos & Background Sync
+   *  Stores data in IndexedDB, registers background sync
    * ============================================================ -->
   <section class="card" id="section-todos">
     <div class="card-header">
       <span class="icon">📋</span>
-      <h2>待办事项</h2>
-      <span class="badge badge-info" id="syncStatus">未注册同步</span>
+      <h2>Todo List</h2>
+      <span class="badge badge-info" id="syncStatus">Sync Not Registered</span>
     </div>
 
-    <!-- 添加待办表单 -->
+    <!-- Add todo form -->
     <form id="todoForm" class="form-row" autocomplete="off">
       <input
         type="text"
         class="form-input"
         id="todoInput"
-        placeholder="输入待办事项..."
+        placeholder="Enter a todo item..."
         required
         maxlength="200"
       >
       <button type="submit" class="btn btn-primary" id="addTodoBtn">
-        添加
+        Add
       </button>
     </form>
 
-    <!-- 待办列表 -->
+    <!-- Todo list -->
     <div id="todoListContainer">
       <div class="empty-state">
-        <p>暂无待办事项，在上方添加一条吧</p>
+        <p>No todo items yet. Add one above!</p>
       </div>
     </div>
 
-    <!-- 同步状态 -->
+    <!-- Sync status -->
     <div id="syncMsg"></div>
   </section>
 
   <!-- ============================================================
-   *  五、推送通知
-   *  Push API 订阅 + 本地模拟推送
+   *  5. Push Notifications
+   *  Push API subscription + local simulated push
    * ============================================================ -->
   <section class="card" id="section-push">
     <div class="card-header">
       <span class="icon">🔔</span>
-      <h2>推送通知</h2>
-      <span class="badge badge-warning" id="pushStatus">未订阅</span>
+      <h2>Push Notifications</h2>
+      <span class="badge badge-warning" id="pushStatus">Not Subscribed</span>
     </div>
 
     <p style="color: var(--color-text-secondary); font-size: 0.9rem; margin-bottom: var(--spacing-md);">
-      订阅推送通知后可接收消息。<br>
-      <small>（因本地开发环境，使用「模拟推送」按钮测试通知效果）</small>
+      Subscribe to push notifications to receive messages.<br>
+      <small>(In local dev environment, use the "Simulate Push" button to test)</small>
     </p>
 
     <div style="display: flex; gap: var(--spacing-sm); flex-wrap: wrap;">
       <button class="btn btn-primary" id="subscribePushBtn">
-        🔔 订阅推送通知
+        🔔 Subscribe to Push
       </button>
       <button class="btn btn-outline" id="simulatePushBtn" disabled>
-        📨 模拟推送
+        📨 Simulate Push
       </button>
       <button class="btn btn-outline btn-sm" id="unsubscribePushBtn" style="display:none;">
-        取消订阅
+        Unsubscribe
       </button>
     </div>
 
@@ -686,86 +686,86 @@ body {
   </section>
 
   <!-- ============================================================
-   *  六、IndexedDB 存储统计
+   *  6. IndexedDB Storage Statistics
    * ============================================================ -->
   <section class="card" id="section-db">
     <div class="card-header">
       <span class="icon">💾</span>
-      <h2>本地存储</h2>
+      <h2>Local Storage</h2>
       <span class="badge badge-success">IndexedDB</span>
     </div>
 
     <div class="stats-grid" id="dbStats">
       <div class="stat-box">
         <div class="stat-value" id="todoCount">0</div>
-        <div class="stat-label">待办总数</div>
+        <div class="stat-label">Total Todos</div>
       </div>
       <div class="stat-box">
         <div class="stat-value" id="syncedCount">0</div>
-        <div class="stat-label">已同步</div>
+        <div class="stat-label">Synced</div>
       </div>
       <div class="stat-box">
         <div class="stat-value" id="pendingCount">0</div>
-        <div class="stat-label">待同步</div>
+        <div class="stat-label">Pending Sync</div>
       </div>
       <div class="stat-box">
         <div class="stat-value" id="swStatusCount">-</div>
-        <div class="stat-label">SW 状态</div>
+        <div class="stat-label">SW Status</div>
       </div>
     </div>
 
     <div style="margin-top: var(--spacing-sm);">
       <button class="btn btn-outline btn-sm" id="clearTodosBtn">
-        🗑️ 清空所有待办
+        🗑️ Clear All Todos
       </button>
     </div>
   </section>
 
-  <!-- ========== 页脚 ========== -->
+  <!-- ========== Footer ========== -->
   <footer class="app-footer">
     <p>
-      <a href="https://developer.mozilla.org/zh-CN/docs/Web/Progressive_web_apps" target="_blank" rel="noopener">PWA 文档</a>
+      <a href="https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps" target="_blank" rel="noopener">PWA Docs</a>
       ·
-      <a href="/apps/">返回应用列表</a>
+      <a href="/apps/">Back to Apps</a>
     </p>
     <p style="margin-top: 0.3rem;">
-      离线就绪 · 后台同步 · 推送通知
+      Offline-ready · Background Sync · Push Notifications
     </p>
   </footer>
 </div>
 
 <!-- ============================================================
- *  JavaScript 主逻辑
- *  全部使用 ES6+，无外部依赖
+ *  JavaScript Main Logic
+ *  All ES6+, no external dependencies
  * ============================================================ -->
 <script>
 (function() {
   'use strict';
 
   /* ============================================================
-   *  IndexedDB 数据库工具
-   *  数据库名: PWADemoDB，版本: 1
-   *  对象存储: todos（主键: id）
+   *  IndexedDB Database Utilities
+   *  Database: PWADemoDB, Version: 1
+   *  Object store: todos (key path: id)
    * ============================================================ */
   var DB_NAME = 'PWADemoDB';
   var DB_VERSION = 1;
   var STORE_NAME = 'todos';
 
   /**
-   * 打开/创建 IndexedDB 数据库
+   * Open / create IndexedDB database
    * @returns {Promise<IDBDatabase>}
    */
   function openDB() {
     return new Promise(function(resolve, reject) {
       var request = indexedDB.open(DB_NAME, DB_VERSION);
 
-      // 数据库首次创建或版本升级时创建对象存储
+      // Create object store on first creation or version upgrade
       request.onupgradeneeded = function(event) {
         var db = event.target.result;
         if (!db.objectStoreNames.contains(STORE_NAME)) {
-          // 创建 todos 对象存储，使用 id 作为主键（自动生成）
+          // Create todos object store with auto-generated id as key path
           db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-          console.log('[DB] 创建对象存储:', STORE_NAME);
+          console.log('[DB] Created object store:', STORE_NAME);
         }
       };
 
@@ -774,16 +774,16 @@ body {
       };
 
       request.onerror = function(event) {
-        console.error('[DB] 打开数据库失败:', event.target.error);
+        console.error('[DB] Failed to open database:', event.target.error);
         reject(event.target.error);
       };
     });
   }
 
   /**
-   * 添加一条待办事项
-   * @param {string} title - 待办标题
-   * @returns {Promise<Object>} 添加的记录
+   * Add a todo item
+   * @param {string} title - Todo title
+   * @returns {Promise<Object>} The added record
    */
   function addTodo(title) {
     return openDB().then(function(db) {
@@ -791,13 +791,13 @@ body {
         var transaction = db.transaction([STORE_NAME], 'readwrite');
         var store = transaction.objectStore(STORE_NAME);
 
-        // 创建待办记录
+        // Create todo record
         var todo = {
           id: Date.now() + '_' + Math.random().toString(36).slice(2, 8),
           title: title.trim(),
           createdAt: new Date().toISOString(),
-          synced: false,    // 是否已同步到服务器
-          syncedAt: null    // 同步时间
+          synced: false,    // Whether synced to server
+          syncedAt: null    // Sync timestamp
         };
 
         var request = store.add(todo);
@@ -818,8 +818,8 @@ body {
   }
 
   /**
-   * 获取所有待办事项
-   * @returns {Promise<Array>} 待办列表
+   * Get all todo items
+   * @returns {Promise<Array>} List of todos
    */
   function getAllTodos() {
     return openDB().then(function(db) {
@@ -844,8 +844,8 @@ body {
   }
 
   /**
-   * 删除一条待办事项
-   * @param {string} id - 待办 ID
+   * Delete a todo item
+   * @param {string} id - Todo ID
    * @returns {Promise<void>}
    */
   function deleteTodo(id) {
@@ -871,7 +871,7 @@ body {
   }
 
   /**
-   * 清空所有待办事项
+   * Clear all todo items
    * @returns {Promise<void>}
    */
   function clearAllTodos() {
@@ -897,7 +897,7 @@ body {
   }
 
   /* ============================================================
-   *  渲染待办列表
+   *  Render todo list
    * ============================================================ */
   function renderTodoList() {
     getAllTodos().then(function(todos) {
@@ -906,38 +906,38 @@ body {
       var statsSynced = document.getElementById('syncedCount');
       var statsPending = document.getElementById('pendingCount');
 
-      // 更新统计
+      // Update statistics
       statsTodo.textContent = todos.length;
       statsSynced.textContent = todos.filter(function(t) { return t.synced; }).length;
       statsPending.textContent = todos.filter(function(t) { return !t.synced; }).length;
 
       if (todos.length === 0) {
         container.innerHTML =
-          '<div class="empty-state"><p>暂无待办事项，在上方添加一条吧</p></div>';
+          '<div class="empty-state"><p>No todo items yet. Add one above!</p></div>';
         return;
       }
 
-      // 生成列表 HTML
+      // Generate list HTML
       var html = '<ul class="todo-list">';
-      // 按创建时间倒序排列
+      // Sort by creation time descending
       todos.sort(function(a, b) {
         return new Date(b.createdAt) - new Date(a.createdAt);
       });
 
       todos.forEach(function(todo) {
         var statusClass = todo.synced ? 'badge-success' : 'badge-warning';
-        var statusText = todo.synced ? '已同步' : '待同步';
+        var statusText = todo.synced ? 'Synced' : 'Pending';
         html +=
           '<li class="todo-item" data-id="' + todo.id + '">' +
             '<span class="todo-title">' + escapeHtml(todo.title) + '</span>' +
             '<span class="todo-status badge ' + statusClass + '">' + statusText + '</span>' +
-            '<button class="todo-delete" data-id="' + todo.id + '" title="删除">✕</button>' +
+            '<button class="todo-delete" data-id="' + todo.id + '" title="Delete">✕</button>' +
           '</li>';
       });
       html += '</ul>';
       container.innerHTML = html;
 
-      // 绑定删除事件
+      // Bind delete events
       container.querySelectorAll('.todo-delete').forEach(function(btn) {
         btn.addEventListener('click', function() {
           var id = this.getAttribute('data-id');
@@ -945,17 +945,17 @@ body {
             renderTodoList();
             updateSyncStatus();
           }).catch(function(err) {
-            console.error('[UI] 删除失败:', err);
+            console.error('[UI] Delete failed:', err);
           });
         });
       });
     }).catch(function(err) {
-      console.error('[UI] 加载待办列表失败:', err);
+      console.error('[UI] Failed to load todo list:', err);
     });
   }
 
   /**
-   * HTML 转义（防止 XSS）
+   * HTML escape (prevents XSS)
    */
   function escapeHtml(str) {
     var div = document.createElement('div');
@@ -964,54 +964,54 @@ body {
   }
 
   /* ============================================================
-   *  后台同步状态更新与注册
+   *  Background sync status update and registration
    * ============================================================ */
   var syncRegistered = false;
   var syncMsgEl = document.getElementById('syncMsg');
   var syncStatusEl = document.getElementById('syncStatus');
 
   /**
-   * 注册后台同步事件
-   * 当网络恢复时，SW 会自动触发 sync 事件
+   * Register background sync event
+   * When network is restored, SW will automatically trigger the sync event
    */
   function registerSync() {
     if (syncRegistered) return;
 
-    // 检查浏览器是否支持后台同步
+    // Check if browser supports background sync
     if (!('SyncManager' in window)) {
-      syncStatusEl.textContent = '不支持同步';
+      syncStatusEl.textContent = 'Sync Not Supported';
       syncStatusEl.className = 'badge badge-error';
-      showSyncMsg('⚠️ 当前浏览器不支持 Background Sync API', 'warning');
+      showSyncMsg('⚠️ Your browser does not support the Background Sync API', 'warning');
       return;
     }
 
     navigator.serviceWorker.ready.then(function(registration) {
-      // 注册 'sync-todos' 标签的同步事件
+      // Register sync event with tag 'sync-todos'
       return registration.sync.register('sync-todos');
     }).then(function() {
       syncRegistered = true;
-      syncStatusEl.textContent = '√ 已注册';
+      syncStatusEl.textContent = '✓ Registered';
       syncStatusEl.className = 'badge badge-success';
-      showSyncMsg('✅ 后台同步已注册，网络恢复时将自动同步数据', 'success');
+      showSyncMsg('✅ Background sync registered. Data will auto-sync when network is restored.', 'success');
     }).catch(function(err) {
-      console.error('[Sync] 注册失败:', err);
-      syncStatusEl.textContent = '注册失败';
+      console.error('[Sync] Registration failed:', err);
+      syncStatusEl.textContent = 'Registration Failed';
       syncStatusEl.className = 'badge badge-error';
-      showSyncMsg('❌ 后台同步注册失败: ' + err.message, 'error');
+      showSyncMsg('❌ Background sync registration failed: ' + err.message, 'error');
     });
   }
 
   /**
-   * 更新同步状态显示
+   * Update sync status display
    */
   function updateSyncStatus() {
     getAllTodos().then(function(todos) {
       var pending = todos.filter(function(t) { return !t.synced; });
       if (pending.length > 0) {
-        syncStatusEl.textContent = pending.length + ' 条待同步';
+        syncStatusEl.textContent = pending.length + ' pending sync';
         syncStatusEl.className = 'badge badge-warning';
       } else {
-        syncStatusEl.textContent = '√ 全部已同步';
+        syncStatusEl.textContent = '✓ All Synced';
         syncStatusEl.className = 'badge badge-success';
       }
     });
@@ -1021,7 +1021,7 @@ body {
     if (!syncMsgEl) return;
     var className = 'status-msg status-msg-' + (type || 'info');
     syncMsgEl.innerHTML = '<div class="' + className + '">' + msg + '</div>';
-    // 3秒后自动清除
+    // Auto-clear after 3 seconds
     clearTimeout(syncMsgEl._timer);
     syncMsgEl._timer = setTimeout(function() {
       syncMsgEl.innerHTML = '';
@@ -1029,7 +1029,7 @@ body {
   }
 
   /* ============================================================
-   *  Service Worker 注册与管理
+   *  Service Worker Registration & Management
    * ============================================================ */
   var swStatusEl = document.getElementById('swStatus');
   var swDetailEl = document.getElementById('swDetail');
@@ -1038,65 +1038,65 @@ body {
   var isSwControlling = false;
 
   /**
-   * 注册 Service Worker
+   * Register Service Worker
    */
   function registerSW() {
     if (!('serviceWorker' in navigator)) {
-      swStatusEl.textContent = '不支持';
+      swStatusEl.textContent = 'Not Supported';
       swStatusEl.className = 'badge badge-error';
-      swDetailEl.textContent = '❌ 当前浏览器不支持 Service Worker';
+      swDetailEl.textContent = '❌ Your browser does not support Service Worker';
       return;
     }
 
-    // 注册 sw.js
+    // Register sw.js
     navigator.serviceWorker.register('sw.js')
       .then(function(registration) {
         swRegistration = registration;
-        console.log('[SW] 注册成功:', registration);
+        console.log('[SW] Registration successful:', registration);
 
-        // 监听 SW 状态变化
+        // Listen for SW status changes
         updateSWStatus(registration);
 
-        // 当 SW 状态发生变化时更新显示
+        // Update display when SW status changes
         registration.addEventListener('updatefound', function() {
           updateSWStatus(registration);
         });
 
-        // 监听来自 SW 的消息
+        // Listen for messages from SW
         navigator.serviceWorker.addEventListener('message', function(event) {
-          console.log('[Page] 收到 SW 消息:', event.data);
+          console.log('[Page] Received SW message:', event.data);
           if (event.data && event.data.type === 'SW_UPDATED') {
-            swDetailEl.textContent = '✅ SW 已更新，请刷新页面';
-            swStatusEl.textContent = '已更新';
+            swDetailEl.textContent = '✅ SW has been updated, please refresh the page';
+            swStatusEl.textContent = 'Updated';
             swStatusEl.className = 'badge badge-success';
           }
           if (event.data && event.data.type === 'SYNC_COMPLETE') {
-            showSyncMsg('✅ 已同步 ' + event.data.count + ' 条待办事项', 'success');
+            showSyncMsg('✅ Synced ' + event.data.count + ' todo items', 'success');
             renderTodoList();
             updateSyncStatus();
           }
         });
 
-        // 监听 controllerchange（新 SW 接管页面）
+        // Listen for controllerchange (new SW takes over page)
         navigator.serviceWorker.addEventListener('controllerchange', function() {
-          console.log('[SW] 控制器已变更');
+          console.log('[SW] Controller changed');
           isSwControlling = true;
         });
 
-        // 检查是否有等待中的 SW（需要更新）
+        // Check for waiting SW (update pending)
         checkWaitingSW(registration);
 
       })
       .catch(function(error) {
-        console.error('[SW] 注册失败:', error);
-        swStatusEl.textContent = '错误';
+        console.error('[SW] Registration failed:', error);
+        swStatusEl.textContent = 'Error';
         swStatusEl.className = 'badge badge-error';
-        swDetailEl.textContent = '❌ 注册失败: ' + error.message;
+        swDetailEl.textContent = '❌ Registration failed: ' + error.message;
       });
   }
 
   /**
-   * 更新 SW 状态显示
+   * Update SW status display
    */
   function updateSWStatus(registration) {
     var sw = registration.installing || registration.waiting || registration.active;
@@ -1107,25 +1107,25 @@ body {
 
     switch (sw.state) {
       case 'installing':
-        swDetailEl.textContent = '⏳ Service Worker 正在安装...';
+        swDetailEl.textContent = '⏳ Service Worker is installing...';
         break;
       case 'activated':
-        swDetailEl.textContent = '✅ Service Worker 已激活，离线功能就绪';
+        swDetailEl.textContent = '✅ Service Worker activated. Offline features ready.';
         updateSwBtn.disabled = true;
-        // SW 就绪后注册后台同步
+        // Register background sync after SW is ready
         registerSync();
         break;
       case 'waiting':
-        swDetailEl.textContent = '⏸️ 新版本 Service Worker 正在等待，点击"更新 SW"激活';
+        swDetailEl.textContent = '⏸️ A new Service Worker version is waiting. Click "Update SW" to activate.';
         updateSwBtn.disabled = false;
         break;
       default:
-        swDetailEl.textContent = 'SW 状态: ' + sw.state;
+        swDetailEl.textContent = 'SW status: ' + sw.state;
     }
   }
 
   /**
-   * 检查是否有等待中的 SW
+   * Check for waiting SW
    */
   function checkWaitingSW(registration) {
     if (registration.waiting) {
@@ -1141,94 +1141,94 @@ body {
   }
 
   /**
-   * 手动更新 SW（skipWaiting + 刷新）
+   * Manually update SW (skipWaiting + refresh)
    */
   function updateSW() {
     if (!swRegistration || !swRegistration.waiting) {
-      swDetailEl.textContent = '⚠️ 没有等待中的 SW 更新';
+      swDetailEl.textContent = '⚠️ No pending SW update';
       return;
     }
 
-    // 发送 SKIP_WAITING 消息给 SW
+    // Send SKIP_WAITING message to SW
     swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
-    swDetailEl.textContent = '🔄 正在更新 Service Worker...';
+    swDetailEl.textContent = '🔄 Updating Service Worker...';
     updateSwBtn.disabled = true;
 
-    // 等待 controllerchange 后刷新
+    // Refresh on controllerchange
     navigator.serviceWorker.addEventListener('controllerchange', function() {
       window.location.reload();
     });
 
-    // 如果 3 秒后未触发 controllerchange，强制刷新
+    // Force refresh after 3 seconds if controllerchange doesn't fire
     setTimeout(function() {
       window.location.reload();
     }, 3000);
   }
 
   /* ============================================================
-   *  beforeinstallprompt — 添加到主屏幕
+   *  beforeinstallprompt — Add to Home Screen
    * ============================================================ */
   var deferredPrompt = null;
   var installBtn = document.getElementById('installBtn');
   var installStatus = document.getElementById('installStatus');
   var installMsgEl = document.getElementById('installMsg');
 
-  // 监听 beforeinstallprompt 事件
+  // Listen for beforeinstallprompt event
   window.addEventListener('beforeinstallprompt', function(event) {
-    // 阻止 Chrome 自动显示安装提示
+    // Prevent Chrome from automatically showing the install prompt
     event.preventDefault();
-    // 保存事件以便后续触发
+    // Save the event for later use
     deferredPrompt = event;
-    // 显示安装按钮
+    // Show install button
     installBtn.style.display = 'flex';
     installBtn.disabled = false;
-    installStatus.textContent = '可安装';
+    installStatus.textContent = 'Installable';
     installStatus.className = 'badge badge-success';
-    console.log('[Install] 已捕获 beforeinstallprompt 事件');
+    console.log('[Install] Captured beforeinstallprompt event');
   });
 
-  // 安装按钮点击处理
+  // Install button click handler
   installBtn.addEventListener('click', function() {
     if (!deferredPrompt) {
       installMsgEl.innerHTML =
-        '<div class="status-msg status-msg-warning">⚠️ 安装提示不可用，请检查浏览器设置</div>';
+        '<div class="status-msg status-msg-warning">⚠️ Install prompt unavailable. Please check your browser settings.</div>';
       return;
     }
 
-    // 触发安装弹窗
+    // Trigger install prompt
     deferredPrompt.prompt();
 
-    // 等待用户响应
+    // Wait for user response
     deferredPrompt.userChoice.then(function(choiceResult) {
       if (choiceResult.outcome === 'accepted') {
-        console.log('[Install] 用户接受了安装');
+        console.log('[Install] User accepted installation');
         installMsgEl.innerHTML =
-          '<div class="status-msg status-msg-success">✅ 应用已安装到主屏幕</div>';
+          '<div class="status-msg status-msg-success">✅ App has been installed to home screen</div>';
         installBtn.style.display = 'none';
-        installStatus.textContent = '已安装';
+        installStatus.textContent = 'Installed';
         installStatus.className = 'badge badge-success';
       } else {
-        console.log('[Install] 用户拒绝了安装');
+        console.log('[Install] User declined installation');
         installMsgEl.innerHTML =
-          '<div class="status-msg status-msg-info">⏳ 您可以在需要时再次安装</div>';
+          '<div class="status-msg status-msg-info">⏳ You can install again later</div>';
       }
       deferredPrompt = null;
       installBtn.disabled = true;
     });
   });
 
-  // 监听 appinstalled 事件
+  // Listen for appinstalled event
   window.addEventListener('appinstalled', function() {
-    console.log('[Install] 应用已安装');
+    console.log('[Install] App has been installed');
     installMsgEl.innerHTML =
-      '<div class="status-msg status-msg-success">🎉 应用已成功安装到主屏幕！</div>';
+      '<div class="status-msg status-msg-success">🎉 App successfully installed to home screen!</div>';
     installBtn.style.display = 'none';
-    installStatus.textContent = '已安装';
+    installStatus.textContent = 'Installed';
     installStatus.className = 'badge badge-success';
   });
 
   /* ============================================================
-   *  推送通知订阅
+   *  Push Notification Subscription
    * ============================================================ */
   var subscribeBtn = document.getElementById('subscribePushBtn');
   var simulateBtn = document.getElementById('simulatePushBtn');
@@ -1236,14 +1236,14 @@ body {
   var pushStatusEl = document.getElementById('pushStatus');
   var pushMsgEl = document.getElementById('pushMsg');
 
-  // 测试用 VAPID 公钥（Base64 URL 编码）
-  // 注意：实际生产环境需要替换为服务端生成的密钥对
-  // 生成方式：npx web-push generate-vapid-keys
+  // Test VAPID public key (Base64 URL encoded)
+  // Note: In production, replace with a real server-generated key pair
+  // Generate with: npx web-push generate-vapid-keys
   var VAPID_PUBLIC_KEY = 'BIsdfPHJ4vWqJ_6mF7QgKfGcP0yLxkBzRjTnX8V3wYmEo9qZ5uN2aRpSdKfHbWcLvMxYz1A4bC7DeFgHiJkLmNoP';
 
   /**
-   * 将 Base64 字符串转换为 Uint8Array
-   * （VAPID 密钥需要 Uint8Array 格式）
+   * Convert Base64 string to Uint8Array
+   * (VAPID keys require Uint8Array format)
    */
   function urlBase64ToUint8Array(base64String) {
     var padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -1261,51 +1261,51 @@ body {
   }
 
   /**
-   * 订阅推送通知
+   * Subscribe to push notifications
    */
   function subscribePush() {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-      showPushMsg('❌ 当前浏览器不支持推送通知', 'error');
+      showPushMsg('❌ Your browser does not support push notifications', 'error');
       return;
     }
 
     subscribeBtn.disabled = true;
-    subscribeBtn.textContent = '⏳ 订阅中...';
+    subscribeBtn.textContent = '⏳ Subscribing...';
 
-    // 先生成 VAPID 密钥（模拟）
-    // 实际项目中应从服务器获取
+    // Generate VAPID key (simulated)
+    // In production, fetch from server
     var applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
 
     navigator.serviceWorker.ready.then(function(registration) {
       return registration.pushManager.subscribe({
-        userVisibleOnly: true,  // 必须设置为 true
+        userVisibleOnly: true,  // Must be set to true
         applicationServerKey: applicationServerKey
       });
     }).then(function(subscription) {
-      console.log('[Push] 订阅成功:', subscription);
-      pushStatusEl.textContent = '√ 已订阅';
+      console.log('[Push] Subscription successful:', subscription);
+      pushStatusEl.textContent = '✓ Subscribed';
       pushStatusEl.className = 'badge badge-success';
-      showPushMsg('✅ 推送通知订阅成功！点击"模拟推送"测试', 'success');
+      showPushMsg('✅ Push notification subscribed! Click "Simulate Push" to test.', 'success');
 
       subscribeBtn.style.display = 'none';
       simulateBtn.disabled = false;
       unsubscribeBtn.style.display = 'inline-flex';
 
-      // 保存订阅信息到 localStorage（模拟）
+      // Save subscription info to localStorage (simulated)
       localStorage.setItem('pushSubscription', JSON.stringify(subscription));
 
     }).catch(function(err) {
-      console.error('[Push] 订阅失败:', err);
-      pushStatusEl.textContent = '订阅失败';
+      console.error('[Push] Subscription failed:', err);
+      pushStatusEl.textContent = 'Subscription Failed';
       pushStatusEl.className = 'badge badge-error';
-      showPushMsg('❌ 订阅失败: ' + err.message + '<br><small>提示：推送功能需要 HTTPS 或 localhost</small>', 'error');
+      showPushMsg('❌ Subscription failed: ' + err.message + '<br><small>Note: Push notifications require HTTPS or localhost</small>', 'error');
       subscribeBtn.disabled = false;
-      subscribeBtn.textContent = '🔔 订阅推送通知';
+      subscribeBtn.textContent = '🔔 Subscribe to Push';
     });
   }
 
   /**
-   * 取消订阅推送通知
+   * Unsubscribe from push notifications
    */
   function unsubscribePush() {
     navigator.serviceWorker.ready.then(function(registration) {
@@ -1315,43 +1315,43 @@ body {
         return subscription.unsubscribe();
       }
     }).then(function() {
-      pushStatusEl.textContent = '未订阅';
+      pushStatusEl.textContent = 'Not Subscribed';
       pushStatusEl.className = 'badge badge-warning';
-      showPushMsg('📴 已取消推送订阅', 'info');
+      showPushMsg('📴 Unsubscribed from push notifications', 'info');
 
       subscribeBtn.style.display = 'inline-flex';
       subscribeBtn.disabled = false;
-      subscribeBtn.textContent = '🔔 订阅推送通知';
+      subscribeBtn.textContent = '🔔 Subscribe to Push';
       simulateBtn.disabled = true;
       unsubscribeBtn.style.display = 'none';
 
       localStorage.removeItem('pushSubscription');
     }).catch(function(err) {
-      console.error('[Push] 取消订阅失败:', err);
+      console.error('[Push] Unsubscribe failed:', err);
     });
   }
 
   /**
-   * 模拟推送通知
-   * 使用 registration.showNotification() 直接显示
+   * Simulate a push notification
+   * Uses registration.showNotification() directly
    */
   function simulatePush() {
     if (!('Notification' in window)) {
-      showPushMsg('❌ 当前浏览器不支持通知', 'error');
+      showPushMsg('❌ Your browser does not support notifications', 'error');
       return;
     }
 
-    // 检查通知权限
+    // Check notification permission
     if (Notification.permission === 'denied') {
-      showPushMsg('⚠️ 通知权限已被拒绝，请在浏览器设置中开启', 'warning');
+      showPushMsg('⚠️ Notification permission has been denied. Please enable it in browser settings.', 'warning');
       return;
     }
 
     navigator.serviceWorker.ready.then(function(registration) {
-      // 使用 SW 的 showNotification 方法显示通知
-      // 这样即使用户关闭了页面，通知也能显示
-      registration.showNotification('📬 PWA 演示 - 模拟推送', {
-        body: '这是一条模拟的推送消息，时间: ' + new Date().toLocaleTimeString('zh-CN'),
+      // Use SW showNotification method to display notification
+      // This works even if the page is closed
+      registration.showNotification('📬 PWA Demo - Simulated Push', {
+        body: 'This is a simulated push message. Time: ' + new Date().toLocaleTimeString('en-US'),
         icon: '/wobbly-platypus/apps/pwa-demo/icons/icon-192.svg',
         badge: '/wobbly-platypus/apps/pwa-demo/icons/favicon.svg',
         vibrate: [200, 100, 200],
@@ -1362,14 +1362,14 @@ body {
           timestamp: Date.now()
         },
         actions: [
-          { action: 'open', title: '打开' },
-          { action: 'close', title: '关闭' }
+          { action: 'open', title: 'Open' },
+          { action: 'close', title: 'Close' }
         ]
       }).then(function() {
-        showPushMsg('📨 模拟推送已发送！请查看系统通知', 'success');
+        showPushMsg('📨 Simulated push sent! Check your system notifications.', 'success');
       }).catch(function(err) {
-        console.error('[Push] 模拟推送失败:', err);
-        showPushMsg('❌ 模拟推送失败: ' + err.message, 'error');
+        console.error('[Push] Simulated push failed:', err);
+        showPushMsg('❌ Simulated push failed: ' + err.message, 'error');
       });
     });
   }
@@ -1384,7 +1384,7 @@ body {
     }, 8000);
   }
 
-  // 检查已有的推送订阅状态
+  // Check existing push subscription status
   function checkExistingPushSubscription() {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
 
@@ -1392,20 +1392,20 @@ body {
       return registration.pushManager.getSubscription();
     }).then(function(subscription) {
       if (subscription) {
-        pushStatusEl.textContent = '√ 已订阅';
+        pushStatusEl.textContent = '✓ Subscribed';
         pushStatusEl.className = 'badge badge-success';
         subscribeBtn.style.display = 'none';
         simulateBtn.disabled = false;
         unsubscribeBtn.style.display = 'inline-flex';
-        showPushMsg('✅ 推送通知已订阅，可点击"模拟推送"测试', 'success');
+        showPushMsg('✅ Push notifications subscribed. Click "Simulate Push" to test.', 'success');
       }
     }).catch(function(err) {
-      console.log('[Push] 检查订阅状态失败:', err);
+      console.log('[Push] Failed to check subscription status:', err);
     });
   }
 
   /* ============================================================
-   *  网络状态检测
+   *  Network Status Detection
    * ============================================================ */
   var netStatusEl = document.getElementById('netStatus');
   var netLabelEl = document.getElementById('netLabel');
@@ -1415,53 +1415,53 @@ body {
     var online = navigator.onLine;
 
     if (online) {
-      netStatusEl.textContent = '在线';
+      netStatusEl.textContent = 'Online';
       netStatusEl.className = 'badge badge-success';
-      netLabelEl.textContent = '在线';
+      netLabelEl.textContent = 'Online';
       networkBar.className = 'network-bar';
       networkBar.textContent = '';
     } else {
-      netStatusEl.textContent = '离线';
+      netStatusEl.textContent = 'Offline';
       netStatusEl.className = 'badge badge-error';
-      netLabelEl.textContent = '离线';
+      netLabelEl.textContent = 'Offline';
       networkBar.className = 'network-bar offline';
-      networkBar.textContent = '📡 您当前处于离线状态';
+      networkBar.textContent = '📡 You are currently offline';
     }
   }
 
-  // 监听网络状态变化
+  // Listen for network status changes
   window.addEventListener('online', function() {
     updateNetworkStatus();
-    // 网络恢复时尝试后台同步
+    // Attempt background sync when network is restored
     registerSync();
   });
 
   window.addEventListener('offline', updateNetworkStatus);
 
   /* ============================================================
-   *  清空所有待办
+   *  Clear all todos
    * ============================================================ */
   document.getElementById('clearTodosBtn').addEventListener('click', function() {
-    if (confirm('确定要清空所有待办事项吗？此操作不可撤销。')) {
+    if (confirm('Are you sure you want to clear all todos? This action cannot be undone.')) {
       clearAllTodos().then(function() {
         renderTodoList();
         updateSyncStatus();
-        showSyncMsg('🗑️ 已清空所有待办事项', 'info');
+        showSyncMsg('🗑️ All todos have been cleared', 'info');
       }).catch(function(err) {
-        console.error('[UI] 清空失败:', err);
-        showSyncMsg('❌ 清空失败', 'error');
+        console.error('[UI] Clear failed:', err);
+        showSyncMsg('❌ Clear failed', 'error');
       });
     }
   });
 
   /* ============================================================
-   *  事件绑定
+   *  Event Bindings
    * ============================================================ */
 
-  // 更新 SW 按钮
+  // Update SW button
   updateSwBtn.addEventListener('click', updateSW);
 
-  // 待办表单提交
+  // Todo form submission
   document.getElementById('todoForm').addEventListener('submit', function(event) {
     event.preventDefault();
     var input = document.getElementById('todoInput');
@@ -1470,46 +1470,46 @@ body {
     if (!title) return;
 
     addTodo(title).then(function(todo) {
-      console.log('[Todo] 添加成功:', todo);
+      console.log('[Todo] Added successfully:', todo);
       input.value = '';
       input.focus();
       renderTodoList();
       updateSyncStatus();
-      showSyncMsg('📝 已添加待办事项: ' + escapeHtml(todo.title), 'success');
+      showSyncMsg('📝 Added todo: ' + escapeHtml(todo.title), 'success');
     }).catch(function(err) {
-      console.error('[Todo] 添加失败:', err);
-      showSyncMsg('❌ 添加失败: ' + err.message, 'error');
+      console.error('[Todo] Add failed:', err);
+      showSyncMsg('❌ Add failed: ' + err.message, 'error');
     });
   });
 
-  // 推送订阅按钮
+  // Push subscribe button
   subscribeBtn.addEventListener('click', subscribePush);
 
-  // 模拟推送按钮
+  // Simulate push button
   simulateBtn.addEventListener('click', simulatePush);
 
-  // 取消订阅按钮
+  // Unsubscribe button
   unsubscribeBtn.addEventListener('click', unsubscribePush);
 
   /* ============================================================
-   *  初始化
+   *  Initialization
    * ============================================================ */
   function init() {
-    console.log('[App] PWA 演示应用初始化');
+    console.log('[App] PWA Demo initializing');
 
-    // 1. 注册 Service Worker
+    // 1. Register Service Worker
     registerSW();
 
-    // 2. 设置初始网络状态
+    // 2. Set initial network status
     updateNetworkStatus();
 
-    // 3. 加载待办列表
+    // 3. Load todo list
     renderTodoList();
 
-    // 4. 检查推送订阅状态
+    // 4. Check push subscription status
     checkExistingPushSubscription();
 
-    // 5. 定期刷新待办列表和 SW 统计（每 5 秒）
+    // 5. Periodic refresh of todo list and SW stats (every 5 seconds)
     setInterval(function() {
       renderTodoList();
       if (swRegistration) {
@@ -1522,7 +1522,7 @@ body {
     }, 5000);
   }
 
-  // 页面加载完成后初始化
+  // Initialize after page load
   if (document.readyState === 'complete') {
     init();
   } else {

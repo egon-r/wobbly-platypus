@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>离线 - PWA 演示</title>
+<title>Offline — PWA Demo</title>
 <style>
-  /* ===== CSS 自定义属性（主题变量） ===== */
+  /* ===== CSS Custom Properties (Theme Variables) ===== */
   :root {
     --color-primary: #6366f1;
     --color-primary-light: #818cf8;
@@ -19,7 +19,7 @@
     --shadow: 0 1px 3px rgba(0,0,0,0.1);
   }
 
-  /* 暗色模式 */
+  /* Dark mode */
   @media (prefers-color-scheme: dark) {
     :root {
       --color-bg: #0f172a;
@@ -56,7 +56,7 @@
     text-align: center;
   }
 
-  /* 离线图标 */
+  /* Offline icon */
   .offline-icon {
     width: 80px;
     height: 80px;
@@ -83,7 +83,7 @@
     font-size: 0.95rem;
   }
 
-  /* 缓存页面列表 */
+  /* Cached page list */
   .cached-list {
     text-align: left;
     margin-top: 1.25rem;
@@ -114,7 +114,7 @@
     font-weight: bold;
   }
 
-  /* 重试按钮 */
+  /* Retry button */
   .retry-btn {
     display: inline-block;
     margin-top: 1rem;
@@ -127,7 +127,7 @@
     font-weight: 500;
     cursor: pointer;
     transition: background 0.2s;
-    min-height: 44px;  /* 触控友好 */
+    min-height: 44px;  /* Touch-friendly */
     -webkit-tap-highlight-color: transparent;
   }
 
@@ -143,35 +143,35 @@
 <body>
 
 <div class="card" role="alert">
-  <!-- 离线图标 -->
+  <!-- Offline icon -->
   <div class="offline-icon" aria-hidden="true">📡</div>
 
-  <h1>您当前处于离线状态</h1>
-  <p>网络连接已断开，部分功能可能受限。<br>但您仍可以查看已缓存的内容。</p>
-  <p>请检查您的网络连接后重试。</p>
+  <h1>You are currently offline</h1>
+  <p>The network connection has been lost. Some features may be limited.<br>You can still view cached content.</p>
+  <p>Please check your network connection and try again.</p>
 
-  <!-- 缓存页面列表 -->
+  <!-- Cached content list -->
   <div class="cached-list">
-    <h3>📦 已缓存的内容</h3>
-    <div class="cached-item">PWA 演示主页</div>
-    <div class="cached-item">应用图标</div>
-    <div class="cached-item">样式与脚本资源</div>
+    <h3>📦 Cached Content</h3>
+    <div class="cached-item">PWA Demo Home</div>
+    <div class="cached-item">App Icons</div>
+    <div class="cached-item">Styles & Script Resources</div>
   </div>
 
-  <!-- 重试按钮 -->
+  <!-- Retry button -->
   <button class="retry-btn" id="retryBtn" onclick="window.location.reload()">
-    重新连接
+    Reconnect
   </button>
 </div>
 
 <script>
-  // 页面加载后尝试检查网络状态
+  // Check network status on page load
   (function() {
     var retryBtn = document.getElementById('retryBtn');
 
-    // 监听网络恢复
+    // Listen for network recovery
     window.addEventListener('online', function() {
-      retryBtn.textContent = '✓ 网络已恢复，正在刷新...';
+      retryBtn.textContent = '✓ Network restored, refreshing...';
       retryBtn.disabled = true;
       setTimeout(function() { window.location.reload(); }, 800);
     });
