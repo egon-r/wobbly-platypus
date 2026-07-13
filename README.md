@@ -11,3 +11,4 @@ Static demo site for AI agent projects. Hosted at **https://ai-demo.egonr.dev/**
 ## Domain
 
 `ai-demo.egonr.dev` — configured via `CNAME`. Push to `main` to deploy.
+
