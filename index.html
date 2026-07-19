@@ -393,13 +393,9 @@
             var val = localStorage.getItem(key);
             if (val) total += val.length * 2;
           }
-          var display;
-          if (total < 1024) display = total + ' B';
-          else if (total < 1048576) display = (total / 1024).toFixed(1) + ' KB';
-          else display = (total / 1048576).toFixed(1) + ' MB';
-          el.textContent = 'LS: ' + display;
+          el.textContent = total + ' B';
         } catch(e) {
-          el.textContent = 'LS: —';
+          el.textContent = '\u2022 \u2014';
         }
       }
       updateStorage();
