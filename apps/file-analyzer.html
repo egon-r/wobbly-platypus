@@ -405,6 +405,7 @@
 
   // ---- Constants ----
   var HEADER_READ_SIZE = 2 * 1024 * 1024; // 2 MB
+  var ENTROPY_TARGET_BLOCKS = 2000; // total resolution for full-file entropy graph
 
   const SUBSYSTEMS = {
     0: 'Unknown', 1: 'Native', 2: 'Windows GUI', 3: 'Windows Console',
@@ -905,7 +906,7 @@
     setProgress(88, 'Preparing results…');
 
     // Phase 1: Show base results immediately (hex + entropy)
-    showBaseResults(file.name, file.size, buffer, format);
+    showBaseResults(file.name, file.size, buffer, format, file);
     if (cancelled) return;
 
     // Phase 2: If PE, asynchronously parse metadata
@@ -1068,6 +1069,90 @@
   var lastTapTime = 0;
   var lastTapX = 0;
   var lastTapBlock = -1;
+  var isFullFileBuild = false;       // true while streaming is running
+  var fullFileBuildCancelled = false;
+
+  function computeEntropyFromBytes(bytes) {
+    // bytes is Uint8Array of arbitrary length (at least 256 bytes ideally)
+    var freq = new Array(256);
+    for (var fi = 0; fi < 256; fi++) freq[fi] = 0;
+    for (var i = 0; i < bytes.length; i++) {
+      freq[bytes[i]]++;
+    }
+    var entropy = 0;
+    for (var i = 0; i < 256; i++) {
+      if (freq[i] > 0) {
+        var p = freq[i] / bytes.length;
+        entropy -= p * Math.log2(p);
+      }
+    }
+    return entropy;
+  }
+
+  function buildFullFileEntropy(file, onProgress, onDone) {
+    var fileSize = file.size;
+    // Compute block size to get roughly ENTROPY_TARGET_BLOCKS across the whole file
+    var blockSize = Math.max(4096, Math.ceil(fileSize / ENTROPY_TARGET_BLOCKS));
+    var numBlocks = Math.ceil(fileSize / blockSize);
+    var values = new Array(numBlocks);
+    var completed = 0;
+    var cancelled = false;
+    var BATCH_SIZE = 16;
+
+    function readBlock(i) {
+      var start = i * blockSize;
+      var end = Math.min(start + blockSize, fileSize);
+      var blob = file.slice(start, end);
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        if (cancelled) return;
+        var buf = e.target.result;
+        var bytes = new Uint8Array(buf);
+        values[i] = computeEntropyFromBytes(bytes);
+        completed++;
+        if (onProgress) onProgress(completed, numBlocks);
+        if (completed === numBlocks) {
+          if (onDone) onDone({
+            values: values,
+            blockSize: blockSize,
+            numBlocks: numBlocks,
+            fileSize: fileSize
+          });
+        }
+      };
+      reader.onerror = function() {
+        // On error reading a slice, fill with -1 and continue
+        values[i] = -1;
+        completed++;
+        if (onProgress) onProgress(completed, numBlocks);
+        if (completed === numBlocks && onDone) {
+          onDone({
+            values: values,
+            blockSize: blockSize,
+            numBlocks: numBlocks,
+            fileSize: fileSize
+          });
+        }
+      };
+      reader.readAsArrayBuffer(blob);
+    }
+
+    function processBatch(startIdx) {
+      if (cancelled) return;
+      var endIdx = Math.min(startIdx + BATCH_SIZE, numBlocks);
+      for (var i = startIdx; i < endIdx; i++) {
+        readBlock(i);
+      }
+      if (endIdx < numBlocks) {
+        setTimeout(function() { processBatch(endIdx); }, 30);
+      }
+    }
+
+    processBatch(0);
+
+    // Return a cancel function
+    return function() { cancelled = true; };
+  }
 
   function renderEntropy(buffer) {
     var maxBytes = Math.min(buffer.byteLength, 2 * 1024 * 1024);
@@ -1929,6 +2014,8 @@
       currentReader = null;
     }
     if (parseTimer) { clearTimeout(parseTimer); parseTimer = null; }
+    fullFileBuildCancelled = true;
+    isFullFileBuild = false;
     cancelled = false;
     dropZone.classList.remove('has-file');
     dropZone.classList.remove('dragover');
@@ -1954,7 +2041,7 @@
     resetBtn.classList.add('active');
   }
 
-  function showBaseResults(fileName, fileSize, buffer, format) {
+  function showBaseResults(fileName, fileSize, buffer, format, file) {
     currentFileBuffer = buffer;
 
     // File info
@@ -1993,6 +2080,39 @@
       document.getElementById('hexSummary').textContent += ' — PE (MZ) signature at offset 0x00000000';
     } else {
       hexContainer.classList.remove('pe-detected');
+    }
+
+    // If file bigger than 2MB, build full-file entropy in background
+    if (file && fileSize > HEADER_READ_SIZE && entropyBlocks && entropyBlocks.length > 0) {
+      isFullFileBuild = true;
+      fullFileBuildCancelled = false;
+
+      // Show progress (keep progress bar visible)
+      progressSection.classList.add('active');
+      setProgress(70, 'Building full-file entropy graph…');
+
+      buildFullFileEntropy(file, function(completed, total) {
+        if (fullFileBuildCancelled) return;
+        var pct = 70 + Math.round((completed / total) * 25);
+        setProgress(pct, 'Building full-file entropy graph… (' + completed + '/' + total + ' blocks)');
+      }, function(fullData) {
+        if (fullFileBuildCancelled) return;
+        // Replace entropy graph data with full-file version
+        entropyData = fullData;
+        entropyBlocks = fullData.values;
+        spikes = findSpikes(entropyBlocks);
+        viewStart = 0;
+        viewEnd = entropyBlocks.length;
+        currentClickBlock = -1;
+        currentSnapBlock = -1;
+        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1, -1);
+        renderMinimap();
+        isFullFileBuild = false;
+        setProgress(100, 'Full-file entropy ready!');
+        setTimeout(function() {
+          if (!cancelled) progressSection.classList.remove('active');
+        }, 600);
+      });
     }
   }
 
@@ -2136,6 +2256,10 @@
 
   cancelBtn.addEventListener('click', function() {
     cancelled = true;
+    if (isFullFileBuild) {
+      fullFileBuildCancelled = true;
+      isFullFileBuild = false;
+    }
     if (currentReader) {
       try { currentReader.abort(); } catch(e) {}
       currentReader = null;
