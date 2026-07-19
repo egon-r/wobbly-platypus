@@ -1516,9 +1516,17 @@
       return;
     }
     el.style.display = 'block';
+    var blockSize = entropyData ? entropyData.blockSize : 256;
+    var startOff = viewStart * blockSize;
+    var endOff = viewEnd * blockSize;
+    var winBytes = endOff - startOff;
+    var winStr;
+    if (winBytes < 1024) winStr = winBytes + ' B';
+    else if (winBytes < 1048576) winStr = (winBytes / 1024).toFixed(1) + ' KB';
+    else if (winBytes < 1073741824) winStr = (winBytes / 1048576).toFixed(1) + ' MB';
+    else winStr = (winBytes / 1073741824).toFixed(2) + ' GB';
     document.getElementById('zoomRange').textContent =
-      'Zoom: 0x' + (viewStart * 256).toString(16).toUpperCase() +
-      ' \u2013 0x' + (viewEnd * 256).toString(16).toUpperCase();
+      '0x' + startOff.toString(16).toUpperCase() + ' \u2013 0x' + endOff.toString(16).toUpperCase() + ' (' + winStr + ')';
     renderMinimap();
     syncHexWithView();
   }
