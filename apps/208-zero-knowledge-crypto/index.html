@@ -57,9 +57,9 @@
     height: 3px;
     border-radius: 0.875rem 0.875rem 0 0;
   }
-  .card.public::before { background: #22c55e; }
-  .card.scoped::before  { background: #3b82f6; }
-  .card.lost::before    { background: #ef4444; }
+  .card.alice::before { background: #22c55e; }
+  .card.you::before  { background: #3b82f6; }
+  .card.admin::before    { background: #ef4444; }
 
   .card-icon { font-size: 1.6rem; margin-bottom: 0.4rem; }
   .card h2   { font-size: 1.05rem; font-weight: 500; margin-bottom: 0.3rem; }
@@ -170,9 +170,9 @@
     line-height: 1.4;
   }
   .error.hidden { display: none; }
-  .card.public .error { background: rgba(34,197,94,0.1); color: #86efac; border: 1px solid rgba(34,197,94,0.2); }
-  .card.scoped .error  { background: rgba(59,130,246,0.1); color: #93c5fd; border: 1px solid rgba(59,130,246,0.2); }
-  .card.lost .error    { background: rgba(239,68,68,0.1); color: #fca5a5; border: 1px solid rgba(239,68,68,0.2); }
+  .card.alice .error { background: rgba(34,197,94,0.1); color: #86efac; border: 1px solid rgba(34,197,94,0.2); }
+  .card.you .error  { background: rgba(59,130,246,0.1); color: #93c5fd; border: 1px solid rgba(59,130,246,0.2); }
+  .card.admin .error    { background: rgba(239,68,68,0.1); color: #fca5a5; border: 1px solid rgba(239,68,68,0.2); }
   .error strong { display: block; margin-bottom: 0.2rem; }
 
   /* ── spinner ── */
@@ -204,57 +204,57 @@
 
   <header>
     <h1><span>🔐</span>Zero-Knowledge Crypto</h1>
-    <p class="subtitle">Client-side encryption<span>·</span>AES-256-GCM<span>·</span>PBKDF2</p>
+    <p class="subtitle">Alice · You · Admin  —  Client-side encryption<span>·</span>AES-256-GCM<span>·</span>PBKDF2</p>
   </header>
 
   <div class="tiers">
 
-    <!-- ════════════ PUBLIC TIER ════════════ -->
-    <div class="card public">
-      <div class="card-icon">🔓</div>
-      <h2>Public Tier</h2>
-      <p class="card-desc">No key required — visible to everyone.</p>
+    <!-- ════════════ ALICE TIER ════════════ -->
+    <div class="card alice">
+      <div class="card-icon">👤</div>
+      <h2>Alice</h2>
+      <p class="card-desc">Alice's data is public — her key is known to everyone.</p>
       <div class="lock-area">
-        <input type="text" value="no-key-needed" readonly>
+        <input type="text" value="alice-public-key" readonly>
         <button disabled>✓ Unlocked</button>
       </div>
       <div class="card-content" id="publicContent">
         <div class="label"><span class="status-dot green"></span>Always accessible — Public Data</div>
-        <div class="decrypted-text">Welcome! This is public data visible to everyone. No encryption key is needed — the content is always accessible.</div>
+        <div class="decrypted-text">Hi, I'm Alice! This is my public profile. Anyone can see this data — no encryption needed. 🔓</div>
       </div>
     </div>
 
-    <!-- ════════════ SCOPED TIER ════════════ -->
-    <div class="card scoped" id="scopedCard">
-      <div class="card-icon">🔐</div>
-      <h2>Scoped Tier</h2>
-      <p class="card-desc">Encrypted with a known passphrase. Enter it to unlock.</p>
-      <div class="hint">🔑 <code>scoped-demo-key-2024</code></div>
-      <div class="lock-area" id="scopedLockArea">
-        <input type="password" id="scopedPass" placeholder="Enter passphrase" autocomplete="off" onkeydown="if(event.key==='Enter')unlockScoped()">
-        <button id="scopedBtn" onclick="unlockScoped()">Unlock</button>
+    <!-- ════════════ YOU TIER ════════════ -->
+    <div class="card you" id="youCard">
+      <div class="card-icon">🔑</div>
+      <h2>You</h2>
+      <p class="card-desc">Your data is encrypted. The passphrase is shown below — enter it to unlock.</p>
+      <div class="hint">🔑 <code>your-demo-key-2024</code></div>
+      <div class="lock-area" id="yourLockArea">
+        <input type="password" id="yourPass" placeholder="Enter passphrase" autocomplete="off" onkeydown="if(event.key==='Enter')unlockYours()">
+        <button id="yourBtn" onclick="unlockYours()">Unlock</button>
       </div>
-      <div class="card-content hidden" id="scopedContent">
-        <div class="label"><span class="status-dot green"></span>Decrypted — Scoped Tier</div>
-        <div class="decrypted-text" id="scopedDecrypted"></div>
+      <div class="card-content hidden" id="yourContent">
+        <div class="label"><span class="status-dot green"></span>Decrypted — Your Data</div>
+        <div class="decrypted-text" id="yourDecrypted"></div>
       </div>
-      <div class="error hidden" id="scopedError"></div>
+      <div class="error hidden" id="yourError"></div>
     </div>
 
-    <!-- ════════════ LOST KEY TIER ════════════ -->
-    <div class="card lost" id="lostCard">
-      <div class="card-icon">🗝️</div>
-      <h2>Lost Key Tier</h2>
-      <p class="card-desc">The passphrase was deliberately deleted. Without it, the data cannot be recovered.</p>
-      <div class="lock-area" id="lostLockArea">
-        <input type="password" id="lostPass" placeholder="Enter any passphrase" autocomplete="off" onkeydown="if(event.key==='Enter')unlockLost()">
-        <button id="lostBtn" onclick="unlockLost()">Try Unlock</button>
+    <!-- ════════════ ADMIN TIER ════════════ -->
+    <div class="card admin" id="adminCard">
+      <div class="card-icon">🛡️</div>
+      <h2>Admin</h2>
+      <p class="card-desc">The admin passphrase was deliberately deleted. Without it, the data is irrecoverable.</p>
+      <div class="lock-area" id="adminLockArea">
+        <input type="password" id="adminPass" placeholder="Enter any passphrase" autocomplete="off" onkeydown="if(event.key==='Enter')unlockAdmin()">
+        <button id="adminBtn" onclick="unlockAdmin()">Try Unlock</button>
       </div>
-      <div class="card-content hidden" id="lostContent">
-        <div class="label"><span class="status-dot blue"></span>Decrypted — Lost Key Tier</div>
-        <div class="decrypted-text" id="lostDecrypted"></div>
+      <div class="card-content hidden" id="adminContent">
+        <div class="label"><span class="status-dot blue"></span>Decrypted — Admin Tier</div>
+        <div class="decrypted-text" id="adminDecrypted"></div>
       </div>
-      <div class="error hidden" id="lostError"></div>
+      <div class="error hidden" id="adminError"></div>
     </div>
 
   </div>
@@ -280,17 +280,17 @@ function bytesToB64(bytes) {
 }
 
 // ─── Encrypted blobs (pre-computed) ───────────────────────────
-// Scoped: encrypted with passphrase "scoped-demo-key-2024"
-// Lost Key: encrypted with a randomly generated passphrase that was
-//           deliberately deleted. Without the passphrase, the data
-//           is mathematically irrecoverable.
+// You: encrypted with passphrase "your-demo-key-2024"
+// Admin: encrypted with a randomly generated passphrase that was
+//        deliberately deleted. Without the passphrase, the data
+//        is mathematically irrecoverable.
 var CRYPTO_DATA = {
-  scoped: {
-    salt: "Ip0Iuc32YNPYiFxc8j4mnw==",
-    iv:   "RYi5r1bu8KBNyl3z",
-    data: "nXgu/Z6ITvuRz2TSbwzlP6IssTvON1YfIvr69685v9szkgD8IACB4G1CxyWjVpJNajTPTQriteCxw2AnjWSD8HtwKLypxicS9bq1UdTC/oDD8nOMubQmXXOGILkx9QSpugqyjMdUS22LoVwmPR11DBg="
+  you: {
+    salt: "EIZyKyzA0AdpPN2WMR5CAg==",
+    iv:   "vAdK8NKY2NtJTg1D",
+    data: "IN1D30cjmP1KKnMkYuD7vrwhcckm/P2ykSbmM+kCrF6jS6C2VUYa6207xRfNanIcZRpRBkQFr35FGvhoBlyCZG0syDe7wS0BsbbM4XQ9uewwg/h1Ego8mu/QPEnh+ydVJD1HRoU0"
   },
-  lostKey: {
+  admin: {
     salt: "NCuzP/3ON2pLk1I95D06LQ==",
     iv:   "MV7C06HaJIlmqN5U",
     data: "dVIkpsAXJO/RPuzufwPXryKr7nTJojWr4b/6LOt5Ad01wDZ9PY4MqD3dVMjZltsIKTWKUiT+EA=="
@@ -338,13 +338,13 @@ async function decryptBlob(blob, passphrase) {
   return dec.decode(plainBuf);
 }
 
-// ─── Unlock: Scoped Tier ──────────────────────────────────────
-async function unlockScoped() {
-  var input = document.getElementById('scopedPass');
-  var btn   = document.getElementById('scopedBtn');
-  var content = document.getElementById('scopedContent');
-  var decrypted = document.getElementById('scopedDecrypted');
-  var errEl = document.getElementById('scopedError');
+// ─── Unlock: You Tier ──────────────────────────────────────
+async function unlockYours() {
+  var input = document.getElementById('yourPass');
+  var btn   = document.getElementById('yourBtn');
+  var content = document.getElementById('yourContent');
+  var decrypted = document.getElementById('yourDecrypted');
+  var errEl = document.getElementById('yourError');
 
   var pass = input.value.trim();
   if (!pass) { showError(errEl, 'Please enter a passphrase.'); return; }
@@ -356,27 +356,27 @@ async function unlockScoped() {
   errEl.classList.add('hidden');
 
   try {
-    var plaintext = await decryptBlob(CRYPTO_DATA.scoped, pass);
+    var plaintext = await decryptBlob(CRYPTO_DATA.you, pass);
     decrypted.textContent = plaintext;
     content.classList.remove('hidden');
     input.value = '';
   } catch (e) {
-    showError(errEl, 'Incorrect passphrase. Hint: try <code>scoped-demo-key-2024</code>');
+    showError(errEl, 'Incorrect passphrase. Hint: try <code>your-demo-key-2024</code>');
   } finally {
     btn.disabled = false;
     btn.textContent = 'Unlock';
   }
 }
 
-// ─── Unlock: Lost Key Tier ────────────────────────────────────
-var lostAttempts = 0;
+// ─── Unlock: Admin Tier ────────────────────────────────────
+var adminAttempts = 0;
 
-async function unlockLost() {
-  var input = document.getElementById('lostPass');
-  var btn   = document.getElementById('lostBtn');
-  var content = document.getElementById('lostContent');
-  var decrypted = document.getElementById('lostDecrypted');
-  var errEl = document.getElementById('lostError');
+async function unlockAdmin() {
+  var input = document.getElementById('adminPass');
+  var btn   = document.getElementById('adminBtn');
+  var content = document.getElementById('adminContent');
+  var decrypted = document.getElementById('adminDecrypted');
+  var errEl = document.getElementById('adminError');
 
   var pass = input.value.trim();
   if (!pass) { showError(errEl, 'Enter any passphrase to try.'); return; }
@@ -387,20 +387,20 @@ async function unlockLost() {
   errEl.classList.add('hidden');
 
   try {
-    var plaintext = await decryptBlob(CRYPTO_DATA.lostKey, pass);
+    var plaintext = await decryptBlob(CRYPTO_DATA.admin, pass);
     // If we get here, somehow the passphrase worked (should never happen)
     decrypted.textContent = plaintext;
     content.classList.remove('hidden');
     input.value = '';
     showError(errEl, '<strong>⚠️ Impossible — key was found?</strong> This should not happen. The passphrase was supposed to be deleted.');
   } catch (e) {
-    lostAttempts++;
+    adminAttempts++;
     var msg;
-    if (lostAttempts === 1) {
+    if (adminAttempts === 1) {
       msg = 'Decryption failed. The passphrase for this data was deliberately deleted.';
-    } else if (lostAttempts <= 3) {
+    } else if (adminAttempts <= 3) {
       msg = 'Still no match. Without the correct passphrase, AES-256-GCM is computationally infeasible to break.';
-    } else if (lostAttempts <= 5) {
+    } else if (adminAttempts <= 5) {
       msg = 'The passphrase was a 32-character random hex string, generated and then <strong>permanently discarded</strong>. No amount of guessing will recover it.';
     } else {
       msg = '<strong>Lost key = lost data.</strong> This is the fundamental truth of encryption: without the key, the data might as well not exist. The original passphrase was generated once, used to encrypt, and then deleted without ever being written down.<br><br>Or can it? Try it if you want.';
@@ -422,10 +422,10 @@ function showError(el, msg) {
 // Public content is already in the HTML as static text.
 // The encrypted data is ready and waiting for passphrases.
 console.log('🔐 Zero-Knowledge Crypto Demo loaded');
-console.log('📦 Scoped blob size:', CRYPTO_DATA.scoped.data.length, 'bytes base64');
-console.log('📦 Lost Key blob size:', CRYPTO_DATA.lostKey.data.length, 'bytes base64');
-console.log('🔑 Scoped passphrase hint: scoped-demo-key-2024');
-console.log('🗑️  Lost Key passphrase: DELETED');
+console.log('📦 You blob size:', CRYPTO_DATA.you.data.length, 'bytes base64');
+console.log('📦 Admin blob size:', CRYPTO_DATA.admin.data.length, 'bytes base64');
+console.log('🔑 You passphrase hint: your-demo-key-2024');
+console.log('🗑️  Admin passphrase: DELETED');
 </script>
 
 </body>
