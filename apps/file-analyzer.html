@@ -331,7 +331,7 @@
       </div>
       <canvas id="entropyCanvas"></canvas>
       <div class="scrub-info" id="scrubInfo">Hover the graph to inspect</div>
-      <div class="hint">Click to jump · Drag to select range · Scroll to zoom · Hold <kbd>S</kbd> to reveal spikes, release to snap</div>
+      <div class="hint">Hold <kbd>S</kbd> to reveal spikes · Click to snap · Scroll to zoom</div>
       <div class="entropy-legend" id="entropyLegend">
         <span class="legend-label">Low (structured)</span>
         <div class="legend-gradient"></div>
@@ -1406,9 +1406,10 @@
       if (!entropyData || entropyData.values.length === 0) return;
       var block = blockFromMouse(e);
       if (block < 0) return;
-      isSnapMode = false;
-      hoveredSpike = -1;
-      currentSnapBlock = -1;
+      if (isSnapMode) {
+        // In snap mode, don't start drag — click handler will snap
+        return;
+      }
       isDragging = true;
       dragStartBlock = block;
       dragCurrentBlock = block;
@@ -1431,6 +1432,21 @@
 
     canvas.addEventListener('click', function(e) {
       if (!entropyData || entropyData.values.length === 0) return;
+
+      // Snap mode: snap to hovered spike and exit snap mode
+      if (isSnapMode && hoveredSpike >= 0) {
+        currentSnapBlock = hoveredSpike;
+        currentClickBlock = hoveredSpike;
+        var snapOffset = hoveredSpike * 256;
+        if (currentFileBuffer) {
+          renderHexDump(currentFileBuffer, snapOffset);
+        }
+        isSnapMode = false;
+        hoveredSpike = -1;
+        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+        return;
+      }
+
       // Ignore click if it was part of a drag
       if (isDragging) return;
 
@@ -1753,19 +1769,9 @@
     if (e.key === 's' || e.key === 'S') {
       if (isSnapMode) {
         isSnapMode = false;
-        // Snap to the hovered spike
-        if (hoveredSpike >= 0) {
-          currentSnapBlock = hoveredSpike;
-          currentClickBlock = hoveredSpike;
-          var offset = hoveredSpike * 256;
-          if (currentFileBuffer) {
-            renderHexDump(currentFileBuffer, offset);
-          }
-        } else {
-          currentSnapBlock = -1;
-        }
         hoveredSpike = -1;
         renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+        // Do NOT snap or jump — markers simply disappear
       }
     }
   });
