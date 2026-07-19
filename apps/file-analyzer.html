@@ -1151,8 +1151,10 @@
       var centerBlock = Math.floor((viewStart + viewEnd) / 2);
       centerBlock = Math.max(0, Math.min(centerBlock, entropyBlocks.length - 1));
       var offset = centerBlock * entropyData.blockSize;
-      loadAndShowHex(offset);
-      // syncHexWithView should NOT touch scrubInfo
+      // Match hex view size to viewport width, cap at 64KB, floor at 512
+      var viewBytes = (viewEnd - viewStart) * entropyData.blockSize;
+      var numBytes = Math.min(Math.max(viewBytes, 512), 65536);
+      loadAndShowHex(offset, numBytes);
     }, 400);
   }
 
@@ -1660,7 +1662,9 @@
         scrubThrottle = setTimeout(function() {
           scrubThrottle = null;
           var offset = block * entropyData.blockSize;
-          loadAndShowHex(offset);
+          var viewBytes = (viewEnd - viewStart) * entropyData.blockSize;
+          var numBytes = Math.min(Math.max(viewBytes, 512), 65536);
+          loadAndShowHex(offset, numBytes);
         }, 80);
       }
     });
@@ -1790,7 +1794,9 @@
             scrubThrottle = null;
             var centerBlock = Math.floor((viewStart + viewEnd) / 2);
             var offset = centerBlock * entropyData.blockSize;
-            loadAndShowHex(offset);
+            var viewBytes = (viewEnd - viewStart) * entropyData.blockSize;
+            var numBytes = Math.min(Math.max(viewBytes, 512), 65536);
+            loadAndShowHex(offset, numBytes);
           }, 80);
         }
       } else if (e.touches.length === 2 && isPinching) {
@@ -1857,7 +1863,9 @@
       // Final hex update at current position
       var centerBlock = Math.floor((viewStart + viewEnd) / 2);
       var offset = centerBlock * entropyData.blockSize;
-      loadAndShowHex(offset);
+      var viewBytes = (viewEnd - viewStart) * entropyData.blockSize;
+      var numBytes = Math.min(Math.max(viewBytes, 512), 65536);
+      loadAndShowHex(offset, numBytes);
     }, { passive: false });
 
     document.getElementById('zoomReset').addEventListener('click', function(e) {
