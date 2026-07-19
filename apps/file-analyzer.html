@@ -192,7 +192,7 @@
   <div class="drop-zone" id="dropZone">
     <div class="icon">📁</div>
     <div class="main-text">Drop a file here or click to browse</div>
-    <div class="sub-text">Supported: .exe (more formats coming soon)</div>
+    <div class="sub-text">Supported: .exe</div>
     <div class="file-info" id="fileInfo"></div>
     <input type="file" id="fileInput" accept=".exe,.dll,.ocx,.sys,.scr,.cpl">
   </div>
@@ -266,7 +266,7 @@
   'use strict';
 
   // ---- Constants ----
-  const MAX_READ_SIZE = 5 * 1024 * 1024; // 5 MB
+  var HEADER_READ_SIZE = 2 * 1024 * 1024; // 2 MB
 
   const SUBSYSTEMS = {
     0: 'Unknown', 1: 'Native', 2: 'Windows GUI', 3: 'Windows Console',
@@ -646,6 +646,115 @@
     return result;
   }
 
+  // ---- Lightweight PE Section Parser (for two-phase read) ----
+  function parsePESections(dv) {
+    if (dv.byteLength < 64) throw new Error('File too small to be a PE image');
+    var eMagic = dv.getUint16(0, true);
+    if (eMagic !== 0x5A4D) throw new Error('Not a PE file — missing MZ signature');
+    var peOffset = dv.getUint32(0x3C, true);
+    if (peOffset + 4 > dv.byteLength) throw new Error('PE signature offset out of range');
+
+    var peSig = dv.getUint32(peOffset, true);
+    if (peSig !== 0x00004550) throw new Error('Invalid PE signature');
+
+    var coffStart = peOffset + 4;
+    if (coffStart + 20 > dv.byteLength) throw new Error('COFF header truncated');
+    var numSections = dv.getUint16(coffStart + 2, true);
+    var sizeOfOptionalHeader = dv.getUint16(coffStart + 16, true);
+
+    var optHdrStart = coffStart + 20;
+    if (optHdrStart + 2 > dv.byteLength) throw new Error('Optional header truncated');
+    var magic = dv.getUint16(optHdrStart, true);
+    var isPE32Plus = (magic === 0x20B);
+    if (magic !== 0x10B && magic !== 0x20B) throw new Error('Unknown PE magic: 0x' + magic.toString(16));
+
+    // Data directories — find resource directory entry (index 2)
+    var numRvaSizesOff = isPE32Plus ? 108 : 92;
+    var ddStartOff = isPE32Plus ? 112 : 96;
+    if (optHdrStart + ddStartOff + 16 * 3 > dv.byteLength) throw new Error('Data directories truncated');
+    var numDD = dv.getUint32(optHdrStart + numRvaSizesOff, true);
+
+    var resDirRVA = null;
+    var resDirSize = 0;
+    if (numDD > 2) {
+      var rva = dv.getUint32(optHdrStart + ddStartOff + 2 * 8, true);
+      var size = dv.getUint32(optHdrStart + ddStartOff + 2 * 8 + 4, true);
+      if (rva !== 0) {
+        resDirRVA = rva;
+        resDirSize = size;
+      }
+    }
+
+    // Section headers
+    var sectionStart = optHdrStart + sizeOfOptionalHeader;
+    if (sectionStart + numSections * 40 > dv.byteLength) throw new Error('Section headers truncated');
+    var sections = [];
+    for (var i = 0; i < numSections; i++) {
+      var sOff = sectionStart + i * 40;
+      sections.push({
+        virtualSize: dv.getUint32(sOff + 8, true),
+        virtualAddress: dv.getUint32(sOff + 12, true),
+        sizeOfRawData: dv.getUint32(sOff + 16, true),
+        pointerToRawData: dv.getUint32(sOff + 20, true)
+      });
+    }
+
+    function rvaToFileOffset(rva) {
+      for (var i = 0; i < sections.length; i++) {
+        var s = sections[i];
+        var start = s.virtualAddress;
+        var end = s.virtualAddress + Math.max(s.virtualSize, s.sizeOfRawData);
+        if (rva >= start && rva < end) {
+          var delta = rva - start;
+          if (delta < s.sizeOfRawData) {
+            return s.pointerToRawData + delta;
+          }
+        }
+      }
+      return null;
+    }
+
+    var resFileOffset = resDirRVA !== null ? rvaToFileOffset(resDirRVA) : null;
+
+    return {
+      resFileOffset: resFileOffset,
+      resDirSize: resDirSize,
+      sections: sections,
+      numSections: numSections
+    };
+  }
+
+  function finishParse(buffer, file) {
+    setProgress(88, 'Resolving resources…');
+    parseTimer = setTimeout(function() {
+      if (cancelled) return;
+      setProgress(95, 'Extracting version info…');
+
+      parseTimer = setTimeout(function() {
+        if (cancelled) return;
+        try {
+          var dv = new DataView(buffer);
+          var parsed = parsePE(dv, file.size);
+          setProgress(100, 'Done!');
+          setTimeout(function() {
+            if (!cancelled) {
+              progressSection.classList.remove('active');
+              showResults(parsed, file.name, file.size);
+            }
+          }, 400);
+        } catch (err) {
+          setProgress(100, 'Error');
+          setTimeout(function() {
+            if (!cancelled) {
+              progressSection.classList.remove('active');
+              showError(err.message);
+            }
+          }, 400);
+        }
+      }, 300);
+    }, 250);
+  }
+
   // ---- UI Logic ----
   function resetUI() {
     if (currentReader) {
@@ -736,7 +845,7 @@
     resetUI();
 
     if (!file) return;
-    const ext = file.name.split('.').pop().toLowerCase();
+    var ext = file.name.split('.').pop().toLowerCase();
     if (!['exe','dll','ocx','sys','scr','cpl'].includes(ext)) {
       showError('Unsupported file type ".'.concat(ext, '". Please select a PE executable (.exe, .dll, .ocx, .sys, .scr, .cpl).'));
       return;
@@ -752,17 +861,17 @@
 
     cancelled = false;
 
-    // Slice to first 5MB
-    const sliceSize = Math.min(file.size, MAX_READ_SIZE);
-    const blob = file.slice(0, sliceSize);
+    // Phase 1: Read file headers and section table
+    var sliceSize = Math.min(file.size, HEADER_READ_SIZE);
+    var blob = file.slice(0, sliceSize);
 
-    const reader = new FileReader();
+    var reader = new FileReader();
     currentReader = reader;
 
     reader.onprogress = function(e) {
       if (cancelled) return;
       if (e.lengthComputable) {
-        const pct = (e.loaded / e.total) * 78;
+        var pct = (e.loaded / e.total) * 78;
         setProgress(pct, 'Reading file… (' + formatSize(e.loaded) + ' / ' + formatSize(e.total) + ')');
       }
     };
@@ -771,40 +880,68 @@
       if (cancelled) return;
       setProgress(80, 'Parsing PE headers…');
 
-      const buffer = e.target.result;
-      const dv = new DataView(buffer);
+      var buffer = e.target.result;
 
-      parseTimer = setTimeout(function() {
-        if (cancelled) return;
-        setProgress(88, 'Resolving resources…');
+      try {
+        var dv = new DataView(buffer);
+        var sectionInfo = parsePESections(dv);
 
-        parseTimer = setTimeout(function() {
-          if (cancelled) return;
-          setProgress(95, 'Extracting version info…');
+        // Check if resource data is within the current buffer
+        if (sectionInfo.resFileOffset === null || sectionInfo.resFileOffset < buffer.byteLength) {
+          // Single-phase: all needed data already in buffer
+          finishParse(buffer, file);
+        } else {
+          // Phase 2: Read the resource directory data
+          var resReadSize = 65536;
+          var resBlob = file.slice(sectionInfo.resFileOffset, sectionInfo.resFileOffset + resReadSize);
 
-          parseTimer = setTimeout(function() {
+          var reader2 = new FileReader();
+          currentReader = reader2;
+
+          reader2.onprogress = function(e2) {
             if (cancelled) return;
-            try {
-              const parsed = parsePE(dv, file.size);
-              setProgress(100, 'Done!');
-              setTimeout(function() {
-                if (!cancelled) {
-                  progressSection.classList.remove('active');
-                  showResults(parsed, file.name, file.size);
-                }
-              }, 400);
-            } catch (err) {
-              setProgress(100, 'Error');
-              setTimeout(function() {
-                if (!cancelled) {
-                  progressSection.classList.remove('active');
-                  showError(err.message);
-                }
-              }, 400);
+            if (e2.lengthComputable) {
+              var pct2 = 82 + (e2.loaded / e2.total) * 6;
+              setProgress(pct2, 'Reading extended resource data… (' + formatSize(e2.loaded) + ' / ' + formatSize(e2.total) + ')');
             }
-          }, 300);
-        }, 250);
-      }, 200);
+          };
+
+          reader2.onload = function(e2) {
+            if (cancelled) return;
+
+            // Merge the two buffers into one, placing phase 2 data at correct offset
+            var mergedLen = Math.max(buffer.byteLength, sectionInfo.resFileOffset + resReadSize);
+            var merged = new Uint8Array(mergedLen);
+            merged.set(new Uint8Array(buffer), 0);
+            merged.set(new Uint8Array(e2.target.result), sectionInfo.resFileOffset);
+
+            finishParse(merged.buffer, file);
+          };
+
+          reader2.onerror = function() {
+            if (cancelled) return;
+            progressSection.classList.remove('active');
+            showError('Error reading resource data');
+          };
+
+          reader2.onabort = function() {
+            if (!cancelled) {
+              progressSection.classList.remove('active');
+              showError('File reading cancelled');
+            }
+          };
+
+          reader2.readAsArrayBuffer(resBlob);
+        }
+      } catch (err) {
+        setProgress(100, 'Error');
+        setTimeout(function() {
+          if (!cancelled) {
+            progressSection.classList.remove('active');
+            showError(err.message);
+          }
+        }, 400);
+      }
     };
 
     reader.onerror = function() {
