@@ -36,7 +36,7 @@
 
   /* ── tier grid ── */
   .tiers { display: grid; grid-template-columns: 1fr; gap: 1.25rem; }
-  @media (min-width: 700px) { .tiers { grid-template-columns: 1fr 1fr 1fr; } }
+  /* Single column vertical layout on all screen sizes */
 
   /* ── cards ── */
   .card {
@@ -106,6 +106,8 @@
   }
   .lock-area input:focus { border-color: #6366f1; }
   .lock-area input::placeholder { color: #52525b; }
+  .lock-area input[readonly] { color: #a1a1aa; cursor: default; border-color: #22c55e; opacity: 0.8; }
+  .lock-area input[readonly]:focus { border-color: #22c55e; }
 
   .lock-area button {
     background: #27272a;
@@ -186,18 +188,6 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* ── public profile ── */
-  .public-profile { font-size: 0.85rem; }
-  .public-profile .row {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.35rem 0;
-    border-bottom: 1px solid #1f1f23;
-  }
-  .public-profile .row:last-child { border-bottom: none; }
-  .public-profile .row .key { color: #71717a; }
-  .public-profile .row .val { color: #e4e4e7; }
-
   /* ── footer ── */
   footer { margin-top: 2.5rem; text-align: center; }
   footer a {
@@ -207,26 +197,6 @@
     transition: color .15s;
   }
   footer a:hover { color: #a1a1aa; }
-
-  /* ── about section (public) ── */
-  .about-box {
-    margin-top: 0.75rem;
-    padding: 0.65rem;
-    background: #09090b;
-    border-radius: 0.5rem;
-    border: 1px solid #27272a;
-    font-size: 0.82rem;
-    color: #a1a1aa;
-    line-height: 1.5;
-  }
-  .about-box strong { color: #e4e4e7; }
-  .about-box code {
-    color: #86efac;
-    background: #1a2e1a;
-    padding: 0.05rem 0.3rem;
-    border-radius: 0.2rem;
-    font-size: 0.75rem;
-  }
 </style>
 </head>
 <body>
@@ -244,24 +214,13 @@
       <div class="card-icon">🔓</div>
       <h2>Public Tier</h2>
       <p class="card-desc">No key required — visible to everyone.</p>
+      <div class="lock-area">
+        <input type="text" value="no-key-needed" readonly>
+        <button disabled>✓ Unlocked</button>
+      </div>
       <div class="card-content" id="publicContent">
-        <div class="public-profile">
-          <div class="row"><span class="key">👤 Username</span><span class="val">demo_user</span></div>
-          <div class="row"><span class="key">📅 Member since</span><span class="val">January 2024</span></div>
-          <div class="row"><span class="key">🌍 Region</span><span class="val">Global</span></div>
-          <div class="row"><span class="key">🔑 Public key</span><span class="val" style="font-family:monospace;font-size:0.75rem;color:#22c55e">•••• e3f2 8a1c</span></div>
-          <div class="row"><span class="key">📝 Bio</span><span class="val">This profile is fully public. Anyone can see this information — no encryption needed.</span></div>
-        </div>
-        <div class="about-box">
-          <strong>How this works</strong><br>
-          This app demonstrates <strong>client-side zero-knowledge encryption</strong> on a fully static site.
-          Three data tiers show how scoped access works:<br><br>
-          <strong>Public</strong> → plaintext, everyone sees it<br>
-          <strong>Scoped</strong> → encrypted with a known passphrase <code>(scoped-demo-key-2024)</code><br>
-          <strong>Lost Key</strong> → encrypted with a <em>deleted</em> passphrase — truly irrecoverable<br><br>
-          All encryption happens in your browser using the <code>Web Crypto API</code>.
-          No data ever leaves this page. No backend. No cookies. No sessions.
-        </div>
+        <div class="label"><span class="status-dot green"></span>Always accessible — Public Data</div>
+        <div class="decrypted-text">Welcome! This is public data visible to everyone. No encryption key is needed — the content is always accessible.</div>
       </div>
     </div>
 
@@ -332,9 +291,9 @@ var CRYPTO_DATA = {
     data: "nXgu/Z6ITvuRz2TSbwzlP6IssTvON1YfIvr69685v9szkgD8IACB4G1CxyWjVpJNajTPTQriteCxw2AnjWSD8HtwKLypxicS9bq1UdTC/oDD8nOMubQmXXOGILkx9QSpugqyjMdUS22LoVwmPR11DBg="
   },
   lostKey: {
-    salt: "s5/Yvbr7VPIVNk74SxWoQQ==",
-    iv:   "2VF+omvJp0XNwB+w",
-    data: "/guq4t3vjUiWuLJe7S3A/yMCZf/5OALxmYeXWEfXk1dXCaG9jnXPXi5Va3E03XKwgUpQ4lrB8A=="
+    salt: "NCuzP/3ON2pLk1I95D06LQ==",
+    iv:   "MV7C06HaJIlmqN5U",
+    data: "dVIkpsAXJO/RPuzufwPXryKr7nTJojWr4b/6LOt5Ad01wDZ9PY4MqD3dVMjZltsIKTWKUiT+EA=="
   }
 };
 
@@ -444,7 +403,7 @@ async function unlockLost() {
     } else if (lostAttempts <= 5) {
       msg = 'The passphrase was a 32-character random hex string, generated and then <strong>permanently discarded</strong>. No amount of guessing will recover it.';
     } else {
-      msg = '<strong>Lost key = lost data.</strong> This is the fundamental truth of encryption: without the key, the data might as well not exist. The original passphrase was generated once, used to encrypt, and then deleted without ever being written down.';
+      msg = '<strong>Lost key = lost data.</strong> This is the fundamental truth of encryption: without the key, the data might as well not exist. The original passphrase was generated once, used to encrypt, and then deleted without ever being written down.<br><br>Or can it? Try it if you want.';
     }
     showError(errEl, msg);
   } finally {
