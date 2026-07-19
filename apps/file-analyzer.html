@@ -970,19 +970,19 @@
   }
 
   // ---- Hex Dump ----
-  function renderHexDump(buffer, startOffset) {
+  function renderHexDump(buffer, startOffset, numBytes) {
     startOffset = startOffset || 0;
-    var totalBytes = buffer.byteLength;
-    var windowSize = 4096;
+    var fileBytes = buffer.byteLength;
+    var windowSize = numBytes || 4096;
 
-    if (startOffset >= totalBytes) {
+    if (startOffset >= fileBytes) {
       document.getElementById('hexDump').textContent = '(data not loaded — beyond read window)';
       var endOff = startOffset + windowSize;
-      document.getElementById('hexSummary').textContent = 'Offset 0x' + startOffset.toString(16).toUpperCase().padStart(4, '0') + ' – 0x' + endOff.toString(16).toUpperCase().padStart(4, '0') + ' (beyond ' + (totalBytes / 1048576).toFixed(1) + ' MB file)';
+      document.getElementById('hexSummary').textContent = 'Offset 0x' + startOffset.toString(16).toUpperCase().padStart(4, '0') + ' – 0x' + endOff.toString(16).toUpperCase().padStart(4, '0') + ' (beyond ' + (fileBytes / 1048576).toFixed(1) + ' MB file)';
       return;
     }
 
-    var displayBytes = Math.min(windowSize, totalBytes - startOffset);
+    var displayBytes = Math.min(windowSize, fileBytes - startOffset);
     var bytes = new Uint8Array(buffer.slice(startOffset, startOffset + displayBytes));
 
     var hexRows = [];
@@ -1019,7 +1019,7 @@
 
     document.getElementById('hexDump').textContent = hexRows.join('\n');
 
-    var sizeMB = (totalBytes / 1048576).toFixed(1);
+    var sizeMB = (fileBytes / 1048576).toFixed(1);
     var endOffset = startOffset + displayBytes;
     var prefix = (startOffset === 0) ? 'first ' : '';
     var rangeStr = 'Offset 0x' + startOffset.toString(16).toUpperCase().padStart(4, '0') + ' – 0x' + endOffset.toString(16).toUpperCase().padStart(4, '0');
@@ -1151,7 +1151,7 @@
 
     // Build points for visible range
     var points = [];
-    var maxIdx = Math.max(visibleCount - 1, 1);
+    var maxIdx = Math.max(visibleCount, 1);
     for (var pi = vStart; pi < vEnd; pi++) {
       var px = padding.left + ((pi - vStart) / maxIdx) * plotW;
       var py = padding.top + plotH - ((Math.min(blocks[pi], yMax) - yMin) / yRange) * plotH;
@@ -1331,7 +1331,7 @@
     var plotW = Math.max(w - padding.left - padding.right, 1);
     if (mouseX < padding.left || mouseX > w - padding.right) return -1;
     var ratio = (mouseX - padding.left) / plotW;
-    var block = viewStart + Math.round(ratio * (viewEnd - viewStart));
+    var block = viewStart + Math.floor(ratio * (viewEnd - viewStart));
     return Math.max(0, Math.min(block, entropyData.values.length - 1));
   }
 
@@ -1421,14 +1421,18 @@
     canvas.addEventListener('mouseup', function(e) {
       if (!isDragging) return;
       isDragging = false;
-      var midBlock = Math.floor((Math.min(dragStartBlock, dragCurrentBlock) + Math.max(dragStartBlock, dragCurrentBlock)) / 2);
+      var startBlock = Math.min(dragStartBlock, dragCurrentBlock);
+      var endBlock = Math.max(dragStartBlock, dragCurrentBlock);
+      var midBlock = Math.floor((startBlock + endBlock) / 2);
       var midOffset = midBlock * 256;
       var startOff = Math.max(0, midOffset - 2048);
+      var selectionBlocks = endBlock - startBlock + 1;
+      var selectionBytes = selectionBlocks * 256;
       currentClickBlock = midBlock;
       dragStartBlock = -1;
       dragCurrentBlock = -1;
       if (currentFileBuffer) {
-        renderHexDump(currentFileBuffer, startOff);
+        renderHexDump(currentFileBuffer, startOff, selectionBytes);
       }
       renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
       var infoEntropy = entropyData.values[currentClickBlock];
