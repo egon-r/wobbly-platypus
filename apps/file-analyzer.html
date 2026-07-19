@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>File Analyzer</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #09090b;
+    color: #e4e4e7;
+    font-family: system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .container {
+    width: 100%;
+    max-width: 640px;
+  }
+  h1 {
+    font-weight: 300;
+    font-size: 1.5rem;
+    margin-bottom: 1.25rem;
+    color: #e4e4e7;
+  }
+  .drop-zone {
+    border: 2px dashed #27272a;
+    border-radius: 1rem;
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .2s, background .15s;
+    background: #18181b;
+    position: relative;
+  }
+  .drop-zone:hover { border-color: #52525b; background: #1f1f23; }
+  .drop-zone.dragover { border-color: #3b82f6; background: #1e293b; }
+  .drop-zone.has-file { border-color: #3b82f6; border-style: solid; }
+  .drop-zone .icon { font-size: 2.5rem; margin-bottom: .75rem; opacity: .6; }
+  .drop-zone .main-text { font-size: 1rem; color: #a1a1aa; }
+  .drop-zone .sub-text { font-size: .8rem; color: #52525b; margin-top: .5rem; }
+  .drop-zone .file-info { font-size: .85rem; color: #3b82f6; margin-top: .5rem; display: none; }
+  .drop-zone.has-file .file-info { display: block; }
+  .drop-zone input[type="file"] { display: none; }
+
+  .progress-section { display: none; margin-top: 1rem; }
+  .progress-section.active { display: block; }
+  .progress-bar-track {
+    width: 100%;
+    height: 6px;
+    background: #27272a;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #3b82f6, #6366f1);
+    border-radius: 3px;
+    transition: width .3s ease;
+  }
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: .4rem;
+    font-size: .8rem;
+    color: #71717a;
+  }
+  .progress-label .status { color: #a1a1aa; }
+  .progress-label .cancel-btn {
+    background: none;
+    border: 1px solid #3f3f46;
+    color: #a1a1aa;
+    padding: .2rem .6rem;
+    border-radius: .3rem;
+    cursor: pointer;
+    font-size: .75rem;
+    font-family: inherit;
+    transition: background .15s;
+  }
+  .progress-label .cancel-btn:hover { background: #27272a; }
+
+  .results { display: none; margin-top: 1.25rem; }
+  .results.active { display: block; }
+
+  .results-section {
+    background: #18181b;
+    border: 1px solid #27272a;
+    border-radius: .75rem;
+    padding: 1rem 1.25rem;
+    margin-bottom: .75rem;
+  }
+  .section-title {
+    font-size: .7rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #52525b;
+    margin-bottom: .75rem;
+    font-weight: 600;
+  }
+  .kv {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: .3rem 0;
+    border-bottom: 1px solid #1f1f23;
+    gap: 1rem;
+  }
+  .kv:last-child { border-bottom: none; }
+  .kv .k {
+    color: #71717a;
+    font-size: .8rem;
+    flex-shrink: 0;
+  }
+  .kv .v {
+    color: #e4e4e7;
+    font-size: .85rem;
+    text-align: right;
+    word-break: break-all;
+  }
+  .kv .v.mono {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: .8rem;
+  }
+  .kv .v.hex {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: .75rem;
+    color: #6366f1;
+  }
+
+  .error-box {
+    display: none;
+    background: #1f1414;
+    border: 1px solid #7f1d1d;
+    border-radius: .75rem;
+    padding: 1rem 1.25rem;
+    margin-top: 1rem;
+    color: #fca5a5;
+    font-size: .875rem;
+  }
+  .error-box.active { display: block; }
+
+  .btn-reset {
+    display: none;
+    margin-top: 1rem;
+    background: #27272a;
+    border: none;
+    color: #e4e4e7;
+    padding: .6rem 1.25rem;
+    border-radius: .5rem;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: .875rem;
+    transition: background .15s;
+  }
+  .btn-reset:hover { background: #3f3f46; }
+  .btn-reset.active { display: inline-block; }
+
+  .back-link {
+    color: #52525b;
+    font-size: .875rem;
+    margin-top: 1.5rem;
+    display: inline-block;
+    text-decoration: none;
+    transition: color .15s;
+  }
+  .back-link:hover { color: #a1a1aa; }
+
+  .footnote {
+    color: #52525b;
+    font-size: .7rem;
+    text-align: center;
+    margin-top: 1rem;
+  }
+
+  @media (max-width: 480px) {
+    body { padding: 1rem .75rem; }
+    .container { max-width: 100%; }
+    .kv { flex-direction: column; align-items: flex-start; gap: .1rem; }
+    .kv .v { text-align: left; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>File Analyzer</h1>
+
+  <div class="drop-zone" id="dropZone">
+    <div class="icon">📁</div>
+    <div class="main-text">Drop a file here or click to browse</div>
+    <div class="sub-text">Supported: .exe (more formats coming soon)</div>
+    <div class="file-info" id="fileInfo"></div>
+    <input type="file" id="fileInput" accept=".exe,.dll,.ocx,.sys,.scr,.cpl">
+  </div>
+
+  <div class="progress-section" id="progressSection">
+    <div class="progress-bar-track">
+      <div class="progress-bar-fill" id="progressFill"></div>
+    </div>
+    <div class="progress-label">
+      <span class="status" id="progressStatus">Reading file…</span>
+      <button class="cancel-btn" id="cancelBtn">Cancel</button>
+    </div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="results-section" id="fileInfoSection">
+      <div class="section-title">File Information</div>
+      <div class="kv"><span class="k">File Name</span><span class="v" id="rFileName"></span></div>
+      <div class="kv"><span class="k">File Size</span><span class="v" id="rFileSize"></span></div>
+    </div>
+
+    <div class="results-section" id="peHeaderSection">
+      <div class="section-title">PE Headers</div>
+      <div class="kv"><span class="k">PE Type</span><span class="v" id="rPEType"></span></div>
+      <div class="kv"><span class="k">Machine</span><span class="v" id="rMachine"></span></div>
+      <div class="kv"><span class="k">Subsystem</span><span class="v" id="rSubsystem"></span></div>
+      <div class="kv"><span class="k">Linker Version</span><span class="v" id="rLinkerVer"></span></div>
+      <div class="kv"><span class="k">Image Base</span><span class="v mono" id="rImageBase"></span></div>
+      <div class="kv"><span class="k">Entry Point</span><span class="v mono" id="rEntryPoint"></span></div>
+      <div class="kv"><span class="k">Sections</span><span class="v" id="rSections"></span></div>
+      <div class="kv"><span class="k">Time Stamp</span><span class="v" id="rTimeStamp"></span></div>
+    </div>
+
+    <div class="results-section" id="versionSection">
+      <div class="section-title">Version Info</div>
+      <div class="kv" id="vRowFileVer"><span class="k">File Version</span><span class="v" id="rFileVer"></span></div>
+      <div class="kv" id="vRowProdVer"><span class="k">Product Version</span><span class="v" id="rProdVer"></span></div>
+      <div class="kv" id="vRowCompany"><span class="k">Company Name</span><span class="v" id="rCompany"></span></div>
+      <div class="kv" id="vRowDesc"><span class="k">File Description</span><span class="v" id="rDesc"></span></div>
+      <div class="kv" id="vRowProdName"><span class="k">Product Name</span><span class="v" id="rProdName"></span></div>
+      <div class="kv" id="vRowCopyright"><span class="k">Legal Copyright</span><span class="v" id="rCopyright"></span></div>
+      <div class="kv" id="vRowOrigName"><span class="k">Original Filename</span><span class="v" id="rOrigName"></span></div>
+      <div class="kv" id="vRowIntName"><span class="k">Internal Name</span><span class="v" id="rIntName"></span></div>
+      <div class="kv" id="vRowComments"><span class="k">Comments</span><span class="v" id="rComments"></span></div>
+    </div>
+
+    <div class="results-section" id="rawVersionSection">
+      <div class="section-title">Raw Version DWORDs</div>
+      <div class="kv"><span class="k">dwFileVersionMS</span><span class="v hex" id="rFileVerMS"></span></div>
+      <div class="kv"><span class="k">dwFileVersionLS</span><span class="v hex" id="rFileVerLS"></span></div>
+      <div class="kv"><span class="k">dwProductVersionMS</span><span class="v hex" id="rProdVerMS"></span></div>
+      <div class="kv"><span class="k">dwProductVersionLS</span><span class="v hex" id="rProdVerLS"></span></div>
+      <div class="kv"><span class="k">dwFileFlags</span><span class="v hex" id="rFileFlags"></span></div>
+      <div class="kv"><span class="k">dwFileOS</span><span class="v hex" id="rFileOS"></span></div>
+      <div class="kv"><span class="k">dwFileType</span><span class="v hex" id="rFileType"></span></div>
+    </div>
+  </div>
+
+  <div class="error-box" id="errorBox"></div>
+
+  <button class="btn-reset" id="resetBtn">Analyze Another File</button>
+
+  <div style="text-align:center">
+    <a class="back-link" href="/apps/">back</a>
+  </div>
+  <div class="footnote">created 2026-07-19</div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ---- Constants ----
+  const MAX_READ_SIZE = 5 * 1024 * 1024; // 5 MB
+
+  const SUBSYSTEMS = {
+    0: 'Unknown', 1: 'Native', 2: 'Windows GUI', 3: 'Windows Console',
+    5: 'OS/2', 7: 'POSIX', 9: 'Windows CE', 10: 'EFI',
+    11: 'EFI Boot', 12: 'EFI Runtime', 13: 'EFI ROM', 14: 'XBOX',
+    16: 'Windows Boot'
+  };
+
+  const MACHINE_TYPES = {
+    0x014C: 'I386 (x86)', 0x0200: 'IA64 (Itanium)', 0x8664: 'AMD64 (x86-64)',
+    0xAA64: 'ARM64', 0x01C4: 'ARM NT', 0xEBC0: 'EFI Byte Code',
+    0x01F0: 'Thumb', 0x5032: 'ARM32'
+  };
+
+  // ---- DOM refs ----
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  const fileInfo = document.getElementById('fileInfo');
+  const progressSection = document.getElementById('progressSection');
+  const progressFill = document.getElementById('progressFill');
+  const progressStatus = document.getElementById('progressStatus');
+  const cancelBtn = document.getElementById('cancelBtn');
+  const results = document.getElementById('results');
+  const errorBox = document.getElementById('errorBox');
+  const resetBtn = document.getElementById('resetBtn');
+
+  // result fields
+  const r = {};
+  ['rFileName','rFileSize','rPEType','rMachine','rSubsystem','rLinkerVer',
+   'rImageBase','rEntryPoint','rSections','rTimeStamp',
+   'rFileVer','rProdVer','rCompany','rDesc','rProdName','rCopyright',
+   'rOrigName','rIntName','rComments',
+   'rFileVerMS','rFileVerLS','rProdVerMS','rProdVerLS','rFileFlags','rFileOS','rFileType'
+  ].forEach(id => { r[id] = document.getElementById(id); });
+
+  let currentReader = null;
+  let cancelled = false;
+  let parseTimer = null;
+
+  // ---- Utilities ----
+  function formatSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + ' MB';
+    return (bytes / 1073741824).toFixed(2) + ' GB';
+  }
+
+  function formatVer(ms, ls) {
+    const major = (ms >> 16) & 0xFFFF;
+    const minor = ms & 0xFFFF;
+    const build = (ls >> 16) & 0xFFFF;
+    const rev = ls & 0xFFFF;
+    return major + '.' + minor + '.' + build + '.' + rev;
+  }
+
+  function readUtf16Key(dv, offset) {
+    let s = '';
+    let i = offset;
+    while (i + 1 < dv.byteLength) {
+      const c = dv.getUint16(i, true);
+      if (c === 0) break;
+      s += String.fromCharCode(c);
+      i += 2;
+    }
+    return s;
+  }
+
+  function align4(off) { return (off + 3) & ~3; }
+
+  function skipUtf16Key(dv, offset) {
+    let i = offset;
+    while (i + 1 < dv.byteLength) {
+      if (dv.getUint16(i, true) === 0) {
+        i += 2;
+        return align4(i);
+      }
+      i += 2;
+    }
+    return align4(dv.byteLength);
+  }
+
+  function readUtf16Value(dv, offset, byteLen) {
+    let s = '';
+    const end = Math.min(offset + byteLen, dv.byteLength);
+    for (let i = offset; i + 1 < end; i += 2) {
+      const c = dv.getUint16(i, true);
+      if (c === 0) break;
+      s += String.fromCharCode(c);
+    }
+    return s;
+  }
+
+  // ---- PE Parser ----
+  function parsePE(dv, fileSize) {
+    const result = {};
+
+    // DOS header
+    if (dv.byteLength < 64) throw new Error('File too small to be a PE image');
+    const eMagic = dv.getUint16(0, true);
+    if (eMagic !== 0x5A4D) throw new Error('Not a PE file — missing MZ signature');
+    const peOffset = dv.getUint32(0x3C, true);
+    if (peOffset + 4 > dv.byteLength) throw new Error('PE signature offset out of range');
+
+    const peSig = dv.getUint32(peOffset, true);
+    if (peSig !== 0x00004550) throw new Error('Invalid PE signature');
+
+    // COFF header
+    const coffStart = peOffset + 4;
+    if (coffStart + 20 > dv.byteLength) throw new Error('COFF header truncated');
+    const machine = dv.getUint16(coffStart, true);
+    const numSections = dv.getUint16(coffStart + 2, true);
+    const timeDateStamp = dv.getUint32(coffStart + 4, true);
+    const sizeOfOptionalHeader = dv.getUint16(coffStart + 16, true);
+    const characteristics = dv.getUint16(coffStart + 18, true);
+
+    result.machine = MACHINE_TYPES[machine] || ('0x' + machine.toString(16).toUpperCase());
+    result.machineRaw = machine;
+    result.numSections = numSections;
+    result.timeStamp = timeDateStamp;
+    result.characteristics = characteristics;
+
+    // Optional header
+    const optHdrStart = coffStart + 20;
+    if (optHdrStart + 2 > dv.byteLength) throw new Error('Optional header truncated');
+    const magic = dv.getUint16(optHdrStart, true);
+    const isPE32Plus = (magic === 0x20B);
+    if (magic !== 0x10B && magic !== 0x20B) throw new Error('Unknown PE magic: 0x' + magic.toString(16));
+
+    result.peType = isPE32Plus ? 'PE32+ (64-bit)' : 'PE32 (32-bit)';
+
+    // Linker version
+    result.linkerMajor = dv.getUint8(optHdrStart + 2);
+    result.linkerMinor = dv.getUint8(optHdrStart + 3);
+
+    // Entry point
+    result.entryPointRVA = dv.getUint32(optHdrStart + 16, true);
+
+    // Image base
+    if (isPE32Plus) {
+      const baseLow = dv.getUint32(optHdrStart + 24, true);
+      const baseHigh = dv.getUint32(optHdrStart + 28, true);
+      result.imageBase = baseHigh ? '0x' + baseHigh.toString(16).toUpperCase() + baseLow.toString(16).toUpperCase().padStart(8, '0') : '0x' + baseLow.toString(16).toUpperCase();
+    } else {
+      result.imageBase = '0x' + dv.getUint32(optHdrStart + 28, true).toString(16).toUpperCase();
+    }
+
+    // Subsystem
+    const subsystemOff = 68; // same for PE32 and PE32+
+    result.subsystem = SUBSYSTEMS[dv.getUint16(optHdrStart + subsystemOff, true)] || ('Unknown (0x' + dv.getUint16(optHdrStart + subsystemOff, true).toString(16) + ')');
+
+    // NumberOfRvaAndSizes + Data Directories
+    const numRvaSizesOff = isPE32Plus ? 108 : 92;
+    const ddStartOff = isPE32Plus ? 112 : 96;
+    if (optHdrStart + ddStartOff + 16 * 3 > dv.byteLength) throw new Error('Data directories truncated');
+    const numDD = dv.getUint32(optHdrStart + numRvaSizesOff, true);
+
+    // Resource directory entry (index 2)
+    if (numDD <= 2) throw new Error('No resource directory in data directories');
+    const resDirRVA = dv.getUint32(optHdrStart + ddStartOff + 2 * 8, true);
+    const resDirSize = dv.getUint32(optHdrStart + ddStartOff + 2 * 8 + 4, true);
+    if (resDirRVA === 0) throw new Error('Resource directory RVA is 0');
+
+    // Section headers
+    if (optHdrStart + sizeOfOptionalHeader + numSections * 40 > dv.byteLength) {
+      throw new Error('Section headers truncated');
+    }
+    const sectionStart = optHdrStart + sizeOfOptionalHeader;
+    const sections = [];
+    for (let i = 0; i < numSections; i++) {
+      const sOff = sectionStart + i * 40;
+      const name = dv.getUint32(sOff, true); // first 4 bytes as quick ID
+      sections.push({
+        nameRaw: String.fromCharCode(dv.getUint8(sOff), dv.getUint8(sOff+1), dv.getUint8(sOff+2), dv.getUint8(sOff+3), dv.getUint8(sOff+4), dv.getUint8(sOff+5), dv.getUint8(sOff+6), dv.getUint8(sOff+7)).replace(/\0/g, ''),
+        virtualSize: dv.getUint32(sOff + 8, true),
+        virtualAddress: dv.getUint32(sOff + 12, true),
+        sizeOfRawData: dv.getUint32(sOff + 16, true),
+        pointerToRawData: dv.getUint32(sOff + 20, true)
+      });
+    }
+
+    // RVA -> file offset
+    function rvaToFileOffset(rva) {
+      for (let i = 0; i < sections.length; i++) {
+        const s = sections[i];
+        const start = s.virtualAddress;
+        const end = s.virtualAddress + Math.max(s.virtualSize, s.sizeOfRawData);
+        if (rva >= start && rva < end) {
+          const delta = rva - start;
+          if (delta < s.sizeOfRawData) {
+            return s.pointerToRawData + delta;
+          }
+        }
+      }
+      return null;
+    }
+
+    const resDataFileOff = rvaToFileOffset(resDirRVA);
+    if (resDataFileOff === null || resDataFileOff >= dv.byteLength) {
+      throw new Error('Resource directory data outside readable range (file may be too large)');
+    }
+
+    // Navigate resource tree to find RT_VERSION (ID 16)
+    // Root resource directory
+    let off = resDataFileOff;
+    if (off + 16 > dv.byteLength) throw new Error('Resource directory header truncated');
+
+    const numNamedEntries = dv.getUint16(off + 12, true);
+    const numIdEntries = dv.getUint16(off + 14, true);
+    const totalEntries = numNamedEntries + numIdEntries;
+    let entriesOff = off + 16;
+
+    // Find type 16 entry
+    let typeEntryOff = -1;
+    let typeEntryIsDir = false;
+    for (let i = 0; i < totalEntries && i < 200; i++) {
+      const eOff = entriesOff + i * 8;
+      if (eOff + 8 > dv.byteLength) break;
+      const nameId = dv.getUint32(eOff, true);
+      const dataOff = dv.getUint32(eOff + 4, true);
+      if (!(nameId & 0x80000000) && nameId === 16) {
+        typeEntryOff = dataOff;
+        typeEntryIsDir = !!(dataOff & 0x80000000);
+        break;
+      }
+    }
+    if (typeEntryOff === -1) throw new Error('No RT_VERSION entry found in resources');
+
+    // Navigate subdirectory (ID level)
+    const idDirOff = resDataFileOff + (typeEntryOff & 0x7FFFFFFF);
+
+    function readResourceDirectory(dirOff) {
+      if (dirOff + 16 > dv.byteLength) throw new Error('Resource subdirectory header truncated');
+      const nNamed = dv.getUint16(dirOff + 12, true);
+      const nId = dv.getUint16(dirOff + 14, true);
+      const total = nNamed + nId;
+      return { total, entriesStart: dirOff + 16 };
+    }
+
+    // Level 2: Resource ID (should be 1 for version info)
+    const l2 = readResourceDirectory(idDirOff);
+    let l2DataOff = -1;
+    for (let i = 0; i < l2.total && i < 200; i++) {
+      const eOff = l2.entriesStart + i * 8;
+      if (eOff + 8 > dv.byteLength) break;
+      const nameId = dv.getUint32(eOff, true);
+      const dataOff = dv.getUint32(eOff + 4, true);
+      // Look for ID 1 (common version resource ID) or any entry if no ID 1
+      if (!(nameId & 0x80000000) && nameId === 1) {
+        l2DataOff = dataOff;
+        break;
+      }
+    }
+    if (l2DataOff === -1 && l2.total > 0) {
+      // Take first entry
+      const eOff = l2.entriesStart;
+      l2DataOff = dv.getUint32(eOff + 4, true);
+    }
+    if (l2DataOff === -1) throw new Error('No resource entries at name/ID level');
+
+    // Level 3: Language level
+    const l3DirOff = resDataFileOff + (l2DataOff & 0x7FFFFFFF);
+    const l3 = readResourceDirectory(l3DirOff);
+    let l3DataOff = -1;
+    for (let i = 0; i < l3.total && i < 200; i++) {
+      const eOff = l3.entriesStart + i * 8;
+      if (eOff + 8 > dv.byteLength) break;
+      const dataOff = dv.getUint32(eOff + 4, true);
+      if (!(dataOff & 0x80000000)) {
+        l3DataOff = dataOff;
+        break;
+      }
+    }
+    if (l3DataOff === -1) throw new Error('No resource data entry found at language level');
+
+    // Resource data entry
+    const rdeOff = resDataFileOff + l3DataOff;
+    if (rdeOff + 16 > dv.byteLength) throw new Error('Resource data entry truncated');
+    const versionDataRVA = dv.getUint32(rdeOff, true);
+    const versionDataSize = dv.getUint32(rdeOff + 4, true);
+
+    result.hasVersionInfo = false;
+
+    const versionFileOff = rvaToFileOffset(versionDataRVA);
+    if (versionFileOff === null || versionFileOff + 6 > dv.byteLength) {
+      result.versionInfoError = 'Version resource data outside readable range';
+      return result;
+    }
+
+    // ---- Parse VS_VERSIONINFO ----
+    let vOff = versionFileOff;
+    const vLength = dv.getUint16(vOff, true);
+    if (vLength < 6 || vLength > dv.byteLength - vOff) {
+      result.versionInfoError = 'Invalid VS_VERSIONINFO length';
+      return result;
+    }
+
+    const vValLen = dv.getUint16(vOff + 2, true);
+    const vType = dv.getUint16(vOff + 4, true);
+
+    // Verify key
+    const vKey = readUtf16Key(dv, vOff + 6);
+    if (vKey !== 'VS_VERSION_INFO') {
+      result.versionInfoError = 'Invalid version info key: "' + vKey + '"';
+      return result;
+    }
+
+    let vPos = skipUtf16Key(dv, vOff + 6);
+
+    // VS_FIXEDFILEINFO
+    if (vValLen >= 52 && vPos + 52 <= dv.byteLength) {
+      const ffisig = dv.getUint32(vPos, true);
+      if (ffisig === 0xFEEF04BD) {
+        result.fileVerMS = dv.getUint32(vPos + 8, true);
+        result.fileVerLS = dv.getUint32(vPos + 12, true);
+        result.prodVerMS = dv.getUint32(vPos + 16, true);
+        result.prodVerLS = dv.getUint32(vPos + 20, true);
+        result.fileFlags = dv.getUint32(vPos + 28, true);
+        result.fileOS = dv.getUint32(vPos + 32, true);
+        result.fileType = dv.getUint32(vPos + 36, true);
+        result.hasVersionInfo = true;
+        vPos += 52;
+        vPos = align4(vPos);
+      }
+    }
+
+    // Children: StringFileInfo, VarFileInfo
+    const vEnd = vOff + vLength;
+    result.strings = {};
+
+    while (vPos + 6 <= vEnd && vPos + 6 <= dv.byteLength) {
+      const childLen = dv.getUint16(vPos, true);
+      if (childLen < 6) break;
+      const childValLen = dv.getUint16(vPos + 2, true);
+      const childType = dv.getUint16(vPos + 4, true);
+      const childKey = readUtf16Key(dv, vPos + 6);
+
+      if (childKey === 'StringFileInfo') {
+        let sfPos = skipUtf16Key(dv, vPos + 6);
+        const sfEnd = vPos + childLen;
+
+        // StringTable(s)
+        while (sfPos + 6 <= sfEnd && sfPos + 6 <= dv.byteLength) {
+          const stLen = dv.getUint16(sfPos, true);
+          if (stLen < 6) break;
+          const stValLen = dv.getUint16(sfPos + 2, true);
+          const stType = dv.getUint16(sfPos + 4, true);
+          const stKey = readUtf16Key(dv, sfPos + 6); // language code
+
+          let stPos = skipUtf16Key(dv, sfPos + 6);
+          const stEnd = sfPos + stLen;
+
+          // String entries
+          while (stPos + 6 <= stEnd && stPos + 6 <= dv.byteLength) {
+            const strLen = dv.getUint16(stPos, true);
+            if (strLen < 6) break;
+            const strValLen = dv.getUint16(stPos + 2, true);
+            const strType = dv.getUint16(stPos + 4, true);
+            const strKey = readUtf16Key(dv, stPos + 6);
+
+            let strPos = skipUtf16Key(dv, stPos + 6);
+            if (strValLen > 0 && strPos + strValLen <= dv.byteLength && strPos + strValLen <= stEnd) {
+              result.strings[strKey] = readUtf16Value(dv, strPos, strValLen);
+            }
+
+            stPos += strLen;
+          }
+
+          sfPos += stLen;
+        }
+      } else if (childKey === 'VarFileInfo') {
+        // Skip VarFileInfo for now
+      }
+
+      vPos += childLen;
+    }
+
+    return result;
+  }
+
+  // ---- UI Logic ----
+  function resetUI() {
+    if (currentReader) {
+      try { currentReader.abort(); } catch(e) {}
+      currentReader = null;
+    }
+    if (parseTimer) { clearTimeout(parseTimer); parseTimer = null; }
+    cancelled = false;
+    dropZone.classList.remove('has-file');
+    dropZone.classList.remove('dragover');
+    progressSection.classList.remove('active');
+    results.classList.remove('active');
+    errorBox.classList.remove('active');
+    errorBox.textContent = '';
+    resetBtn.classList.remove('active');
+    progressFill.style.width = '0%';
+    progressStatus.textContent = '';
+    fileInput.value = '';
+    fileInfo.textContent = '';
+  }
+
+  function setProgress(pct, status) {
+    progressFill.style.width = Math.min(pct, 100) + '%';
+    if (status) progressStatus.textContent = status;
+  }
+
+  function showError(msg) {
+    errorBox.textContent = msg;
+    errorBox.classList.add('active');
+    resetBtn.classList.add('active');
+  }
+
+  function showResults(parsed, fileName, fileSize) {
+    // File info
+    r.rFileName.textContent = fileName;
+    r.rFileSize.textContent = formatSize(fileSize) + ' (' + fileSize.toLocaleString() + ' bytes)';
+
+    // PE headers
+    r.rPEType.textContent = parsed.peType;
+    r.rMachine.textContent = parsed.machine;
+    r.rSubsystem.textContent = parsed.subsystem;
+    r.rLinkerVer.textContent = parsed.linkerMajor + '.' + parsed.linkerMinor;
+    r.rImageBase.textContent = parsed.imageBase;
+    r.rEntryPoint.textContent = '0x' + parsed.entryPointRVA.toString(16).toUpperCase();
+    r.rSections.textContent = parsed.numSections;
+    const ts = new Date(parsed.timeStamp * 1000);
+    r.rTimeStamp.textContent = ts.toUTCString();
+
+    // Version info
+    if (parsed.hasVersionInfo) {
+      r.rFileVer.textContent = formatVer(parsed.fileVerMS, parsed.fileVerLS);
+      r.rProdVer.textContent = formatVer(parsed.prodVerMS, parsed.prodVerLS);
+      r.rCompany.textContent = parsed.strings['CompanyName'] || '—';
+      r.rDesc.textContent = parsed.strings['FileDescription'] || '—';
+      r.rProdName.textContent = parsed.strings['ProductName'] || '—';
+      r.rCopyright.textContent = parsed.strings['LegalCopyright'] || '—';
+      r.rOrigName.textContent = parsed.strings['OriginalFilename'] || '—';
+      r.rIntName.textContent = parsed.strings['InternalName'] || '—';
+      r.rComments.textContent = parsed.strings['Comments'] || '—';
+
+      r.rFileVerMS.textContent = '0x' + parsed.fileVerMS.toString(16).toUpperCase().padStart(8, '0');
+      r.rFileVerLS.textContent = '0x' + parsed.fileVerLS.toString(16).toUpperCase().padStart(8, '0');
+      r.rProdVerMS.textContent = '0x' + parsed.prodVerMS.toString(16).toUpperCase().padStart(8, '0');
+      r.rProdVerLS.textContent = '0x' + parsed.prodVerLS.toString(16).toUpperCase().padStart(8, '0');
+      r.rFileFlags.textContent = '0x' + parsed.fileFlags.toString(16).toUpperCase().padStart(8, '0');
+      r.rFileOS.textContent = '0x' + parsed.fileOS.toString(16).toUpperCase().padStart(8, '0');
+      r.rFileType.textContent = '0x' + parsed.fileType.toString(16).toUpperCase().padStart(8, '0');
+
+      document.getElementById('versionSection').style.display = '';
+      document.getElementById('rawVersionSection').style.display = '';
+    } else {
+      // Hide version sections, show error note
+      document.getElementById('versionSection').style.display = 'none';
+      document.getElementById('rawVersionSection').style.display = 'none';
+      if (parsed.versionInfoError) {
+        // Show a small note in the PE section
+        r.rTimeStamp.textContent += '  (No version info: ' + parsed.versionInfoError + ')';
+      } else {
+        r.rTimeStamp.textContent += '  (No version info found)';
+      }
+    }
+
+    results.classList.add('active');
+    resetBtn.classList.add('active');
+  }
+
+  function handleFile(file) {
+    resetUI();
+
+    if (!file) return;
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['exe','dll','ocx','sys','scr','cpl'].includes(ext)) {
+      showError('Unsupported file type ".'.concat(ext, '". Please select a PE executable (.exe, .dll, .ocx, .sys, .scr, .cpl).'));
+      return;
+    }
+
+    // Show file info in drop zone
+    dropZone.classList.add('has-file');
+    fileInfo.textContent = file.name + ' (' + formatSize(file.size) + ')';
+
+    // Show progress
+    progressSection.classList.add('active');
+    setProgress(0, 'Reading file…');
+
+    cancelled = false;
+
+    // Slice to first 5MB
+    const sliceSize = Math.min(file.size, MAX_READ_SIZE);
+    const blob = file.slice(0, sliceSize);
+
+    const reader = new FileReader();
+    currentReader = reader;
+
+    reader.onprogress = function(e) {
+      if (cancelled) return;
+      if (e.lengthComputable) {
+        const pct = (e.loaded / e.total) * 78;
+        setProgress(pct, 'Reading file… (' + formatSize(e.loaded) + ' / ' + formatSize(e.total) + ')');
+      }
+    };
+
+    reader.onload = function(e) {
+      if (cancelled) return;
+      setProgress(80, 'Parsing PE headers…');
+
+      const buffer = e.target.result;
+      const dv = new DataView(buffer);
+
+      parseTimer = setTimeout(function() {
+        if (cancelled) return;
+        setProgress(88, 'Resolving resources…');
+
+        parseTimer = setTimeout(function() {
+          if (cancelled) return;
+          setProgress(95, 'Extracting version info…');
+
+          parseTimer = setTimeout(function() {
+            if (cancelled) return;
+            try {
+              const parsed = parsePE(dv, file.size);
+              setProgress(100, 'Done!');
+              setTimeout(function() {
+                if (!cancelled) {
+                  progressSection.classList.remove('active');
+                  showResults(parsed, file.name, file.size);
+                }
+              }, 400);
+            } catch (err) {
+              setProgress(100, 'Error');
+              setTimeout(function() {
+                if (!cancelled) {
+                  progressSection.classList.remove('active');
+                  showError(err.message);
+                }
+              }, 400);
+            }
+          }, 300);
+        }, 250);
+      }, 200);
+    };
+
+    reader.onerror = function() {
+      if (cancelled) return;
+      progressSection.classList.remove('active');
+      showError('Error reading file');
+    };
+
+    reader.onabort = function() {
+      if (!cancelled) {
+        progressSection.classList.remove('active');
+        showError('File reading cancelled');
+      }
+    };
+
+    reader.readAsArrayBuffer(blob);
+  }
+
+  // ---- Event Handlers ----
+  dropZone.addEventListener('click', function() {
+    fileInput.click();
+  });
+
+  fileInput.addEventListener('change', function() {
+    if (this.files && this.files[0]) handleFile(this.files[0]);
+  });
+
+  dropZone.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+
+  dropZone.addEventListener('dragleave', function() {
+    dropZone.classList.remove('dragover');
+  });
+
+  dropZone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFile(e.dataTransfer.files[0]);
+    }
+  });
+
+  cancelBtn.addEventListener('click', function() {
+    cancelled = true;
+    if (currentReader) {
+      try { currentReader.abort(); } catch(e) {}
+      currentReader = null;
+    }
+    if (parseTimer) { clearTimeout(parseTimer); parseTimer = null; }
+    resetUI();
+  });
+
+  resetBtn.addEventListener('click', resetUI);
+
+  // Keyboard shortcut: Escape cancels
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && progressSection.classList.contains('active')) {
+      cancelBtn.click();
+    }
+  });
+})();
+</script>
+</body>
+</html>
