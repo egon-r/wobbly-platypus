@@ -327,16 +327,12 @@
       <div class="no-metadata">Metadata extraction not available for this format</div>
     </div>
 
-    <div class="results-section" id="hexSection">
-      <div class="section-title">Hex Dump</div>
+    <div class="results-section" id="hexEntropySection">
+      <div class="section-title">Hex View &amp; Entropy</div>
       <div class="hex-summary" id="hexSummary"></div>
-      <div class="hex-container" id="hexContainer">
+      <div class="hex-container" id="hexContainer" style="margin-bottom:0.75rem">
         <pre id="hexDump"></pre>
       </div>
-    </div>
-
-    <div class="results-section" id="entropySection">
-      <div class="section-title">Entropy Analysis</div>
       <div class="zoom-info" id="zoomInfo" style="display:none">
         <span id="zoomRange"></span>
         <a href="#" id="zoomReset" style="color:#3b82f6;text-decoration:none;margin-left:0.5rem;font-size:0.7rem;">[Reset]</a>
@@ -344,7 +340,7 @@
       <canvas id="entropyCanvas"></canvas>
       <canvas id="entropyMinimap"></canvas>
       <div class="scrub-info" id="scrubInfo">Hover the graph to inspect</div>
-      <div class="hint">Hold <kbd>S</kbd> to reveal spikes · Click to snap · Scroll to zoom</div>
+      <div class="hint">Scroll to zoom &#xB7; Drag to pan &#xB7; Hold <kbd>S</kbd> to reveal spikes</div>
       <div class="entropy-legend" id="entropyLegend">
         <span class="legend-label">Low (structured)</span>
         <div class="legend-gradient"></div>
@@ -1088,6 +1084,21 @@
   var isPanning = false;
   var isFullFileBuild = false;       // true while streaming is running
   var fullFileBuildCancelled = false;
+  var syncHexTimeout = null;
+
+  function syncHexWithView() {
+    if (syncHexTimeout) clearTimeout(syncHexTimeout);
+    syncHexTimeout = setTimeout(function() {
+      if (!entropyData || entropyBlocks.length === 0) return;
+      var centerBlock = Math.floor((viewStart + viewEnd) / 2);
+      centerBlock = Math.max(0, Math.min(centerBlock, entropyBlocks.length - 1));
+      var offset = centerBlock * entropyData.blockSize;
+      loadAndShowHex(offset);
+      // Update scrub info to show the hex view range
+      var endOffset = offset + 512;
+      document.getElementById('scrubInfo').textContent = '0x' + offset.toString(16).toUpperCase().padStart(8, '0') + ' \u2013 0x' + endOffset.toString(16).toUpperCase().padStart(8, '0') + ' (512 bytes)';
+    }, 400);
+  }
 
   function buildFullFileEntropy(file, onProgress, onDone) {
     var fileSize = file.size;
@@ -1510,6 +1521,7 @@
       'Zoom: 0x' + (viewStart * 256).toString(16).toUpperCase() +
       ' \u2013 0x' + (viewEnd * 256).toString(16).toUpperCase();
     renderMinimap();
+    syncHexWithView();
   }
 
   function setupEntropyEvents() {
@@ -1538,20 +1550,22 @@
           hoveredSpike = newHovered;
           renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, block);
         }
-        document.getElementById('scrubInfo').textContent = 'Offset: 0x' + offset.toString(16).toUpperCase() + '  Entropy: ' + entropy.toFixed(2);
+        var endOffset = offset + entropyData.blockSize;
+        document.getElementById('scrubInfo').textContent = '0x' + offset.toString(16).toUpperCase().padStart(8, '0') + ' \u2013 0x' + endOffset.toString(16).toUpperCase().padStart(8, '0') + ' (' + entropyData.blockSize + ' bytes, entropy: ' + entropy.toFixed(2) + ')';
         return;
       }
 
       renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, block);
 
-      document.getElementById('scrubInfo').textContent = 'Offset: 0x' + offset.toString(16).toUpperCase() + '  Entropy: ' + entropy.toFixed(2);
+      var endOffset = offset + entropyData.blockSize;
+      document.getElementById('scrubInfo').textContent = '0x' + offset.toString(16).toUpperCase().padStart(8, '0') + ' \u2013 0x' + endOffset.toString(16).toUpperCase().padStart(8, '0') + ' (' + entropyData.blockSize + ' bytes, entropy: ' + entropy.toFixed(2) + ')';
     });
 
     canvas.addEventListener('mouseleave', function() {
       if (entropyData && entropyData.values.length > 0) {
         renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
       }
-      document.getElementById('scrubInfo').textContent = 'Hover the graph to inspect';
+      syncHexWithView();
     });
 
     canvas.addEventListener('click', function(e) {
@@ -1582,10 +1596,6 @@
       }
 
       renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
-
-      var entropy = entropyData.values[block];
-      var offset = block * entropyData.blockSize;
-      document.getElementById('scrubInfo').textContent = 'Offset: 0x' + offset.toString(16).toUpperCase() + '  Entropy: ' + entropy.toFixed(2);
     });
 
     canvas.addEventListener('dblclick', function(e) {
@@ -1937,6 +1947,10 @@
     if (buffer && (!file || fileSize <= HEADER_READ_SIZE)) {
       renderEntropy(buffer);
     }
+    // Set initial scrub info to show offset 0 range
+    if (entropyData) {
+      document.getElementById('scrubInfo').textContent = '0x00000000 \u2013 0x00000200 (512 bytes)';
+    }
 
     // PE highlight in hex viewer
     var hexContainer = document.getElementById('hexContainer');
@@ -1972,6 +1986,7 @@
         currentSnapBlock = -1;
         renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
         renderMinimap();
+        syncHexWithView();
         isFullFileBuild = false;
         setProgress(100, 'Entropy graph ready!');
         setTimeout(function() {
