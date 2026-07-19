@@ -1041,6 +1041,7 @@
   var isDragging = false;
   var dragStartBlock = -1;
   var dragCurrentBlock = -1;
+  var wasDrag = false;
 
   function renderEntropy(buffer) {
     var maxBytes = Math.min(buffer.byteLength, 2 * 1024 * 1024);
@@ -1359,6 +1360,7 @@
         var block = blockFromMouse(e);
         if (block >= 0) {
           dragCurrentBlock = block;
+          wasDrag = true;
           renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
         }
         return;
@@ -1404,6 +1406,7 @@
 
     canvas.addEventListener('mousedown', function(e) {
       if (!entropyData || entropyData.values.length === 0) return;
+      wasDrag = false;
       var block = blockFromMouse(e);
       if (block < 0) return;
       if (isSnapMode) {
@@ -1434,6 +1437,9 @@
 
     canvas.addEventListener('click', function(e) {
       if (!entropyData || entropyData.values.length === 0) return;
+
+      // Skip click if it followed a drag
+      if (wasDrag) { wasDrag = false; return; }
 
       // Snap mode: snap to hovered spike and exit snap mode
       if (isSnapMode && hoveredSpike >= 0) {
