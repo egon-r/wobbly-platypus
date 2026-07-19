@@ -1423,12 +1423,10 @@
       isDragging = false;
       var startBlock = Math.min(dragStartBlock, dragCurrentBlock);
       var endBlock = Math.max(dragStartBlock, dragCurrentBlock);
-      var midBlock = Math.floor((startBlock + endBlock) / 2);
-      var midOffset = midBlock * 256;
-      var startOff = Math.max(0, midOffset - 2048);
+      var startOff = startBlock * 256;
       var selectionBlocks = endBlock - startBlock + 1;
-      var selectionBytes = selectionBlocks * 256;
-      currentClickBlock = midBlock;
+      var selectionBytes = Math.min(selectionBlocks * 256, currentFileBuffer ? currentFileBuffer.byteLength - startOff : 4096);
+      currentClickBlock = startBlock;
       dragStartBlock = -1;
       dragCurrentBlock = -1;
       if (currentFileBuffer) {
@@ -1436,7 +1434,7 @@
       }
       renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
       var infoEntropy = entropyData.values[currentClickBlock];
-      document.getElementById('scrubInfo').textContent = 'Selected: Offset 0x' + startOff.toString(16).toUpperCase() + '  Entropy: ' + infoEntropy.toFixed(2);
+      document.getElementById('scrubInfo').textContent = 'Selection: 0x' + startOff.toString(16).toUpperCase() + ' \u2013 0x' + (startOff + selectionBytes).toString(16).toUpperCase() + ' (' + selectionBytes + ' bytes)';
     });
 
     canvas.addEventListener('click', function(e) {
