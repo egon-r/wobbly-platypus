@@ -973,7 +973,7 @@
   function renderHexDump(buffer, startOffset, numBytes) {
     startOffset = startOffset || 0;
     var fileBytes = buffer.byteLength;
-    var windowSize = numBytes || 4096;
+    var windowSize = numBytes || 512;
 
     if (startOffset >= fileBytes) {
       document.getElementById('hexDump').textContent = '(data not loaded — beyond read window)';
