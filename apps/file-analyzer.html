@@ -245,6 +245,24 @@
     background: linear-gradient(90deg, #22c55e, #eab308, #ef4444);
   }
 
+  .format-badge {
+    display: inline-block; background: #1e293b; color: #3b82f6;
+    padding: 0.15rem 0.5rem; border-radius: 0.25rem;
+    font-size: 0.75rem; font-weight: 500;
+    margin-left: 0.5rem;
+  }
+  .hex-container.pe-detected {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 1px rgba(59,130,246,0.3);
+  }
+  .no-metadata {
+    font-size: 0.8rem;
+    color: #52525b;
+    font-style: italic;
+    text-align: center;
+    padding: 1rem 0;
+  }
+
   .hint { font-size: 0.7rem; color: #52525b; text-align: center; margin-top: 0.25rem; }
   .hint kbd { background: #27272a; padding: 0.1rem 0.35rem; border-radius: 0.2rem; font-family: inherit; font-size: 0.7rem; border: 1px solid #3f3f46; }
 
@@ -263,9 +281,9 @@
   <div class="drop-zone" id="dropZone">
     <div class="icon">📁</div>
     <div class="main-text">Drop a file here or click to browse</div>
-    <div class="sub-text">Supported: .exe</div>
+    <div class="sub-text">Any file type supported</div>
     <div class="file-info" id="fileInfo"></div>
-    <input type="file" id="fileInput" accept=".exe,.dll,.ocx,.sys,.scr,.cpl">
+    <input type="file" id="fileInput">
   </div>
 
   <div class="progress-section" id="progressSection">
@@ -283,6 +301,12 @@
       <div class="section-title">File Information</div>
       <div class="kv"><span class="k">File Name</span><span class="v" id="rFileName"></span></div>
       <div class="kv"><span class="k">File Size</span><span class="v" id="rFileSize"></span></div>
+      <div class="kv"><span class="k">Format</span><span class="v" id="rFileFormat"></span></div>
+    </div>
+
+    <div class="results-section" id="noMetadataSection" style="display:none">
+      <div class="section-title">Metadata</div>
+      <div class="no-metadata">Metadata extraction not available for this format</div>
     </div>
 
     <div class="results-section" id="hexSection">
@@ -386,7 +410,7 @@
 
   // result fields
   const r = {};
-  ['rFileName','rFileSize','rPEType','rMachine','rSubsystem','rLinkerVer',
+  ['rFileName','rFileSize','rFileFormat','rPEType','rMachine','rSubsystem','rLinkerVer',
    'rImageBase','rEntryPoint','rSections','rTimeStamp',
    'rFileVer','rProdVer','rCompany','rDesc','rProdName','rCopyright',
    'rOrigName','rIntName','rComments',
@@ -448,6 +472,40 @@
       s += String.fromCharCode(c);
     }
     return s;
+  }
+
+  // ---- Format Detection ----
+  function detectFormat(dv) {
+    if (dv.byteLength < 4) return null;
+
+    const magic16 = dv.getUint16(0, true);
+    const magic32 = dv.getUint32(0, true);
+
+    // PE (Windows executable)
+    if (magic16 === 0x5A4D) return { format: 'pe', name: 'PE executable' };
+
+    // PDF
+    if (magic32 === 0x46445025) return { format: 'pdf', name: 'PDF document' };
+
+    // PNG
+    if (magic32 === 0x474E5089) return { format: 'png', name: 'PNG image' };
+
+    // ZIP (also covers .docx, .xlsx, .jar, .apk)
+    if (magic16 === 0x4B50) return { format: 'zip', name: 'ZIP archive' };
+
+    // GZIP
+    if (magic16 === 0x8B1F) return { format: 'gzip', name: 'GZip archive' };
+
+    // ELF (Linux executable)
+    if (magic32 === 0x464C457F) return { format: 'elf', name: 'ELF binary' };
+
+    // JPEG
+    if (magic16 === 0xD8FF) return { format: 'jpeg', name: 'JPEG image' };
+
+    // RIFF (AVI, WAV)
+    if (magic32 === 0x46464952) return { format: 'riff', name: 'RIFF container' };
+
+    return null;
   }
 
   // ---- PE Parser ----
@@ -816,34 +874,89 @@
   }
 
   function finishParse(buffer, file) {
-    setProgress(88, 'Resolving resources…');
-    parseTimer = setTimeout(function() {
-      if (cancelled) return;
-      setProgress(95, 'Extracting version info…');
+    if (cancelled) return;
 
+    var dv = new DataView(buffer);
+    var format = detectFormat(dv);
+
+    setProgress(88, 'Preparing results…');
+
+    // Phase 1: Show base results immediately (hex + entropy)
+    showBaseResults(file.name, file.size, buffer, format);
+    if (cancelled) return;
+
+    // Phase 2: If PE, asynchronously parse metadata
+    if (format && format.format === 'pe') {
+      setProgress(92, 'Extracting PE metadata…');
       parseTimer = setTimeout(function() {
         if (cancelled) return;
         try {
-          var dv = new DataView(buffer);
-          var parsed = parsePE(dv, file.size);
-          setProgress(100, 'Done!');
-          setTimeout(function() {
-            if (!cancelled) {
-              progressSection.classList.remove('active');
-              showResults(parsed, file.name, file.size, buffer);
-            }
-          }, 400);
-        } catch (err) {
+          // Check if resource data is within current buffer
+          var sectionInfo = parsePESections(dv);
+
+          if (sectionInfo.resFileOffset !== null && sectionInfo.resFileOffset >= buffer.byteLength) {
+            // Need to read more data for resources
+            var resReadSize = 65536;
+            var resBlob = file.slice(sectionInfo.resFileOffset, sectionInfo.resFileOffset + resReadSize);
+
+            var reader2 = new FileReader();
+            currentReader = reader2;
+
+            reader2.onload = function(e2) {
+              if (cancelled) return;
+              var mergedLen = Math.max(buffer.byteLength, sectionInfo.resFileOffset + resReadSize);
+              var merged = new Uint8Array(mergedLen);
+              merged.set(new Uint8Array(buffer), 0);
+              merged.set(new Uint8Array(e2.target.result), sectionInfo.resFileOffset);
+              var mergedDv = new DataView(merged.buffer);
+
+              try {
+                var parsed = parsePE(mergedDv, file.size);
+                showMetadataResults(parsed);
+              } catch (peErr) {
+                showMetadataError(peErr.message);
+              }
+              setProgress(100, 'Done!');
+              setTimeout(function() {
+                if (!cancelled) progressSection.classList.remove('active');
+              }, 400);
+            };
+
+            reader2.onerror = function() {
+              if (!cancelled) showMetadataError('Error reading extended resource data');
+              setProgress(100, 'Error');
+              setTimeout(function() {
+                if (!cancelled) progressSection.classList.remove('active');
+              }, 400);
+            };
+
+            reader2.readAsArrayBuffer(resBlob);
+          } else {
+            // All data already in buffer
+            var parsed = parsePE(dv, file.size);
+            showMetadataResults(parsed);
+            setProgress(100, 'Done!');
+            setTimeout(function() {
+              if (!cancelled) progressSection.classList.remove('active');
+            }, 400);
+          }
+        } catch (peErr) {
+          showMetadataError(peErr.message);
           setProgress(100, 'Error');
           setTimeout(function() {
-            if (!cancelled) {
-              progressSection.classList.remove('active');
-              showError(err.message);
-            }
+            if (!cancelled) progressSection.classList.remove('active');
           }, 400);
         }
-      }, 300);
-    }, 250);
+      }, 200);
+    } else {
+      // Non-PE: done after base results
+      setProgress(95, 'Done!');
+      setTimeout(function() {
+        if (!cancelled) {
+          progressSection.classList.remove('active');
+        }
+      }, 400);
+    }
   }
 
   // ---- Hex Dump ----
@@ -1235,12 +1348,49 @@
     resetBtn.classList.add('active');
   }
 
-  function showResults(parsed, fileName, fileSize, buffer) {
+  function showBaseResults(fileName, fileSize, buffer, format) {
     currentFileBuffer = buffer;
+
     // File info
     r.rFileName.textContent = fileName;
     r.rFileSize.textContent = formatSize(fileSize) + ' (' + fileSize.toLocaleString() + ' bytes)';
 
+    // Format info
+    if (format) {
+      r.rFileFormat.textContent = format.name;
+      // Add format badge
+      r.rFileFormat.innerHTML = format.name + ' <span class="format-badge">' + format.format.toUpperCase() + '</span>';
+    } else {
+      r.rFileFormat.textContent = 'Unknown — showing raw data only';
+    }
+
+    // Hide metadata sections by default
+    document.getElementById('peHeaderSection').style.display = 'none';
+    document.getElementById('versionSection').style.display = 'none';
+    document.getElementById('rawVersionSection').style.display = 'none';
+    document.getElementById('noMetadataSection').style.display = 'none';
+
+    // Must show results before rendering hex/entropy (canvas needs visible width)
+    results.classList.add('active');
+    resetBtn.classList.add('active');
+
+    // Hex dump and entropy visualization
+    if (buffer) {
+      renderHexDump(buffer, hexViewerOffset);
+      renderEntropy(buffer);
+    }
+
+    // PE highlight in hex viewer
+    var hexContainer = document.getElementById('hexContainer');
+    if (format && format.format === 'pe') {
+      hexContainer.classList.add('pe-detected');
+      document.getElementById('hexSummary').textContent += ' — PE (MZ) signature at offset 0x00000000';
+    } else {
+      hexContainer.classList.remove('pe-detected');
+    }
+  }
+
+  function showMetadataResults(parsed) {
     // PE headers
     r.rPEType.textContent = parsed.peType;
     r.rMachine.textContent = parsed.machine;
@@ -1251,6 +1401,8 @@
     r.rSections.textContent = parsed.numSections;
     const ts = new Date(parsed.timeStamp * 1000);
     r.rTimeStamp.textContent = ts.toUTCString();
+
+    document.getElementById('peHeaderSection').style.display = '';
 
     // Version info
     if (parsed.hasVersionInfo) {
@@ -1275,25 +1427,25 @@
       document.getElementById('versionSection').style.display = '';
       document.getElementById('rawVersionSection').style.display = '';
     } else {
-      // Hide version sections, show error note
       document.getElementById('versionSection').style.display = 'none';
       document.getElementById('rawVersionSection').style.display = 'none';
       if (parsed.versionInfoError) {
-        // Show a small note in the PE section
         r.rTimeStamp.textContent += '  (No version info: ' + parsed.versionInfoError + ')';
       } else {
         r.rTimeStamp.textContent += '  (No version info found)';
       }
     }
+  }
 
-    // Must show results before rendering hex/entropy (canvas needs visible width)
-    results.classList.add('active');
-    resetBtn.classList.add('active');
-
-    // Hex dump and entropy visualization
-    if (buffer) {
-      renderHexDump(buffer, hexViewerOffset);
-      renderEntropy(buffer);
+  function showMetadataError(msg) {
+    document.getElementById('peHeaderSection').style.display = 'none';
+    document.getElementById('versionSection').style.display = 'none';
+    document.getElementById('rawVersionSection').style.display = 'none';
+    document.getElementById('noMetadataSection').style.display = '';
+    // Append error detail to the notice text
+    var notice = document.querySelector('#noMetadataSection .no-metadata');
+    if (msg) {
+      notice.textContent = 'PE metadata extraction failed: ' + msg;
     }
   }
 
@@ -1301,11 +1453,6 @@
     resetUI();
 
     if (!file) return;
-    var ext = file.name.split('.').pop().toLowerCase();
-    if (!['exe','dll','ocx','sys','scr','cpl'].includes(ext)) {
-      showError('Unsupported file type ".'.concat(ext, '". Please select a PE executable (.exe, .dll, .ocx, .sys, .scr, .cpl).'));
-      return;
-    }
 
     // Show file info in drop zone
     dropZone.classList.add('has-file');
@@ -1317,7 +1464,7 @@
 
     cancelled = false;
 
-    // Phase 1: Read file headers and section table
+    // Read file data (up to HEADER_READ_SIZE for analysis)
     var sliceSize = Math.min(file.size, HEADER_READ_SIZE);
     var blob = file.slice(0, sliceSize);
 
@@ -1327,77 +1474,16 @@
     reader.onprogress = function(e) {
       if (cancelled) return;
       if (e.lengthComputable) {
-        var pct = (e.loaded / e.total) * 78;
+        var pct = (e.loaded / e.total) * 85;
         setProgress(pct, 'Reading file… (' + formatSize(e.loaded) + ' / ' + formatSize(e.total) + ')');
       }
     };
 
     reader.onload = function(e) {
       if (cancelled) return;
-      setProgress(80, 'Parsing PE headers…');
 
       var buffer = e.target.result;
-
-      try {
-        var dv = new DataView(buffer);
-        var sectionInfo = parsePESections(dv);
-
-        // Check if resource data is within the current buffer
-        if (sectionInfo.resFileOffset === null || sectionInfo.resFileOffset < buffer.byteLength) {
-          // Single-phase: all needed data already in buffer
-          finishParse(buffer, file);
-        } else {
-          // Phase 2: Read the resource directory data
-          var resReadSize = 65536;
-          var resBlob = file.slice(sectionInfo.resFileOffset, sectionInfo.resFileOffset + resReadSize);
-
-          var reader2 = new FileReader();
-          currentReader = reader2;
-
-          reader2.onprogress = function(e2) {
-            if (cancelled) return;
-            if (e2.lengthComputable) {
-              var pct2 = 82 + (e2.loaded / e2.total) * 6;
-              setProgress(pct2, 'Reading extended resource data… (' + formatSize(e2.loaded) + ' / ' + formatSize(e2.total) + ')');
-            }
-          };
-
-          reader2.onload = function(e2) {
-            if (cancelled) return;
-
-            // Merge the two buffers into one, placing phase 2 data at correct offset
-            var mergedLen = Math.max(buffer.byteLength, sectionInfo.resFileOffset + resReadSize);
-            var merged = new Uint8Array(mergedLen);
-            merged.set(new Uint8Array(buffer), 0);
-            merged.set(new Uint8Array(e2.target.result), sectionInfo.resFileOffset);
-
-            finishParse(merged.buffer, file);
-          };
-
-          reader2.onerror = function() {
-            if (cancelled) return;
-            progressSection.classList.remove('active');
-            showError('Error reading resource data');
-          };
-
-          reader2.onabort = function() {
-            if (!cancelled) {
-              progressSection.classList.remove('active');
-              showError('File reading cancelled');
-            }
-          };
-
-          reader2.readAsArrayBuffer(resBlob);
-        }
-      } catch (err) {
-        setProgress(100, 'Error');
-        setTimeout(function() {
-          if (!cancelled) {
-            progressSection.classList.remove('active');
-            showError(err.message);
-          }
-        }, 400);
-      }
+      finishParse(buffer, file);
     };
 
     reader.onerror = function() {
