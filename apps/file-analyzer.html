@@ -331,7 +331,7 @@
       </div>
       <canvas id="entropyCanvas"></canvas>
       <div class="scrub-info" id="scrubInfo">Hover the graph to inspect</div>
-      <div class="hint">Click to jump · Drag to select range · Scroll to zoom · Press <kbd>S</kbd> for spike snap</div>
+      <div class="hint">Click to jump · Drag to select range · Scroll to zoom · Press <kbd>S</kbd> to snap to nearest spike (red dashed)</div>
       <div class="entropy-legend" id="entropyLegend">
         <span class="legend-label">Low (structured)</span>
         <div class="legend-gradient"></div>
@@ -1035,6 +1035,7 @@
   var currentFileBuffer = null;
   var viewStart = 0;
   var viewEnd = 0;
+  var currentSnapBlock = -1;
   var isDragging = false;
   var dragStartBlock = -1;
   var dragCurrentBlock = -1;
@@ -1243,6 +1244,36 @@
       ctx.strokeRect(selX1, padding.top, selX2 - selX1, plotH);
       ctx.restore();
     }
+
+    // Spike markers (dashed red lines)
+    ctx.save();
+    ctx.setLineDash([3, 4]);
+    ctx.strokeStyle = 'rgba(239, 68, 68, 0.5)';
+    ctx.lineWidth = 1;
+    for (var si = 0; si < spikes.length; si++) {
+      var s = spikes[si];
+      if (s.index < vStart || s.index > vEnd) continue;
+      var sx = padding.left + ((s.index - vStart) / maxIdx) * plotW;
+      ctx.beginPath();
+      ctx.moveTo(sx, padding.top);
+      ctx.lineTo(sx, h - padding.bottom);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Snap indicator (solid thick red line)
+    if (currentSnapBlock >= 0) {
+      ctx.save();
+      ctx.setLineDash([]);
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 3;
+      var cmx = padding.left + ((currentSnapBlock - vStart) / maxIdx) * plotW;
+      ctx.beginPath();
+      ctx.moveTo(cmx, padding.top);
+      ctx.lineTo(cmx, h - padding.bottom);
+      ctx.stroke();
+      ctx.restore();
+    }
   }
 
   function findSpikes(blocks) {
@@ -1262,7 +1293,12 @@
 
   function findNearestSpike(blockIndex) {
     if (spikes.length === 0) return null;
-    return spikes.reduce(function(nearest, s) {
+    // First, look only at spikes within the current viewport
+    var viewSpikes = spikes.filter(function(s) {
+      return s.index >= viewStart && s.index <= viewEnd;
+    });
+    var candidates = viewSpikes.length > 0 ? viewSpikes : spikes;
+    return candidates.reduce(function(nearest, s) {
       return Math.abs(s.index - blockIndex) < Math.abs(nearest.index - blockIndex) ? s : nearest;
     });
   }
@@ -1340,6 +1376,7 @@
       if (!entropyData || entropyData.values.length === 0) return;
       var block = blockFromMouse(e);
       if (block < 0) return;
+      currentSnapBlock = -1;
       isDragging = true;
       dragStartBlock = block;
       dragCurrentBlock = block;
@@ -1679,6 +1716,7 @@
       }
 
       currentClickBlock = nearest.index;
+      currentSnapBlock = nearest.index;
       hexViewerOffset = nearest.offset;
 
       if (currentFileBuffer) {
