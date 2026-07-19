@@ -331,7 +331,7 @@
       </div>
       <canvas id="entropyCanvas"></canvas>
       <div class="scrub-info" id="scrubInfo">Hover the graph to inspect</div>
-      <div class="hint">Click to jump · Drag to select range · Scroll to zoom · Press <kbd>S</kbd> to snap to nearest spike (red dashed)</div>
+      <div class="hint">Click to jump · Drag to select range · Scroll to zoom · Hold <kbd>S</kbd> to reveal spikes, release to snap</div>
       <div class="entropy-legend" id="entropyLegend">
         <span class="legend-label">Low (structured)</span>
         <div class="legend-gradient"></div>
@@ -1036,6 +1036,8 @@
   var viewStart = 0;
   var viewEnd = 0;
   var currentSnapBlock = -1;
+  var isSnapMode = false;
+  var hoveredSpike = -1;
   var isDragging = false;
   var dragStartBlock = -1;
   var dragCurrentBlock = -1;
@@ -1245,23 +1247,39 @@
       ctx.restore();
     }
 
-    // Spike markers (dashed red lines)
-    ctx.save();
-    ctx.setLineDash([3, 4]);
-    ctx.strokeStyle = 'rgba(239, 68, 68, 0.5)';
-    ctx.lineWidth = 1;
-    for (var si = 0; si < spikes.length; si++) {
-      var s = spikes[si];
-      if (s.index < vStart || s.index > vEnd) continue;
-      var sx = padding.left + ((s.index - vStart) / maxIdx) * plotW;
-      ctx.beginPath();
-      ctx.moveTo(sx, padding.top);
-      ctx.lineTo(sx, h - padding.bottom);
-      ctx.stroke();
+    // Spike markers (dashed red lines) — only revealed in snap mode
+    if (isSnapMode) {
+      ctx.save();
+      ctx.setLineDash([3, 4]);
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.4)';
+      ctx.lineWidth = 1;
+      for (var si = 0; si < spikes.length; si++) {
+        var s = spikes[si];
+        if (s.index < vStart || s.index >= vEnd) continue;
+        var sx = padding.left + ((s.index - vStart) / maxIdx) * plotW;
+        ctx.beginPath();
+        ctx.moveTo(sx, padding.top);
+        ctx.lineTo(sx, h - padding.bottom);
+        ctx.stroke();
+      }
+      ctx.restore();
     }
-    ctx.restore();
 
-    // Snap indicator (solid thick red line)
+    // Hovered spike highlight (more prominent dash) — in snap mode
+    if (isSnapMode && hoveredSpike >= 0) {
+      ctx.save();
+      ctx.setLineDash([6, 3]);
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2.5;
+      var hx = padding.left + ((hoveredSpike - vStart) / maxIdx) * plotW;
+      ctx.beginPath();
+      ctx.moveTo(hx, padding.top);
+      ctx.lineTo(hx, h - padding.bottom);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Snap indicator (solid thick red line) — shows after S released
     if (currentSnapBlock >= 0) {
       ctx.save();
       ctx.setLineDash([]);
@@ -1355,6 +1373,18 @@
       var entropy = entropyData.values[block];
       var offset = block * entropyData.blockSize;
 
+      // Snap mode: update hovered spike based on cursor position
+      if (isSnapMode) {
+        var nearest = findNearestSpike(block);
+        var newHovered = nearest !== null ? nearest.index : -1;
+        if (newHovered !== hoveredSpike) {
+          hoveredSpike = newHovered;
+          renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, block);
+        }
+        document.getElementById('scrubInfo').textContent = 'Offset: 0x' + offset.toString(16).toUpperCase() + '  Entropy: ' + entropy.toFixed(2);
+        return;
+      }
+
       renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, block);
 
       document.getElementById('scrubInfo').textContent = 'Offset: 0x' + offset.toString(16).toUpperCase() + '  Entropy: ' + entropy.toFixed(2);
@@ -1376,6 +1406,8 @@
       if (!entropyData || entropyData.values.length === 0) return;
       var block = blockFromMouse(e);
       if (block < 0) return;
+      isSnapMode = false;
+      hoveredSpike = -1;
       currentSnapBlock = -1;
       isDragging = true;
       dragStartBlock = block;
@@ -1701,31 +1733,40 @@
       return;
     }
 
-    // S key: snap to nearest entropy spike
-    if ((e.key === 's' || e.key === 'S') && results.classList.contains('active') && entropyBlocks.length > 0) {
+    // S key: enter snap mode (reveal spike markers, preview nearest)
+    if (e.key === 's' || e.key === 'S') {
       // Don't trigger if user is typing in an input
       var activeEl = document.activeElement;
-      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT')) return;
-
-      var referenceBlock = currentClickBlock >= 0 ? currentClickBlock : Math.floor(hexViewerOffset / 256);
-      var nearest = findNearestSpike(referenceBlock);
-
-      if (!nearest) {
-        document.getElementById('scrubInfo').textContent = 'No entropy spikes detected';
-        return;
+      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) return;
+      if (!results.classList.contains('active')) return;
+      if (!isSnapMode) {
+        isSnapMode = true;
+        // Set initial hoveredSpike based on current click/scrub position
+        var nearest = findNearestSpike(currentClickBlock >= 0 ? currentClickBlock : Math.floor((viewStart + viewEnd) / 2));
+        hoveredSpike = nearest !== null ? nearest.index : -1;
+        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
       }
+    }
+  });
 
-      currentClickBlock = nearest.index;
-      currentSnapBlock = nearest.index;
-      hexViewerOffset = nearest.offset;
-
-      if (currentFileBuffer) {
-        renderHexDump(currentFileBuffer, hexViewerOffset);
+  document.addEventListener('keyup', function(e) {
+    if (e.key === 's' || e.key === 'S') {
+      if (isSnapMode) {
+        isSnapMode = false;
+        // Snap to the hovered spike
+        if (hoveredSpike >= 0) {
+          currentSnapBlock = hoveredSpike;
+          currentClickBlock = hoveredSpike;
+          var offset = hoveredSpike * 256;
+          if (currentFileBuffer) {
+            renderHexDump(currentFileBuffer, offset);
+          }
+        } else {
+          currentSnapBlock = -1;
+        }
+        hoveredSpike = -1;
+        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
       }
-
-      renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, nearest.index);
-
-      document.getElementById('scrubInfo').textContent = 'Spike: Offset 0x' + nearest.offset.toString(16).toUpperCase() + '  Entropy: ' + nearest.entropy.toFixed(2);
     }
   });
 
