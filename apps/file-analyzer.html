@@ -989,7 +989,7 @@
     if (startOffset >= fileBytes) {
       document.getElementById('hexDump').textContent = '(click a block on the entropy graph to load data at that offset)';
       var endOff = startOffset + windowSize;
-      document.getElementById('hexSummary').textContent = 'Offset 0x' + startOffset.toString(16).toUpperCase().padStart(4, '0') + ' – 0x' + endOff.toString(16).toUpperCase().padStart(4, '0') + ' (beyond ' + (fileBytes / 1048576).toFixed(1) + ' MB file)';
+      document.getElementById('hexSummary').textContent = '(data beyond read window \u2014 click graph to load)';
       return;
     }
 
@@ -1030,12 +1030,10 @@
 
     document.getElementById('hexDump').textContent = hexRows.join('\n');
 
-    var sizeMB = (fileBytes / 1048576).toFixed(1);
-    var displayStart = fileOffset;
+    var displayStart = (fileOffset !== undefined) ? fileOffset : startOffset;
     var endOffset = displayStart + displayBytes;
-    var prefix = (displayStart === 0) ? 'first ' : '';
-    var rangeStr = 'Offset 0x' + displayStart.toString(16).toUpperCase().padStart(4, '0') + ' – 0x' + endOffset.toString(16).toUpperCase().padStart(4, '0');
-    document.getElementById('hexSummary').textContent = rangeStr + ' (' + prefix + displayBytes.toLocaleString() + ' bytes of ' + sizeMB + ' MB file)';
+    var fileSizeMB = (currentFile ? currentFile.size : fileBytes) / 1048576;
+    document.getElementById('hexSummary').textContent = 'Offset 0x' + displayStart.toString(16).toUpperCase().padStart(8, '0') + ' \u2013 0x' + endOffset.toString(16).toUpperCase().padStart(8, '0') + ' (Viewing ' + displayBytes.toLocaleString() + ' bytes of ' + fileSizeMB.toFixed(1) + ' MB)';
   }
 
   function loadAndShowHex(offset, numBytes) {
@@ -1094,9 +1092,7 @@
       centerBlock = Math.max(0, Math.min(centerBlock, entropyBlocks.length - 1));
       var offset = centerBlock * entropyData.blockSize;
       loadAndShowHex(offset);
-      // Update scrub info to show the hex view range
-      var endOffset = offset + 512;
-      document.getElementById('scrubInfo').textContent = '0x' + offset.toString(16).toUpperCase().padStart(8, '0') + ' \u2013 0x' + endOffset.toString(16).toUpperCase().padStart(8, '0') + ' (512 bytes)';
+      // syncHexWithView should NOT touch scrubInfo
     }, 400);
   }
 
@@ -1529,13 +1525,13 @@
 
     canvas.addEventListener('mousemove', function(e) {
       if (!entropyData || entropyData.values.length === 0) {
-        document.getElementById('scrubInfo').textContent = 'Hover the graph to inspect';
+        document.getElementById('scrubInfo').textContent = '';
         return;
       }
 
       var block = blockFromMouse(e);
       if (block < 0) {
-        document.getElementById('scrubInfo').textContent = 'Hover the graph to inspect';
+        document.getElementById('scrubInfo').textContent = '';
         return;
       }
 
@@ -1550,15 +1546,13 @@
           hoveredSpike = newHovered;
           renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, block);
         }
-        var endOffset = offset + entropyData.blockSize;
-        document.getElementById('scrubInfo').textContent = '0x' + offset.toString(16).toUpperCase().padStart(8, '0') + ' \u2013 0x' + endOffset.toString(16).toUpperCase().padStart(8, '0') + ' (' + entropyData.blockSize + ' bytes, entropy: ' + entropy.toFixed(2) + ')';
+        document.getElementById('scrubInfo').textContent = 'Entropy: ' + entropy.toFixed(2);
         return;
       }
 
       renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, block);
 
-      var endOffset = offset + entropyData.blockSize;
-      document.getElementById('scrubInfo').textContent = '0x' + offset.toString(16).toUpperCase().padStart(8, '0') + ' \u2013 0x' + endOffset.toString(16).toUpperCase().padStart(8, '0') + ' (' + entropyData.blockSize + ' bytes, entropy: ' + entropy.toFixed(2) + ')';
+      document.getElementById('scrubInfo').textContent = 'Entropy: ' + entropy.toFixed(2);
     });
 
     canvas.addEventListener('mouseleave', function() {
@@ -1938,6 +1932,7 @@
     // Must show results before rendering hex/entropy (canvas needs visible width)
     results.classList.add('active');
     resetBtn.classList.add('active');
+    document.getElementById('hexSummary').textContent = '';
 
     // Hex dump
     if (buffer) {
@@ -1949,14 +1944,13 @@
     }
     // Set initial scrub info to show offset 0 range
     if (entropyData) {
-      document.getElementById('scrubInfo').textContent = '0x00000000 \u2013 0x00000200 (512 bytes)';
+      document.getElementById('scrubInfo').textContent = '';
     }
 
     // PE highlight in hex viewer
     var hexContainer = document.getElementById('hexContainer');
     if (format && format.format === 'pe') {
       hexContainer.classList.add('pe-detected');
-      document.getElementById('hexSummary').textContent += ' — PE (MZ) signature at offset 0x00000000';
     } else {
       hexContainer.classList.remove('pe-detected');
     }
