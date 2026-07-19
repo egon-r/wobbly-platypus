@@ -1142,21 +1142,9 @@
     ctx.fillStyle = '#18181b';
     ctx.fillRect(0, 0, w, h);
 
-    // Determine Y scale
-    var isFullView = (vStart === 0 && vEnd === n);
+    // Y scale — fixed 0-8 bits, never auto-scales
     var yMin = 0;
     var yMax = 8;
-    if (!isFullView && visibleCount > 0) {
-      var visMin = Infinity;
-      var visMax = -Infinity;
-      for (var vi = vStart; vi < vEnd; vi++) {
-        if (blocks[vi] < visMin) visMin = blocks[vi];
-        if (blocks[vi] > visMax) visMax = blocks[vi];
-      }
-      var yPad = (visMax - visMin) * 0.1 || 0.5;
-      yMin = Math.max(0, visMin - yPad);
-      yMax = Math.min(8, visMax + yPad);
-    }
     var yRange = yMax - yMin || 1;
 
     // Grid lines
@@ -1175,6 +1163,12 @@
       var yVal = yMax - (gi / 4) * yRange;
       ctx.fillText(yVal.toFixed(1), padding.left - 4, gy + 3);
     }
+
+    // Y-axis unit label
+    ctx.fillStyle = '#52525b';
+    ctx.font = '8px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('bits', 12, padding.top - 1);
 
     // Build points for visible range
     var points = [];
