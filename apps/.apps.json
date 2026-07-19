@@ -16,32 +16,33 @@
     "created": "2026-07-09T04:12:05+09:00"
   },
   "shader-previewer": {
-    "description": "shader preview \u2014 live GLSL editing, shader presets, orbit + zoom camera",
+    "description": "shader preview — live GLSL editing, shader presets, orbit + zoom camera",
     "created": "2026-07-10T01:05:04.471006+00:00"
   },
   "sensors": {
-    "description": "Real-time device sensor monitor \u2014 gyroscope, accelerometer, geolocation, battery, network, screen, ambient light",
+    "description": "Real-time device sensor monitor — gyroscope, accelerometer, geolocation, battery, network, screen, ambient light",
     "created": "2026-07-11T12:00:00+00:00"
   },
   "code-editor": {
-    "description": "Local-first HTML/CSS/JS playground with live preview \u2014 no backend",
+    "description": "Local-first HTML/CSS/JS playground with live preview — no backend",
     "created": "2026-07-11T17:15:54.339450+00:00"
   },
   "file-analyzer": {
-    "description": "Offline binary metadata extractor \u2014 drop a file to see version info, PE headers, and more",
-    "created": "2026-07-19"
+    "description": "Offline binary metadata extractor — drop a file to see version info, PE headers, and more",
+    "created": "2026-07-19",
+    "url": "/apps/file-analyzer/"
   },
   "pwa-demo": {
-    "description": "Full PWA demo \u2014 offline support, background sync, push notifications, IndexedDB storage",
+    "description": "Full PWA demo — offline support, background sync, push notifications, IndexedDB storage",
     "url": "/apps/pwa-demo/",
     "created": "2026-07-12T00:00:00+00:00"
   },
   "deepseek-chat": {
-    "description": "Chat with DeepSeek API \u2014 streaming, local history, multi-key support",
+    "description": "Chat with DeepSeek API — streaming, local history, multi-key support",
     "created": "2026-07-13T00:00:00+00:00"
   },
   "208-zero-knowledge-crypto": {
-    "description": "Zero-knowledge static app \u2014 client-side AES-256-GCM encryption with scoped keys, PBKDF2 key derivation, fully static GH Pages deploy",
+    "description": "Zero-knowledge static app — client-side AES-256-GCM encryption with scoped keys, PBKDF2 key derivation, fully static GH Pages deploy",
     "url": "/apps/208-zero-knowledge-crypto/",
     "created": "2026-07-19T00:00:00+00:00"
   }

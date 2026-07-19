@@ -1152,9 +1152,7 @@
     if (syncHexTimeout) clearTimeout(syncHexTimeout);
     syncHexTimeout = setTimeout(function() {
       if (!entropyData || entropyBlocks.length === 0) return;
-      var centerBlock = Math.floor((viewStart + viewEnd) / 2);
-      centerBlock = Math.max(0, Math.min(centerBlock, entropyBlocks.length - 1));
-      var offset = centerBlock * entropyData.blockSize;
+      var offset = viewStart * entropyData.blockSize;
       // Match hex view size to viewport width, cap at 64KB, floor at 512
       var viewBytes = (viewEnd - viewStart) * entropyData.blockSize;
       var numBytes = Math.min(Math.max(viewBytes, 512), 65536);
@@ -1670,7 +1668,7 @@
       if (!scrubThrottle) {
         scrubThrottle = setTimeout(function() {
           scrubThrottle = null;
-          var offset = block * entropyData.blockSize;
+          var offset = viewStart * entropyData.blockSize;
           var viewBytes = (viewEnd - viewStart) * entropyData.blockSize;
           var numBytes = Math.min(Math.max(viewBytes, 512), 65536);
           loadAndShowHex(offset, numBytes);
@@ -1755,8 +1753,7 @@
         if (!scrubThrottle) {
           scrubThrottle = setTimeout(function() {
             scrubThrottle = null;
-            var centerBlock = Math.floor((viewStart + viewEnd) / 2);
-            var offset = centerBlock * entropyData.blockSize;
+            var offset = viewStart * entropyData.blockSize;
             var viewBytes = (viewEnd - viewStart) * entropyData.blockSize;
             var numBytes = Math.min(Math.max(viewBytes, 512), 65536);
             loadAndShowHex(offset, numBytes);
@@ -1803,8 +1800,7 @@
       isPinching = false;
       if (scrubThrottle) { clearTimeout(scrubThrottle); scrubThrottle = null; }
       // Final hex update at current position
-      var centerBlock = Math.floor((viewStart + viewEnd) / 2);
-      var offset = centerBlock * entropyData.blockSize;
+      var offset = viewStart * entropyData.blockSize;
       var viewBytes = (viewEnd - viewStart) * entropyData.blockSize;
       var numBytes = Math.min(Math.max(viewBytes, 512), 65536);
       loadAndShowHex(offset, numBytes);
