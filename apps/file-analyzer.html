@@ -1562,8 +1562,9 @@
     var w = canvas.clientWidth || rect.width;
     var padding = { left: 36, right: 12 };
     var plotW = Math.max(w - padding.left - padding.right, 1);
-    if (mouseX < padding.left || mouseX > w - padding.right) return -1;
-    var ratio = (mouseX - padding.left) / plotW;
+    // Clamp to plot bounds instead of bailing out
+    var clampedX = Math.max(padding.left, Math.min(mouseX, w - padding.right));
+    var ratio = (clampedX - padding.left) / plotW;
     var block = viewStart + Math.floor(ratio * (viewEnd - viewStart));
     return Math.max(0, Math.min(block, entropyData.values.length - 1));
   }
@@ -1945,13 +1946,20 @@
           return;
         }
 
-        // Tap outside viewport — center on tap position
+        // Tap outside viewport — center AND start dragging from this position
         var range = viewEnd - viewStart;
         viewStart = Math.max(0, Math.round(block - range / 2));
         viewEnd = Math.min(n, viewStart + range);
         viewStart = Math.max(0, viewEnd - range);
         renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
         updateZoomInfo();
+        // Start dragging from this position too
+        isMinimapDragging = true;
+        minimapDragViewStart = viewStart;
+        var vpLeft = padding.left + (viewStart / n) * plotW;
+        minimapDragStartX = touch.clientX - vpLeft;
+        minimapTouchId = touch.identifier;
+        return;
       }, { passive: false });
 
       minimapCanvas.addEventListener('touchmove', function(e) {
