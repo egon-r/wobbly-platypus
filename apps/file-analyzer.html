@@ -984,13 +984,14 @@
   }
 
   // ---- Hex Dump ----
-  function renderHexDump(buffer, startOffset, numBytes) {
+  function renderHexDump(buffer, startOffset, numBytes, fileOffset) {
     startOffset = startOffset || 0;
+    fileOffset = (fileOffset !== undefined) ? fileOffset : startOffset;
     var fileBytes = buffer.byteLength;
     var windowSize = numBytes || 512;
 
     if (startOffset >= fileBytes) {
-      document.getElementById('hexDump').textContent = '(data not loaded — beyond read window)';
+      document.getElementById('hexDump').textContent = '(click a block on the entropy graph to load data at that offset)';
       var endOff = startOffset + windowSize;
       document.getElementById('hexSummary').textContent = 'Offset 0x' + startOffset.toString(16).toUpperCase().padStart(4, '0') + ' – 0x' + endOff.toString(16).toUpperCase().padStart(4, '0') + ' (beyond ' + (fileBytes / 1048576).toFixed(1) + ' MB file)';
       return;
@@ -1034,10 +1035,35 @@
     document.getElementById('hexDump').textContent = hexRows.join('\n');
 
     var sizeMB = (fileBytes / 1048576).toFixed(1);
-    var endOffset = startOffset + displayBytes;
-    var prefix = (startOffset === 0) ? 'first ' : '';
-    var rangeStr = 'Offset 0x' + startOffset.toString(16).toUpperCase().padStart(4, '0') + ' – 0x' + endOffset.toString(16).toUpperCase().padStart(4, '0');
+    var displayStart = fileOffset;
+    var endOffset = displayStart + displayBytes;
+    var prefix = (displayStart === 0) ? 'first ' : '';
+    var rangeStr = 'Offset 0x' + displayStart.toString(16).toUpperCase().padStart(4, '0') + ' – 0x' + endOffset.toString(16).toUpperCase().padStart(4, '0');
     document.getElementById('hexSummary').textContent = rangeStr + ' (' + prefix + displayBytes.toLocaleString() + ' bytes of ' + sizeMB + ' MB file)';
+  }
+
+  function loadAndShowHex(offset, numBytes) {
+    numBytes = numBytes || 512;
+    // If offset is within the current buffer, use it directly
+    if (currentFileBuffer && offset < currentFileBuffer.byteLength) {
+      renderHexDump(currentFileBuffer, offset, numBytes, offset);
+      return;
+    }
+    // Otherwise, read a slice from the file
+    if (!currentFile) {
+      document.getElementById('hexDump').textContent = '(no file loaded)';
+      return;
+    }
+    var end = Math.min(offset + numBytes, currentFile.size);
+    var blob = currentFile.slice(offset, end);
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      renderHexDump(e.target.result, 0, numBytes, offset);
+    };
+    reader.onerror = function() {
+      document.getElementById('hexDump').textContent = '(error reading file at offset 0x' + offset.toString(16).toUpperCase() + ')';
+    };
+    reader.readAsArrayBuffer(blob);
   }
 
   // ---- Entropy Analysis ----
@@ -1047,28 +1073,19 @@
   var hexViewerOffset = 0;
   var currentClickBlock = -1;
   var currentFileBuffer = null;
+  var currentFile = null; // File object for lazy hex loading
   var viewStart = 0;
   var viewEnd = 0;
   var currentSnapBlock = -1;
   var isSnapMode = false;
   var hoveredSpike = -1;
-  var isDragging = false;
-  var dragStartBlock = -1;
-  var dragCurrentBlock = -1;
-  var wasDrag = false;
-
   var touchStartX = 0;
-  var touchStartBlock = -1;
   var touchStartViewStart = 0;
-  var touchStartTime = 0;
   var pinchStartDist = 0;
   var pinchStartViewStart = 0;
   var pinchStartViewEnd = 0;
   var isPinching = false;
   var isPanning = false;
-  var lastTapTime = 0;
-  var lastTapX = 0;
-  var lastTapBlock = -1;
   var isFullFileBuild = false;       // true while streaming is running
   var fullFileBuildCancelled = false;
 
@@ -1196,11 +1213,11 @@
     viewStart = 0;
     viewEnd = values.length;
 
-    renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1, -1);
+    renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
     renderMinimap();
   }
 
-  function renderEntropyCanvas(blocks, vStart, vEnd, clickBlock, scrubBlock) {
+  function renderEntropyCanvas(blocks, vStart, vEnd, scrubBlock) {
     if (!blocks || blocks.length === 0) return;
     if (!entropyData) return;
 
@@ -1306,21 +1323,6 @@
       ctx.fillText('0x' + offset.toString(16).toUpperCase(), lx, h - 3);
     }
 
-    // Click marker
-    if (clickBlock >= 0) {
-      var ci = Math.max(0, Math.min(clickBlock, n - 1));
-      var cx = padding.left + ((ci - vStart) / maxIdx) * plotW;
-      ctx.save();
-      ctx.strokeStyle = '#3b82f6';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([]);
-      ctx.beginPath();
-      ctx.moveTo(cx, padding.top);
-      ctx.lineTo(cx, h - padding.bottom);
-      ctx.stroke();
-      ctx.restore();
-    }
-
     // Scrubber
     if (scrubBlock >= 0) {
       var si = Math.max(0, Math.min(scrubBlock, n - 1));
@@ -1333,25 +1335,6 @@
       ctx.moveTo(sx, padding.top);
       ctx.lineTo(sx, h - padding.bottom);
       ctx.stroke();
-      ctx.restore();
-    }
-
-    // Selection overlay
-    if (isDragging && dragStartBlock >= 0 && dragCurrentBlock >= 0) {
-      var sStart = Math.min(dragStartBlock, dragCurrentBlock);
-      var sEnd = Math.max(dragStartBlock, dragCurrentBlock);
-      var blockW = plotW / maxIdx;
-      var selX1 = padding.left + ((sStart - vStart) / maxIdx) * plotW;
-      var selX2 = padding.left + ((sEnd + 1 - vStart) / maxIdx) * plotW;
-      selX1 = Math.max(padding.left, selX1);
-      selX2 = Math.min(w - padding.right, selX2);
-      ctx.save();
-      ctx.fillStyle = 'rgba(59, 130, 246, 0.2)';
-      ctx.fillRect(selX1, padding.top, selX2 - selX1, plotH);
-      ctx.strokeStyle = '#3b82f6';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([]);
-      ctx.strokeRect(selX1, padding.top, selX2 - selX1, plotH);
       ctx.restore();
     }
 
@@ -1502,10 +1485,6 @@
   function blockFromMouse(e) {
     return blockFromClientX(e.clientX);
   }
-  function blockFromTouch(touch) {
-    return blockFromClientX(touch.clientX);
-  }
-
   function minimapBlockFromMouse(e) {
     var mCanvas = document.getElementById('entropyMinimap');
     if (!mCanvas) return -1;
@@ -1542,16 +1521,6 @@
         return;
       }
 
-      if (isDragging) {
-        var block = blockFromMouse(e);
-        if (block >= 0) {
-          dragCurrentBlock = block;
-          wasDrag = true;
-          renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
-        }
-        return;
-      }
-
       var block = blockFromMouse(e);
       if (block < 0) {
         document.getElementById('scrubInfo').textContent = 'Hover the graph to inspect';
@@ -1567,67 +1536,26 @@
         var newHovered = nearest !== null ? nearest.index : -1;
         if (newHovered !== hoveredSpike) {
           hoveredSpike = newHovered;
-          renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, block);
+          renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, block);
         }
         document.getElementById('scrubInfo').textContent = 'Offset: 0x' + offset.toString(16).toUpperCase() + '  Entropy: ' + entropy.toFixed(2);
         return;
       }
 
-      renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, block);
+      renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, block);
 
       document.getElementById('scrubInfo').textContent = 'Offset: 0x' + offset.toString(16).toUpperCase() + '  Entropy: ' + entropy.toFixed(2);
     });
 
     canvas.addEventListener('mouseleave', function() {
-      if (isDragging) {
-        isDragging = false;
-        dragStartBlock = -1;
-        dragCurrentBlock = -1;
-      }
       if (entropyData && entropyData.values.length > 0) {
-        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
       }
       document.getElementById('scrubInfo').textContent = 'Hover the graph to inspect';
     });
 
-    canvas.addEventListener('mousedown', function(e) {
-      if (!entropyData || entropyData.values.length === 0) return;
-      wasDrag = false;
-      var block = blockFromMouse(e);
-      if (block < 0) return;
-      if (isSnapMode) {
-        // In snap mode, don't start drag — click handler will snap
-        return;
-      }
-      isDragging = true;
-      dragStartBlock = block;
-      dragCurrentBlock = block;
-    });
-
-    canvas.addEventListener('mouseup', function(e) {
-      if (!isDragging) return;
-      isDragging = false;
-      var startBlock = Math.min(dragStartBlock, dragCurrentBlock);
-      var endBlock = Math.max(dragStartBlock, dragCurrentBlock);
-      var startOff = startBlock * 256;
-      var selectionBlocks = endBlock - startBlock + 1;
-      var selectionBytes = Math.min(selectionBlocks * 256, currentFileBuffer ? currentFileBuffer.byteLength - startOff : 4096);
-      currentClickBlock = startBlock;
-      dragStartBlock = -1;
-      dragCurrentBlock = -1;
-      if (currentFileBuffer) {
-        renderHexDump(currentFileBuffer, startOff, selectionBytes);
-      }
-      renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
-      var infoEntropy = entropyData.values[currentClickBlock];
-      document.getElementById('scrubInfo').textContent = 'Selection: 0x' + startOff.toString(16).toUpperCase() + ' \u2013 0x' + (startOff + selectionBytes).toString(16).toUpperCase() + ' (' + selectionBytes + ' bytes)';
-    });
-
     canvas.addEventListener('click', function(e) {
       if (!entropyData || entropyData.values.length === 0) return;
-
-      // Skip click if it followed a drag
-      if (wasDrag) { wasDrag = false; return; }
 
       // Snap mode: snap to hovered spike and exit snap mode
       if (isSnapMode && hoveredSpike >= 0) {
@@ -1635,16 +1563,13 @@
         currentClickBlock = hoveredSpike;
         var snapOffset = hoveredSpike * (entropyData ? entropyData.blockSize : 256);
         if (currentFileBuffer) {
-          renderHexDump(currentFileBuffer, snapOffset);
+          loadAndShowHex(snapOffset);
         }
         isSnapMode = false;
         hoveredSpike = -1;
-        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
         return;
       }
-
-      // Ignore click if it was part of a drag
-      if (isDragging) return;
 
       var block = blockFromMouse(e);
       if (block < 0) return;
@@ -1653,10 +1578,10 @@
       hexViewerOffset = block * entropyData.blockSize;
 
       if (currentFileBuffer) {
-        renderHexDump(currentFileBuffer, hexViewerOffset);
+        loadAndShowHex(hexViewerOffset);
       }
 
-      renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+      renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
 
       var entropy = entropyData.values[block];
       var offset = block * entropyData.blockSize;
@@ -1676,7 +1601,7 @@
       viewEnd = Math.min(entropyBlocks.length, viewStart + newRange);
       viewStart = Math.max(0, viewEnd - newRange);
 
-      renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+      renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
       updateZoomInfo();
     });
 
@@ -1701,7 +1626,7 @@
       viewEnd = Math.min(entropyBlocks.length, viewStart + newRange);
       viewStart = Math.max(0, viewEnd - newRange);
 
-      renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+      renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
       updateZoomInfo();
     });
 
@@ -1712,19 +1637,9 @@
       if (e.touches.length === 1) {
         var touch = e.touches[0];
         touchStartX = touch.clientX;
-        touchStartBlock = blockFromTouch(touch);
         touchStartViewStart = viewStart;
-        touchStartTime = Date.now();
         isPanning = !(viewStart === 0 && viewEnd === entropyBlocks.length);
         isPinching = false;
-        wasDrag = false;
-
-        // Snap mode: update hovered spike based on touch position
-        if (isSnapMode && touchStartBlock >= 0) {
-          var nearest = findNearestSpike(touchStartBlock);
-          hoveredSpike = nearest !== null ? nearest.index : -1;
-          renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
-        }
       } else if (e.touches.length === 2) {
         var dx = e.touches[0].clientX - e.touches[1].clientX;
         var dy = e.touches[0].clientY - e.touches[1].clientY;
@@ -1754,7 +1669,7 @@
         newStart = Math.min(newStart, n - range);
         viewStart = newStart;
         viewEnd = newStart + range;
-        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
         updateZoomInfo();
       } else if (e.touches.length === 2 && isPinching) {
         var dx = e.touches[0].clientX - e.touches[1].clientX;
@@ -1780,69 +1695,13 @@
         viewEnd = Math.min(entropyBlocks.length, viewStart + newRange);
         viewStart = Math.max(0, viewEnd - newRange);
 
-        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
         updateZoomInfo();
       }
     }, { passive: false });
 
     canvas.addEventListener('touchend', function(e) {
       if (!entropyData || entropyData.values.length === 0) return;
-
-      if (!isPinching && e.touches.length === 0) {
-        // Check if this was a tap (minimal movement, short duration, single touch)
-        var dt = Date.now() - touchStartTime;
-        var moved = Math.abs(e.changedTouches[0].clientX - touchStartX);
-
-        if (moved < 10 && dt < 300 && touchStartBlock >= 0) {
-          // Snap mode: snap to hovered spike and exit snap mode
-          if (isSnapMode && hoveredSpike >= 0) {
-            currentSnapBlock = hoveredSpike;
-            currentClickBlock = hoveredSpike;
-            var snapOffset = hoveredSpike * (entropyData ? entropyData.blockSize : 256);
-            if (currentFileBuffer) {
-              renderHexDump(currentFileBuffer, snapOffset);
-            }
-            isSnapMode = false;
-            hoveredSpike = -1;
-            renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
-            lastTapTime = 0;
-            return;
-          }
-
-          // Check for double tap (two taps within 300ms and < 20px apart)
-          if (lastTapTime > 0 && (Date.now() - lastTapTime) < 300 && Math.abs(e.changedTouches[0].clientX - lastTapX) < 20) {
-            // Double tap — zoom in (same logic as dblclick handler)
-            var centerBlock = lastTapBlock >= 0 ? lastTapBlock : touchStartBlock;
-            var range = viewEnd - viewStart;
-            var newRange = Math.max(16, Math.round(range / 2));
-            viewStart = Math.max(0, Math.round(centerBlock - newRange / 2));
-            viewEnd = Math.min(entropyBlocks.length, viewStart + newRange);
-            viewStart = Math.max(0, viewEnd - newRange);
-            renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
-            updateZoomInfo();
-            lastTapTime = 0;
-          } else {
-            // Single tap — select block (same logic as click handler)
-            currentClickBlock = touchStartBlock;
-            hexViewerOffset = touchStartBlock * entropyData.blockSize;
-            if (currentFileBuffer) {
-              renderHexDump(currentFileBuffer, hexViewerOffset);
-            }
-            renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
-            var entropy = entropyData.values[touchStartBlock];
-            var offset = touchStartBlock * entropyData.blockSize;
-            document.getElementById('scrubInfo').textContent = 'Offset: 0x' + offset.toString(16).toUpperCase() + '  Entropy: ' + entropy.toFixed(2);
-
-            // Record for double-tap detection
-            lastTapTime = Date.now();
-            lastTapX = e.changedTouches[0].clientX;
-            lastTapBlock = touchStartBlock;
-          }
-        } else {
-          // Was a drag/pan or held too long — reset double tap tracking
-          lastTapTime = 0;
-        }
-      }
 
       if (e.touches.length === 0) {
         isPanning = false;
@@ -1854,7 +1713,7 @@
       e.preventDefault();
       viewStart = 0;
       viewEnd = entropyBlocks.length;
-      renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+      renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
       updateZoomInfo();
     });
 
@@ -1893,7 +1752,7 @@
         viewStart = Math.max(0, Math.round(block - range / 2));
         viewEnd = Math.min(n, viewStart + range);
         viewStart = Math.max(0, viewEnd - range);
-        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
         updateZoomInfo();
       });
 
@@ -1911,7 +1770,7 @@
         newStart = Math.min(newStart, n - range);
         viewStart = newStart;
         viewEnd = newStart + range;
-        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
         renderMinimap();
         updateZoomInfo();
       });
@@ -1965,7 +1824,7 @@
         viewStart = Math.max(0, Math.round(block - range / 2));
         viewEnd = Math.min(n, viewStart + range);
         viewStart = Math.max(0, viewEnd - range);
-        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
         updateZoomInfo();
       }, { passive: false });
 
@@ -1995,7 +1854,7 @@
         newStart = Math.min(newStart, n - range);
         viewStart = newStart;
         viewEnd = newStart + range;
-        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
         renderMinimap();
         updateZoomInfo();
       }, { passive: false });
@@ -2019,6 +1878,7 @@
     fullFileBuildCancelled = true;
     isFullFileBuild = false;
     cancelled = false;
+    currentFile = null;
     dropZone.classList.remove('has-file');
     dropZone.classList.remove('dragover');
     progressSection.classList.remove('active');
@@ -2110,7 +1970,7 @@
         viewEnd = entropyBlocks.length;
         currentClickBlock = -1;
         currentSnapBlock = -1;
-        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1, -1);
+        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
         renderMinimap();
         isFullFileBuild = false;
         setProgress(100, 'Entropy graph ready!');
@@ -2194,6 +2054,7 @@
     setProgress(0, 'Reading file…');
 
     cancelled = false;
+    currentFile = file;
 
     // Read file data (up to HEADER_READ_SIZE for analysis)
     var sliceSize = Math.min(file.size, HEADER_READ_SIZE);
@@ -2293,7 +2154,7 @@
         // Set initial hoveredSpike based on current click/scrub position
         var nearest = findNearestSpike(currentClickBlock >= 0 ? currentClickBlock : Math.floor((viewStart + viewEnd) / 2));
         hoveredSpike = nearest !== null ? nearest.index : -1;
-        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
       }
     }
   });
@@ -2303,7 +2164,7 @@
       if (isSnapMode) {
         isSnapMode = false;
         hoveredSpike = -1;
-        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
         // Do NOT snap or jump — markers simply disappear
       }
     }
