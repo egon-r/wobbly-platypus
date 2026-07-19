@@ -213,7 +213,7 @@
   /* Entropy */
   #entropyCanvas {
     width: 100%;
-    height: 100px;
+    height: 200px;
     border-radius: 0.25rem;
     cursor: crosshair;
     display: block;
@@ -251,6 +251,12 @@
     font-size: 0.75rem; font-weight: 500;
     margin-left: 0.5rem;
   }
+  .zoom-info {
+    font-size: 0.7rem; color: #52525b; margin-bottom: 0.25rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .zoom-info a { cursor: pointer; }
+  .zoom-info a:hover { text-decoration: underline !important; }
   .hex-container.pe-detected {
     border-color: #3b82f6;
     box-shadow: 0 0 0 1px rgba(59,130,246,0.3);
@@ -319,9 +325,13 @@
 
     <div class="results-section" id="entropySection">
       <div class="section-title">Entropy Analysis</div>
+      <div class="zoom-info" id="zoomInfo" style="display:none">
+        <span id="zoomRange"></span>
+        <a href="#" id="zoomReset" style="color:#3b82f6;text-decoration:none;margin-left:0.5rem;font-size:0.7rem;">[Reset]</a>
+      </div>
       <canvas id="entropyCanvas"></canvas>
       <div class="scrub-info" id="scrubInfo">Hover the graph to inspect</div>
-      <div class="hint">Click graph to jump hex viewer · Press <kbd>S</kbd> to snap to nearest entropy spike</div>
+      <div class="hint">Click to jump · Drag to select range · Scroll to zoom · Press <kbd>S</kbd> for spike snap</div>
       <div class="entropy-legend" id="entropyLegend">
         <span class="legend-label">Low (structured)</span>
         <div class="legend-gradient"></div>
@@ -1023,6 +1033,11 @@
   var hexViewerOffset = 0;
   var currentClickBlock = -1;
   var currentFileBuffer = null;
+  var viewStart = 0;
+  var viewEnd = 0;
+  var isDragging = false;
+  var dragStartBlock = -1;
+  var dragCurrentBlock = -1;
 
   function renderEntropy(buffer) {
     var maxBytes = Math.min(buffer.byteLength, 2 * 1024 * 1024);
@@ -1062,25 +1077,30 @@
 
     entropyBlocks = values;
     spikes = findSpikes(values);
+    viewStart = 0;
+    viewEnd = values.length;
 
-    drawEntropyChart();
+    renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1, -1);
   }
 
-  function drawEntropyChart() {
-    if (!entropyData || entropyData.values.length === 0) return;
+  function renderEntropyCanvas(blocks, vStart, vEnd, clickBlock, scrubBlock) {
+    if (!blocks || blocks.length === 0) return;
+    if (!entropyData) return;
 
     var canvas = document.getElementById('entropyCanvas');
     var ctx = canvas.getContext('2d');
     var dpr = window.devicePixelRatio || 1;
     var w = canvas.clientWidth || canvas.parentElement.clientWidth - 32;
-    var h = 100;
+    var h = 200;
 
     canvas.width = w * dpr;
     canvas.height = h * dpr;
     ctx.scale(dpr, dpr);
 
-    var values = entropyData.values;
-    var n = values.length;
+    var n = blocks.length;
+    vStart = Math.max(0, vStart);
+    vEnd = Math.min(n, vEnd);
+    var visibleCount = vEnd - vStart;
 
     var padding = { top: 6, bottom: 18, left: 36, right: 12 };
     var plotW = Math.max(w - padding.left - padding.right, 1);
@@ -1088,10 +1108,25 @@
 
     // Clear
     ctx.clearRect(0, 0, w, h);
-
-    // Background
     ctx.fillStyle = '#18181b';
     ctx.fillRect(0, 0, w, h);
+
+    // Determine Y scale
+    var isFullView = (vStart === 0 && vEnd === n);
+    var yMin = 0;
+    var yMax = 8;
+    if (!isFullView && visibleCount > 0) {
+      var visMin = Infinity;
+      var visMax = -Infinity;
+      for (var vi = vStart; vi < vEnd; vi++) {
+        if (blocks[vi] < visMin) visMin = blocks[vi];
+        if (blocks[vi] > visMax) visMax = blocks[vi];
+      }
+      var yPad = (visMax - visMin) * 0.1 || 0.5;
+      yMin = Math.max(0, visMin - yPad);
+      yMax = Math.min(8, visMax + yPad);
+    }
+    var yRange = yMax - yMin || 1;
 
     // Grid lines
     ctx.strokeStyle = '#27272a';
@@ -1103,48 +1138,50 @@
       ctx.moveTo(padding.left, gy);
       ctx.lineTo(w - padding.right, gy);
       ctx.stroke();
-      // Y label
       ctx.fillStyle = '#52525b';
       ctx.font = '9px monospace';
       ctx.textAlign = 'right';
-      var yVal = 8 - gi * 2;
+      var yVal = yMax - (gi / 4) * yRange;
       ctx.fillText(yVal.toFixed(1), padding.left - 4, gy + 3);
     }
 
-    // Build points
+    // Build points for visible range
     var points = [];
-    for (var pi = 0; pi < n; pi++) {
-      var px = padding.left + (pi / Math.max(n - 1, 1)) * plotW;
-      var py = padding.top + plotH - (Math.min(values[pi], 8) / 8) * plotH;
+    var maxIdx = Math.max(visibleCount - 1, 1);
+    for (var pi = vStart; pi < vEnd; pi++) {
+      var px = padding.left + ((pi - vStart) / maxIdx) * plotW;
+      var py = padding.top + plotH - ((Math.min(blocks[pi], yMax) - yMin) / yRange) * plotH;
       points.push({ x: px, y: py });
     }
 
-    // Area fill
-    ctx.beginPath();
-    ctx.moveTo(points[0].x, padding.top + plotH);
-    for (var pi = 0; pi < points.length; pi++) {
-      ctx.lineTo(points[pi].x, points[pi].y);
-    }
-    ctx.lineTo(points[n - 1].x, padding.top + plotH);
-    ctx.closePath();
+    if (points.length > 1) {
+      // Area fill
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, padding.top + plotH);
+      for (var pi = 0; pi < points.length; pi++) {
+        ctx.lineTo(points[pi].x, points[pi].y);
+      }
+      ctx.lineTo(points[points.length - 1].x, padding.top + plotH);
+      ctx.closePath();
 
-    var grad = ctx.createLinearGradient(0, padding.top, 0, padding.top + plotH);
-    grad.addColorStop(0, 'rgba(239, 68, 68, 0.25)');
-    grad.addColorStop(0.5, 'rgba(234, 179, 8, 0.25)');
-    grad.addColorStop(1, 'rgba(34, 197, 94, 0.25)');
-    ctx.fillStyle = grad;
-    ctx.fill();
+      var grad = ctx.createLinearGradient(0, padding.top, 0, padding.top + plotH);
+      grad.addColorStop(0, 'rgba(239, 68, 68, 0.25)');
+      grad.addColorStop(0.5, 'rgba(234, 179, 8, 0.25)');
+      grad.addColorStop(1, 'rgba(34, 197, 94, 0.25)');
+      ctx.fillStyle = grad;
+      ctx.fill();
 
-    // Line path
-    ctx.beginPath();
-    ctx.moveTo(points[0].x, points[0].y);
-    for (var pi = 1; pi < points.length; pi++) {
-      ctx.lineTo(points[pi].x, points[pi].y);
+      // Line
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (var pi = 1; pi < points.length; pi++) {
+        ctx.lineTo(points[pi].x, points[pi].y);
+      }
+      ctx.strokeStyle = '#3b82f6';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([]);
+      ctx.stroke();
     }
-    ctx.strokeStyle = '#3b82f6';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([]);
-    ctx.stroke();
 
     // X-axis labels
     ctx.fillStyle = '#52525b';
@@ -1152,39 +1189,60 @@
     ctx.textAlign = 'center';
     var numLabels = Math.min(6, Math.max(2, Math.floor(plotW / 80)));
     for (var li = 0; li <= numLabels; li++) {
-      var idx = Math.floor((li / numLabels) * (n - 1));
+      var idx = vStart + Math.floor((li / numLabels) * (visibleCount - 1));
       var offset = idx * entropyData.blockSize;
       var lx = padding.left + (li / numLabels) * plotW;
       ctx.fillText('0x' + offset.toString(16).toUpperCase(), lx, h - 3);
     }
 
-  }
+    // Click marker
+    if (clickBlock >= 0) {
+      var ci = Math.max(0, Math.min(clickBlock, n - 1));
+      var cx = padding.left + ((ci - vStart) / maxIdx) * plotW;
+      ctx.save();
+      ctx.strokeStyle = '#3b82f6';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(cx, padding.top);
+      ctx.lineTo(cx, h - padding.bottom);
+      ctx.stroke();
+      ctx.restore();
+    }
 
-  function drawScrubber(blockIdx) {
-    if (!entropyData || entropyData.values.length === 0) return;
+    // Scrubber
+    if (scrubBlock >= 0) {
+      var si = Math.max(0, Math.min(scrubBlock, n - 1));
+      var sx = padding.left + ((si - vStart) / maxIdx) * plotW;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(sx, padding.top);
+      ctx.lineTo(sx, h - padding.bottom);
+      ctx.stroke();
+      ctx.restore();
+    }
 
-    var canvas = document.getElementById('entropyCanvas');
-    var ctx = canvas.getContext('2d');
-    var w = canvas.clientWidth || canvas.parentElement.clientWidth - 32;
-    var h = 100;
-
-    var values = entropyData.values;
-    var n = values.length;
-    var padding = { top: 6, bottom: 18, left: 36, right: 12 };
-    var plotW = Math.max(w - padding.left - padding.right, 1);
-
-    var idx = Math.max(0, Math.min(blockIdx, n - 1));
-    var scrubX = padding.left + (idx / Math.max(n - 1, 1)) * plotW;
-
-    ctx.save();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([3, 3]);
-    ctx.beginPath();
-    ctx.moveTo(scrubX, padding.top);
-    ctx.lineTo(scrubX, h - padding.bottom);
-    ctx.stroke();
-    ctx.restore();
+    // Selection overlay
+    if (isDragging && dragStartBlock >= 0 && dragCurrentBlock >= 0) {
+      var sStart = Math.min(dragStartBlock, dragCurrentBlock);
+      var sEnd = Math.max(dragStartBlock, dragCurrentBlock);
+      var blockW = plotW / maxIdx;
+      var selX1 = padding.left + ((sStart - vStart) / maxIdx) * plotW;
+      var selX2 = padding.left + ((sEnd + 1 - vStart) / maxIdx) * plotW;
+      selX1 = Math.max(padding.left, selX1);
+      selX2 = Math.min(w - padding.right, selX2);
+      ctx.save();
+      ctx.fillStyle = 'rgba(59, 130, 246, 0.2)';
+      ctx.fillRect(selX1, padding.top, selX2 - selX1, plotH);
+      ctx.strokeStyle = '#3b82f6';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([]);
+      ctx.strokeRect(selX1, padding.top, selX2 - selX1, plotH);
+      ctx.restore();
+    }
   }
 
   function findSpikes(blocks) {
@@ -1209,31 +1267,29 @@
     });
   }
 
-  function drawClickMarker() {
-    if (currentClickBlock < 0 || !entropyData || entropyData.values.length === 0) return;
-
+  function blockFromMouse(e) {
     var canvas = document.getElementById('entropyCanvas');
-    var ctx = canvas.getContext('2d');
-    var w = canvas.clientWidth || canvas.parentElement.clientWidth - 32;
-    var h = 100;
-
-    var values = entropyData.values;
-    var n = values.length;
-    var padding = { top: 6, bottom: 18, left: 36, right: 12 };
+    var rect = canvas.getBoundingClientRect();
+    var mouseX = e.clientX - rect.left;
+    var w = canvas.clientWidth || rect.width;
+    var padding = { left: 36, right: 12 };
     var plotW = Math.max(w - padding.left - padding.right, 1);
+    if (mouseX < padding.left || mouseX > w - padding.right) return -1;
+    var ratio = (mouseX - padding.left) / plotW;
+    var block = viewStart + Math.round(ratio * (viewEnd - viewStart));
+    return Math.max(0, Math.min(block, entropyData.values.length - 1));
+  }
 
-    var idx = Math.max(0, Math.min(currentClickBlock, n - 1));
-    var markerX = padding.left + (idx / Math.max(n - 1, 1)) * plotW;
-
-    ctx.save();
-    ctx.strokeStyle = '#3b82f6';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([]);
-    ctx.beginPath();
-    ctx.moveTo(markerX, padding.top);
-    ctx.lineTo(markerX, h - padding.bottom);
-    ctx.stroke();
-    ctx.restore();
+  function updateZoomInfo() {
+    var el = document.getElementById('zoomInfo');
+    if (viewStart === 0 && viewEnd === entropyBlocks.length) {
+      el.style.display = 'none';
+      return;
+    }
+    el.style.display = 'block';
+    document.getElementById('zoomRange').textContent =
+      'Zoom: 0x' + (viewStart * 256).toString(16).toUpperCase() +
+      ' \u2013 0x' + (viewEnd * 256).toString(16).toUpperCase();
   }
 
   function setupEntropyEvents() {
@@ -1245,74 +1301,135 @@
         return;
       }
 
-      var rect = canvas.getBoundingClientRect();
-      var mouseX = e.clientX - rect.left;
-      var w = canvas.clientWidth || rect.width;
-      var padding = { left: 36, right: 12 };
-      var plotW = Math.max(w - padding.left - padding.right, 1);
+      if (isDragging) {
+        var block = blockFromMouse(e);
+        if (block >= 0) {
+          dragCurrentBlock = block;
+          renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+        }
+        return;
+      }
 
-      if (mouseX < padding.left || mouseX > w - padding.right) {
+      var block = blockFromMouse(e);
+      if (block < 0) {
         document.getElementById('scrubInfo').textContent = 'Hover the graph to inspect';
         return;
       }
 
-      var ratio = (mouseX - padding.left) / plotW;
-      var blockIdx = Math.floor(ratio * entropyData.values.length);
-      blockIdx = Math.max(0, Math.min(blockIdx, entropyData.values.length - 1));
+      var entropy = entropyData.values[block];
+      var offset = block * entropyData.blockSize;
 
-      var entropy = entropyData.values[blockIdx];
-      var offset = blockIdx * entropyData.blockSize;
-
-      // Redraw chart (without markers first)
-      drawEntropyChart();
-      // Draw click marker on top
-      drawClickMarker();
-      // Draw scrubber on top
-      drawScrubber(blockIdx);
+      renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, block);
 
       document.getElementById('scrubInfo').textContent = 'Offset: 0x' + offset.toString(16).toUpperCase() + '  Entropy: ' + entropy.toFixed(2);
     });
 
     canvas.addEventListener('mouseleave', function() {
+      if (isDragging) {
+        isDragging = false;
+        dragStartBlock = -1;
+        dragCurrentBlock = -1;
+      }
       if (entropyData && entropyData.values.length > 0) {
-        drawEntropyChart();
-        drawClickMarker();
+        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
       }
       document.getElementById('scrubInfo').textContent = 'Hover the graph to inspect';
     });
 
+    canvas.addEventListener('mousedown', function(e) {
+      if (!entropyData || entropyData.values.length === 0) return;
+      var block = blockFromMouse(e);
+      if (block < 0) return;
+      isDragging = true;
+      dragStartBlock = block;
+      dragCurrentBlock = block;
+    });
+
+    canvas.addEventListener('mouseup', function(e) {
+      if (!isDragging) return;
+      isDragging = false;
+      var startOff = Math.min(dragStartBlock, dragCurrentBlock) * 256;
+      currentClickBlock = Math.min(dragStartBlock, dragCurrentBlock);
+      dragStartBlock = -1;
+      dragCurrentBlock = -1;
+      if (currentFileBuffer) {
+        renderHexDump(currentFileBuffer, startOff);
+      }
+      renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+      var infoEntropy = entropyData.values[currentClickBlock];
+      document.getElementById('scrubInfo').textContent = 'Selected: Offset 0x' + startOff.toString(16).toUpperCase() + '  Entropy: ' + infoEntropy.toFixed(2);
+    });
+
     canvas.addEventListener('click', function(e) {
       if (!entropyData || entropyData.values.length === 0) return;
+      // Ignore click if it was part of a drag
+      if (isDragging) return;
+
+      var block = blockFromMouse(e);
+      if (block < 0) return;
+
+      currentClickBlock = block;
+      hexViewerOffset = block * entropyData.blockSize;
+
+      if (currentFileBuffer) {
+        renderHexDump(currentFileBuffer, hexViewerOffset);
+      }
+
+      renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+
+      var entropy = entropyData.values[block];
+      var offset = block * entropyData.blockSize;
+      document.getElementById('scrubInfo').textContent = 'Offset: 0x' + offset.toString(16).toUpperCase() + '  Entropy: ' + entropy.toFixed(2);
+    });
+
+    canvas.addEventListener('dblclick', function(e) {
+      if (!entropyData || entropyData.values.length === 0) return;
+      e.preventDefault();
+
+      var centerBlock = currentClickBlock >= 0 ? currentClickBlock : blockFromMouse(e);
+      if (centerBlock < 0) return;
+
+      var range = viewEnd - viewStart;
+      var newRange = Math.max(16, Math.round(range / 2));
+      viewStart = Math.max(0, Math.round(centerBlock - newRange / 2));
+      viewEnd = Math.min(entropyBlocks.length, viewStart + newRange);
+      viewStart = Math.max(0, viewEnd - newRange);
+
+      renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+      updateZoomInfo();
+    });
+
+    canvas.addEventListener('wheel', function(e) {
+      e.preventDefault();
+      if (!entropyData || entropyData.values.length === 0) return;
+
+      var zoomFactor = e.deltaY < 0 ? 1 / 1.5 : 1.5;
 
       var rect = canvas.getBoundingClientRect();
       var mouseX = e.clientX - rect.left;
       var w = canvas.clientWidth || rect.width;
       var padding = { left: 36, right: 12 };
       var plotW = Math.max(w - padding.left - padding.right, 1);
+      var centerBlock = viewStart + Math.round((mouseX - padding.left) / plotW * (viewEnd - viewStart));
+      centerBlock = Math.max(0, Math.min(centerBlock, entropyBlocks.length - 1));
 
-      if (mouseX < padding.left || mouseX > w - padding.right) return;
+      var range = viewEnd - viewStart;
+      var newRange = Math.max(16, Math.min(entropyBlocks.length, Math.round(range * zoomFactor)));
 
-      var ratio = (mouseX - padding.left) / plotW;
-      var blockIdx = Math.floor(ratio * entropyData.values.length);
-      blockIdx = Math.max(0, Math.min(blockIdx, entropyData.values.length - 1));
+      viewStart = Math.max(0, Math.round(centerBlock - newRange / 2));
+      viewEnd = Math.min(entropyBlocks.length, viewStart + newRange);
+      viewStart = Math.max(0, viewEnd - newRange);
 
-      currentClickBlock = blockIdx;
-      hexViewerOffset = blockIdx * entropyData.blockSize;
+      renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+      updateZoomInfo();
+    });
 
-      // Jump hex viewer
-      if (currentFileBuffer) {
-        renderHexDump(currentFileBuffer, hexViewerOffset);
-      }
-
-      // Redraw chart with both marker and scrubber
-      drawEntropyChart();
-      drawClickMarker();
-      drawScrubber(blockIdx);
-
-      // Update info
-      var entropy = entropyData.values[blockIdx];
-      var offset = blockIdx * entropyData.blockSize;
-      document.getElementById('scrubInfo').textContent = 'Offset: 0x' + offset.toString(16).toUpperCase() + '  Entropy: ' + entropy.toFixed(2);
+    document.getElementById('zoomReset').addEventListener('click', function(e) {
+      e.preventDefault();
+      viewStart = 0;
+      viewEnd = entropyBlocks.length;
+      renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+      updateZoomInfo();
     });
   }
 
@@ -1568,9 +1685,7 @@
         renderHexDump(currentFileBuffer, hexViewerOffset);
       }
 
-      drawEntropyChart();
-      drawClickMarker();
-      drawScrubber(nearest.index);
+      renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, nearest.index);
 
       document.getElementById('scrubInfo').textContent = 'Spike: Offset 0x' + nearest.offset.toString(16).toUpperCase() + '  Entropy: ' + nearest.entropy.toFixed(2);
     }
