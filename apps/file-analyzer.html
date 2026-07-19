@@ -442,9 +442,9 @@
 <div class="modal-overlay" id="settingsModal">
   <div class="modal-box">
     <h2>Settings</h2>
-    <label for="resInput">Entropy resolution (blocks)</label>
-    <input type="number" id="resInput" placeholder="auto" min="2" max="100000">
-    <div class="hint">Higher = more detail, slightly more data read. Leave empty for auto.</div>
+    <label for="resInput">Block size (bytes)</label>
+    <input type="number" id="resInput" placeholder="auto" min="256" max="1048576" step="256">
+    <div class="hint">Smaller = more detail, slightly slower. Leave empty for auto (targets ~32KB).</div>
     <div class="modal-actions">
       <button id="modalCancel">Cancel</button>
       <button class="primary" id="modalSave">Save</button>
@@ -1165,14 +1165,18 @@
     var w = canvas ? canvas.clientWidth || 600 : 600;
     var padding = { left: 36, right: 12 };
     var plotW = Math.max(w - padding.left - padding.right, 1);
-    // Check for user resolution override
+    // Check for user block size override
     var resInput = document.getElementById('resInput');
     var userVal = resInput && resInput.value ? parseInt(resInput.value, 10) : NaN;
     var numBlocks;
-    if (!isNaN(userVal) && userVal >= 2) {
-      numBlocks = Math.min(userVal, 100000);
+    if (!isNaN(userVal) && userVal >= 256) {
+      // User set a target block size — compute number of blocks
+      numBlocks = Math.min(Math.ceil(fileSize / userVal), 100000);
     } else {
-      numBlocks = Math.min(plotW * 10, 20000);
+      // Auto: target block size ≤ 32KB so min zoom (2 blocks) fits in 64KB hex view
+      var targetBlockSize = 32768;
+      var minForTarget = Math.ceil(fileSize / targetBlockSize);
+      numBlocks = Math.max(plotW, Math.min(minForTarget, 100000));
     }
     // Cap numBlocks to file size in blocks of min 256 bytes
     var minBlocks = Math.ceil(fileSize / (256 * 1024 * 1024)); // at least 1 block per 256MB
@@ -1183,7 +1187,7 @@
     var values = new Array(numBlocks);
     var completed = 0;
     var cancelled = false;
-    var BATCH_SIZE = 100; // read 100 chunks at a time
+    var BATCH_SIZE = 200; // read 200 chunks at a time
 
     function readBlock(i) {
       var start = Math.round(i * blockSize);
@@ -2356,7 +2360,7 @@
   modalSave.addEventListener('click', function() {
     // Validate and save
     var val = parseInt(resInput.value, 10);
-    if (resInput.value !== '' && (isNaN(val) || val < 2)) {
+    if (resInput.value !== '' && (isNaN(val) || val < 256)) {
       resInput.value = '';
     }
     closeModal();
