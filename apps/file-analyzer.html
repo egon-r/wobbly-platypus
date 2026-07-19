@@ -379,12 +379,16 @@
       </div>
       <div class="zoom-info" id="zoomInfo" style="display:none">
         <span id="zoomRange"></span>
-        <a href="#" id="zoomReset" style="color:#3b82f6;text-decoration:none;margin-left:0.5rem;font-size:0.7rem;">[Reset]</a>
+        <span style="margin-left:0.5rem">
+          <a href="#" id="zoomOutBtn" style="color:#3b82f6;text-decoration:none;font-size:0.8rem;margin-right:0.25rem">&#8722;</a>
+          <a href="#" id="zoomInBtn" style="color:#3b82f6;text-decoration:none;font-size:0.8rem">&#43;</a>
+        </span>
+        <a href="#" id="zoomReset" style="color:#3b82f6;text-decoration:none;margin-left:0.3rem;font-size:0.7rem;">[Reset]</a>
       </div>
       <canvas id="entropyCanvas"></canvas>
       <canvas id="entropyMinimap"></canvas>
       <div class="scrub-info" id="scrubInfo">Hover the graph to inspect</div>
-      <div class="hint">Drag to scrub &#xB7; Scroll to zoom &#xB7; Double-tap to zoom</div>
+      <div class="hint">Drag to scrub &#xB7; Scroll to zoom &#xB7; Pinch to zoom</div>
       <div class="entropy-legend" id="entropyLegend">
         <span class="legend-label">Low (structured)</span>
         <div class="legend-gradient"></div>
@@ -1679,53 +1683,7 @@
       if (scrubThrottle) { clearTimeout(scrubThrottle); scrubThrottle = null; }
     });
 
-    canvas.addEventListener('click', function(e) {
-      if (!entropyData || entropyData.values.length === 0) return;
-      if (didScrub) { didScrub = false; return; }
 
-      // Snap mode: snap to hovered spike and exit snap mode
-      if (isSnapMode && hoveredSpike >= 0) {
-        currentSnapBlock = hoveredSpike;
-        currentClickBlock = hoveredSpike;
-        var snapOffset = hoveredSpike * (entropyData ? entropyData.blockSize : 256);
-        if (currentFileBuffer) {
-          loadAndShowHex(snapOffset);
-        }
-        isSnapMode = false;
-        hoveredSpike = -1;
-        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
-        return;
-      }
-
-      var block = blockFromMouse(e);
-      if (block < 0) return;
-
-      currentClickBlock = block;
-      hexViewerOffset = block * entropyData.blockSize;
-
-      if (currentFileBuffer) {
-        loadAndShowHex(hexViewerOffset);
-      }
-
-      renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
-    });
-
-    canvas.addEventListener('dblclick', function(e) {
-      if (!entropyData || entropyData.values.length === 0) return;
-      e.preventDefault();
-
-      var centerBlock = currentClickBlock >= 0 ? currentClickBlock : blockFromMouse(e);
-      if (centerBlock < 0) return;
-
-      var range = viewEnd - viewStart;
-      var newRange = Math.max(2, Math.round(range / 2));
-      viewStart = Math.max(0, Math.round(centerBlock - newRange / 2));
-      viewEnd = Math.min(entropyBlocks.length, viewStart + newRange);
-      viewStart = Math.max(0, viewEnd - newRange);
-
-      renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
-      updateZoomInfo();
-    });
 
     canvas.addEventListener('wheel', function(e) {
       e.preventDefault();
@@ -1835,30 +1793,9 @@
     canvas.addEventListener('touchend', function(e) {
       if (!entropyData || entropyData.values.length === 0) return;
 
-      // Double tap detection (two quick taps)
+      // Track last tap time
       if (!didScrub && e.touches.length === 0 && !isPinching) {
-        var now = Date.now();
-        if (lastTapTime > 0 && (now - lastTapTime) < 300) {
-          // Double tap — zoom in
-          var rect = canvas.getBoundingClientRect();
-          var touch = e.changedTouches[0];
-          var mouseX = touch.clientX - rect.left;
-          var w = canvas.clientWidth || rect.width;
-          var padding = { left: 36, right: 12 };
-          var plotW = Math.max(w - padding.left - padding.right, 1);
-          var centerBlock = viewStart + Math.round((mouseX - padding.left) / plotW * (viewEnd - viewStart));
-          centerBlock = Math.max(0, Math.min(centerBlock, entropyBlocks.length - 1));
-          var range = viewEnd - viewStart;
-          var newRange = Math.max(2, Math.round(range / 2));
-          viewStart = Math.max(0, Math.round(centerBlock - newRange / 2));
-          viewEnd = Math.min(entropyBlocks.length, viewStart + newRange);
-          viewStart = Math.max(0, viewEnd - newRange);
-          renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
-          updateZoomInfo();
-          lastTapTime = 0;
-        } else {
-          lastTapTime = now;
-        }
+        lastTapTime = Date.now();
       }
 
       isScrubbing = false;
@@ -1876,6 +1813,32 @@
       e.preventDefault();
       viewStart = 0;
       viewEnd = entropyBlocks.length;
+      renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
+      updateZoomInfo();
+    });
+
+    document.getElementById('zoomInBtn').addEventListener('click', function(e) {
+      e.preventDefault();
+      if (!entropyData || entropyBlocks.length === 0) return;
+      var range = viewEnd - viewStart;
+      var newRange = Math.max(2, Math.round(range / 2));
+      var centerBlock = Math.round((viewStart + viewEnd) / 2);
+      viewStart = Math.max(0, Math.round(centerBlock - newRange / 2));
+      viewEnd = Math.min(entropyBlocks.length, viewStart + newRange);
+      viewStart = Math.max(0, viewEnd - newRange);
+      renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
+      updateZoomInfo();
+    });
+
+    document.getElementById('zoomOutBtn').addEventListener('click', function(e) {
+      e.preventDefault();
+      if (!entropyData || entropyBlocks.length === 0) return;
+      var range = viewEnd - viewStart;
+      var newRange = Math.min(entropyBlocks.length, Math.round(range * 2));
+      var centerBlock = Math.round((viewStart + viewEnd) / 2);
+      viewStart = Math.max(0, Math.round(centerBlock - newRange / 2));
+      viewEnd = Math.min(entropyBlocks.length, viewStart + newRange);
+      viewStart = Math.max(0, viewEnd - newRange);
       renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
       updateZoomInfo();
     });
