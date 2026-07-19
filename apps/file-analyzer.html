@@ -228,6 +228,9 @@
     background: #18181b;
     margin-top: 1px;
   }
+  #entropyCanvas, #entropyMinimap {
+    touch-action: none;
+  }
   .scrub-info {
     font-size: 0.8rem;
     color: #71717a;
@@ -1053,6 +1056,19 @@
   var dragCurrentBlock = -1;
   var wasDrag = false;
 
+  var touchStartX = 0;
+  var touchStartBlock = -1;
+  var touchStartViewStart = 0;
+  var touchStartTime = 0;
+  var pinchStartDist = 0;
+  var pinchStartViewStart = 0;
+  var pinchStartViewEnd = 0;
+  var isPinching = false;
+  var isPanning = false;
+  var lastTapTime = 0;
+  var lastTapX = 0;
+  var lastTapBlock = -1;
+
   function renderEntropy(buffer) {
     var maxBytes = Math.min(buffer.byteLength, 2 * 1024 * 1024);
     var blockSize = 256;
@@ -1390,10 +1406,10 @@
     });
   }
 
-  function blockFromMouse(e) {
+  function blockFromClientX(clientX) {
     var canvas = document.getElementById('entropyCanvas');
     var rect = canvas.getBoundingClientRect();
-    var mouseX = e.clientX - rect.left;
+    var mouseX = clientX - rect.left;
     var w = canvas.clientWidth || rect.width;
     var padding = { left: 36, right: 12 };
     var plotW = Math.max(w - padding.left - padding.right, 1);
@@ -1401,6 +1417,12 @@
     var ratio = (mouseX - padding.left) / plotW;
     var block = viewStart + Math.floor(ratio * (viewEnd - viewStart));
     return Math.max(0, Math.min(block, entropyData.values.length - 1));
+  }
+  function blockFromMouse(e) {
+    return blockFromClientX(e.clientX);
+  }
+  function blockFromTouch(touch) {
+    return blockFromClientX(touch.clientX);
   }
 
   function minimapBlockFromMouse(e) {
@@ -1602,6 +1624,151 @@
       updateZoomInfo();
     });
 
+    // ---- Touch events for canvas ----
+    canvas.addEventListener('touchstart', function(e) {
+      if (!entropyData || entropyData.values.length === 0) return;
+
+      if (e.touches.length === 1) {
+        var touch = e.touches[0];
+        touchStartX = touch.clientX;
+        touchStartBlock = blockFromTouch(touch);
+        touchStartViewStart = viewStart;
+        touchStartTime = Date.now();
+        isPanning = !(viewStart === 0 && viewEnd === entropyBlocks.length);
+        isPinching = false;
+        wasDrag = false;
+
+        // Snap mode: update hovered spike based on touch position
+        if (isSnapMode && touchStartBlock >= 0) {
+          var nearest = findNearestSpike(touchStartBlock);
+          hoveredSpike = nearest !== null ? nearest.index : -1;
+          renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+        }
+      } else if (e.touches.length === 2) {
+        var dx = e.touches[0].clientX - e.touches[1].clientX;
+        var dy = e.touches[0].clientY - e.touches[1].clientY;
+        pinchStartDist = Math.sqrt(dx * dx + dy * dy);
+        pinchStartViewStart = viewStart;
+        pinchStartViewEnd = viewEnd;
+        isPinching = true;
+        isPanning = false;
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', function(e) {
+      if (!entropyData || entropyData.values.length === 0) return;
+      e.preventDefault();
+
+      if (e.touches.length === 1 && isPanning) {
+        var touch = e.touches[0];
+        var rect = canvas.getBoundingClientRect();
+        var w = canvas.clientWidth || rect.width;
+        var padding = { left: 36, right: 12 };
+        var plotW = Math.max(w - padding.left - padding.right, 1);
+        var n = entropyBlocks.length;
+        var range = viewEnd - viewStart;
+        var deltaPx = touch.clientX - touchStartX;
+        var deltaBlocks = -(deltaPx / plotW) * range;
+        var newStart = Math.max(0, Math.round(touchStartViewStart + deltaBlocks));
+        newStart = Math.min(newStart, n - range);
+        viewStart = newStart;
+        viewEnd = newStart + range;
+        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+        updateZoomInfo();
+      } else if (e.touches.length === 2 && isPinching) {
+        var dx = e.touches[0].clientX - e.touches[1].clientX;
+        var dy = e.touches[0].clientY - e.touches[1].clientY;
+        var currentDist = Math.sqrt(dx * dx + dy * dy);
+        if (currentDist < 5) return;
+
+        // Compute midpoint of the two touches
+        var midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        var rect = canvas.getBoundingClientRect();
+        var mouseX = midX - rect.left;
+        var w = canvas.clientWidth || rect.width;
+        var padding = { left: 36, right: 12 };
+        var plotW = Math.max(w - padding.left - padding.right, 1);
+        var centerBlock = viewStart + Math.round((mouseX - padding.left) / plotW * (viewEnd - viewStart));
+        centerBlock = Math.max(0, Math.min(centerBlock, entropyBlocks.length - 1));
+
+        var initialRange = pinchStartViewEnd - pinchStartViewStart;
+        var scale = pinchStartDist / currentDist;
+        var newRange = Math.max(16, Math.min(entropyBlocks.length, Math.round(initialRange * scale)));
+
+        viewStart = Math.max(0, Math.round(centerBlock - newRange / 2));
+        viewEnd = Math.min(entropyBlocks.length, viewStart + newRange);
+        viewStart = Math.max(0, viewEnd - newRange);
+
+        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+        updateZoomInfo();
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', function(e) {
+      if (!entropyData || entropyData.values.length === 0) return;
+
+      if (!isPinching && e.touches.length === 0) {
+        // Check if this was a tap (minimal movement, short duration, single touch)
+        var dt = Date.now() - touchStartTime;
+        var moved = Math.abs(e.changedTouches[0].clientX - touchStartX);
+
+        if (moved < 10 && dt < 300 && touchStartBlock >= 0) {
+          // Snap mode: snap to hovered spike and exit snap mode
+          if (isSnapMode && hoveredSpike >= 0) {
+            currentSnapBlock = hoveredSpike;
+            currentClickBlock = hoveredSpike;
+            var snapOffset = hoveredSpike * 256;
+            if (currentFileBuffer) {
+              renderHexDump(currentFileBuffer, snapOffset);
+            }
+            isSnapMode = false;
+            hoveredSpike = -1;
+            renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+            lastTapTime = 0;
+            return;
+          }
+
+          // Check for double tap (two taps within 300ms and < 20px apart)
+          if (lastTapTime > 0 && (Date.now() - lastTapTime) < 300 && Math.abs(e.changedTouches[0].clientX - lastTapX) < 20) {
+            // Double tap — zoom in (same logic as dblclick handler)
+            var centerBlock = lastTapBlock >= 0 ? lastTapBlock : touchStartBlock;
+            var range = viewEnd - viewStart;
+            var newRange = Math.max(16, Math.round(range / 2));
+            viewStart = Math.max(0, Math.round(centerBlock - newRange / 2));
+            viewEnd = Math.min(entropyBlocks.length, viewStart + newRange);
+            viewStart = Math.max(0, viewEnd - newRange);
+            renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+            updateZoomInfo();
+            lastTapTime = 0;
+          } else {
+            // Single tap — select block (same logic as click handler)
+            currentClickBlock = touchStartBlock;
+            hexViewerOffset = touchStartBlock * entropyData.blockSize;
+            if (currentFileBuffer) {
+              renderHexDump(currentFileBuffer, hexViewerOffset);
+            }
+            renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+            var entropy = entropyData.values[touchStartBlock];
+            var offset = touchStartBlock * entropyData.blockSize;
+            document.getElementById('scrubInfo').textContent = 'Offset: 0x' + offset.toString(16).toUpperCase() + '  Entropy: ' + entropy.toFixed(2);
+
+            // Record for double-tap detection
+            lastTapTime = Date.now();
+            lastTapX = e.changedTouches[0].clientX;
+            lastTapBlock = touchStartBlock;
+          }
+        } else {
+          // Was a drag/pan or held too long — reset double tap tracking
+          lastTapTime = 0;
+        }
+      }
+
+      if (e.touches.length === 0) {
+        isPanning = false;
+        isPinching = false;
+      }
+    });
+
     document.getElementById('zoomReset').addEventListener('click', function(e) {
       e.preventDefault();
       viewStart = 0;
@@ -1676,6 +1843,87 @@
 
       minimapCanvas.addEventListener('mouseleave', function() {
         isMinimapDragging = false;
+      });
+
+      // ---- Minimap touch events ----
+      var minimapTouchId = null;
+
+      minimapCanvas.addEventListener('touchstart', function(e) {
+        if (!entropyData || entropyData.values.length === 0) return;
+        if (e.touches.length !== 1) return;
+        e.preventDefault();
+
+        var touch = e.touches[0];
+        var mCanvas = document.getElementById('entropyMinimap');
+        var rect = mCanvas.getBoundingClientRect();
+        var touchX = touch.clientX - rect.left;
+        var w = mCanvas.clientWidth || rect.width;
+        var padding = { left: 36, right: 12 };
+        var plotW = Math.max(w - padding.left - padding.right, 1);
+        var n = entropyBlocks.length;
+        if (plotW <= 0 || n === 0) return;
+        var ratio = (touchX - padding.left) / plotW;
+        var block = Math.max(0, Math.min(Math.round(ratio * n), n - 1));
+
+        if (block < 0) return;
+
+        var isFullView = (viewStart === 0 && viewEnd === n);
+
+        if (!isFullView && block >= viewStart && block <= viewEnd) {
+          // Start dragging viewport
+          isMinimapDragging = true;
+          minimapDragViewStart = viewStart;
+          var vpLeft = padding.left + (viewStart / n) * plotW;
+          minimapDragStartX = touch.clientX - vpLeft;
+          minimapTouchId = touch.identifier;
+          return;
+        }
+
+        // Tap outside viewport — center on tap position
+        var range = viewEnd - viewStart;
+        viewStart = Math.max(0, Math.round(block - range / 2));
+        viewEnd = Math.min(n, viewStart + range);
+        viewStart = Math.max(0, viewEnd - range);
+        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+        updateZoomInfo();
+      }, { passive: false });
+
+      minimapCanvas.addEventListener('touchmove', function(e) {
+        if (!isMinimapDragging || minimapTouchId === null) return;
+        e.preventDefault();
+
+        // Find the tracked touch by identifier
+        var touch = null;
+        for (var i = 0; i < e.touches.length; i++) {
+          if (e.touches[i].identifier === minimapTouchId) {
+            touch = e.touches[i];
+            break;
+          }
+        }
+        if (!touch) return;
+
+        var n = entropyBlocks.length;
+        var mCanvas = document.getElementById('entropyMinimap');
+        var rect = mCanvas.getBoundingClientRect();
+        var w = mCanvas.clientWidth || rect.width;
+        var padding = { left: 36, right: 12 };
+        var plotW = Math.max(w - padding.left - padding.right, 1);
+        var ratio = (touch.clientX - padding.left - minimapDragStartX) / plotW;
+        var range = viewEnd - viewStart;
+        var newStart = Math.max(0, Math.round(ratio * n));
+        newStart = Math.min(newStart, n - range);
+        viewStart = newStart;
+        viewEnd = newStart + range;
+        renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, currentClickBlock, -1);
+        renderMinimap();
+        updateZoomInfo();
+      }, { passive: false });
+
+      minimapCanvas.addEventListener('touchend', function(e) {
+        if (isMinimapDragging) {
+          isMinimapDragging = false;
+          minimapTouchId = null;
+        }
       });
     }
   }
