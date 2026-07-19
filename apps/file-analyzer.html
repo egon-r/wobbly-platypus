@@ -1645,7 +1645,7 @@
       if (centerBlock < 0) return;
 
       var range = viewEnd - viewStart;
-      var newRange = Math.max(16, Math.round(range / 2));
+      var newRange = Math.max(2, Math.round(range / 2));
       viewStart = Math.max(0, Math.round(centerBlock - newRange / 2));
       viewEnd = Math.min(entropyBlocks.length, viewStart + newRange);
       viewStart = Math.max(0, viewEnd - newRange);
@@ -1669,7 +1669,7 @@
       centerBlock = Math.max(0, Math.min(centerBlock, entropyBlocks.length - 1));
 
       var range = viewEnd - viewStart;
-      var newRange = Math.max(16, Math.min(entropyBlocks.length, Math.round(range * zoomFactor)));
+      var newRange = Math.max(2, Math.min(entropyBlocks.length, Math.round(range * zoomFactor)));
 
       viewStart = Math.max(0, Math.round(centerBlock - newRange / 2));
       viewEnd = Math.min(entropyBlocks.length, viewStart + newRange);
@@ -1746,7 +1746,7 @@
 
         var initialRange = pinchStartViewEnd - pinchStartViewStart;
         var scale = pinchStartDist / currentDist;
-        var newRange = Math.max(16, Math.min(entropyBlocks.length, Math.round(initialRange * scale)));
+        var newRange = Math.max(2, Math.min(entropyBlocks.length, Math.round(initialRange * scale)));
 
         viewStart = Math.max(0, Math.round(centerBlock - newRange / 2));
         viewEnd = Math.min(entropyBlocks.length, viewStart + newRange);
@@ -1774,7 +1774,7 @@
           var centerBlock = viewStart + Math.round((mouseX - padding.left) / plotW * (viewEnd - viewStart));
           centerBlock = Math.max(0, Math.min(centerBlock, entropyBlocks.length - 1));
           var range = viewEnd - viewStart;
-          var newRange = Math.max(16, Math.round(range / 2));
+          var newRange = Math.max(2, Math.round(range / 2));
           viewStart = Math.max(0, Math.round(centerBlock - newRange / 2));
           viewEnd = Math.min(entropyBlocks.length, viewStart + newRange);
           viewStart = Math.max(0, viewEnd - newRange);
