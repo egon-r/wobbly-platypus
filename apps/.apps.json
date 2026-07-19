@@ -15,8 +15,8 @@
     "description": "3D CSS cube roller",
     "created": "2026-07-09T04:12:05+09:00"
   },
-  "raymarcher": {
-    "description": "shader previewer/editor \u2014 live GLSL editing, shader presets, orbit + zoom camera",
+  "shader-previewer": {
+    "description": "shader preview \u2014 live GLSL editing, shader presets, orbit + zoom camera",
     "created": "2026-07-10T01:05:04.471006+00:00"
   },
   "sensors": {
@@ -30,5 +30,14 @@
   "file-analyzer": {
     "description": "Offline binary metadata extractor \u2014 drop a file to see version info, PE headers, and more",
     "created": "2026-07-19"
+  },
+  "pwa-demo": {
+    "description": "Full PWA demo \u2014 offline support, background sync, push notifications, IndexedDB storage",
+    "url": "/apps/pwa-demo/",
+    "created": "2026-07-12T00:00:00+00:00"
+  },
+  "deepseek-chat": {
+    "description": "Chat with DeepSeek API \u2014 streaming, local history, multi-key support",
+    "created": "2026-07-13T00:00:00+00:00"
   }
 }
