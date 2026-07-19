@@ -340,7 +340,7 @@
       <canvas id="entropyCanvas"></canvas>
       <canvas id="entropyMinimap"></canvas>
       <div class="scrub-info" id="scrubInfo">Hover the graph to inspect</div>
-      <div class="hint">Scroll to zoom &#xB7; Drag to pan &#xB7; Hold <kbd>S</kbd> to reveal spikes</div>
+      <div class="hint">Drag to scrub &#xB7; Scroll to zoom &#xB7; Double-tap to zoom</div>
       <div class="entropy-legend" id="entropyLegend">
         <span class="legend-label">Low (structured)</span>
         <div class="legend-gradient"></div>
@@ -1079,7 +1079,10 @@
   var pinchStartViewStart = 0;
   var pinchStartViewEnd = 0;
   var isPinching = false;
-  var isPanning = false;
+  var isScrubbing = false;
+  var scrubThrottle = null;
+  var didScrub = false;
+  var lastTapTime = 0;
   var isFullFileBuild = false;       // true while streaming is running
   var fullFileBuildCancelled = false;
   var syncHexTimeout = null;
@@ -1562,8 +1565,42 @@
       syncHexWithView();
     });
 
+    // ---- Desktop scrubbing (mouse) ----
+    canvas.addEventListener('mousedown', function(e) {
+      if (!entropyData || entropyData.values.length === 0) return;
+      isScrubbing = true;
+      didScrub = false;
+    });
+
+    canvas.addEventListener('mousemove', function(e) {
+      if (!isScrubbing) return;
+      didScrub = true;
+      var block = blockFromMouse(e);
+      if (block < 0) return;
+      var range = viewEnd - viewStart;
+      var halfRange = Math.round(range / 2);
+      viewStart = Math.max(0, Math.min(block - halfRange, entropyBlocks.length - range));
+      viewEnd = Math.min(entropyBlocks.length, viewStart + range);
+      renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
+      updateZoomInfo();
+      if (!scrubThrottle) {
+        scrubThrottle = setTimeout(function() {
+          scrubThrottle = null;
+          var offset = block * entropyData.blockSize;
+          loadAndShowHex(offset);
+        }, 80);
+      }
+    });
+
+    document.addEventListener('mouseup', function(e) {
+      if (!isScrubbing) return;
+      isScrubbing = false;
+      if (scrubThrottle) { clearTimeout(scrubThrottle); scrubThrottle = null; }
+    });
+
     canvas.addEventListener('click', function(e) {
       if (!entropyData || entropyData.values.length === 0) return;
+      if (didScrub) { didScrub = false; return; }
 
       // Snap mode: snap to hovered spike and exit snap mode
       if (isSnapMode && hoveredSpike >= 0) {
@@ -1639,19 +1676,18 @@
       if (!entropyData || entropyData.values.length === 0) return;
 
       if (e.touches.length === 1) {
-        var touch = e.touches[0];
-        touchStartX = touch.clientX;
+        isScrubbing = true;
+        didScrub = false;
+        touchStartX = e.touches[0].clientX;
         touchStartViewStart = viewStart;
-        isPanning = !(viewStart === 0 && viewEnd === entropyBlocks.length);
-        isPinching = false;
       } else if (e.touches.length === 2) {
+        isScrubbing = false;
         var dx = e.touches[0].clientX - e.touches[1].clientX;
         var dy = e.touches[0].clientY - e.touches[1].clientY;
         pinchStartDist = Math.sqrt(dx * dx + dy * dy);
         pinchStartViewStart = viewStart;
         pinchStartViewEnd = viewEnd;
         isPinching = true;
-        isPanning = false;
       }
     }, { passive: false });
 
@@ -1659,7 +1695,8 @@
       if (!entropyData || entropyData.values.length === 0) return;
       e.preventDefault();
 
-      if (e.touches.length === 1 && isPanning) {
+      if (e.touches.length === 1 && isScrubbing) {
+        didScrub = true;
         var touch = e.touches[0];
         var rect = canvas.getBoundingClientRect();
         var w = canvas.clientWidth || rect.width;
@@ -1675,6 +1712,14 @@
         viewEnd = newStart + range;
         renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
         updateZoomInfo();
+        if (!scrubThrottle) {
+          scrubThrottle = setTimeout(function() {
+            scrubThrottle = null;
+            var centerBlock = Math.floor((viewStart + viewEnd) / 2);
+            var offset = centerBlock * entropyData.blockSize;
+            loadAndShowHex(offset);
+          }, 80);
+        }
       } else if (e.touches.length === 2 && isPinching) {
         var dx = e.touches[0].clientX - e.touches[1].clientX;
         var dy = e.touches[0].clientY - e.touches[1].clientY;
@@ -1707,11 +1752,40 @@
     canvas.addEventListener('touchend', function(e) {
       if (!entropyData || entropyData.values.length === 0) return;
 
-      if (e.touches.length === 0) {
-        isPanning = false;
-        isPinching = false;
+      // Double tap detection (two quick taps)
+      if (!didScrub && e.touches.length === 0 && !isPinching) {
+        var now = Date.now();
+        if (lastTapTime > 0 && (now - lastTapTime) < 300) {
+          // Double tap — zoom in
+          var rect = canvas.getBoundingClientRect();
+          var touch = e.changedTouches[0];
+          var mouseX = touch.clientX - rect.left;
+          var w = canvas.clientWidth || rect.width;
+          var padding = { left: 36, right: 12 };
+          var plotW = Math.max(w - padding.left - padding.right, 1);
+          var centerBlock = viewStart + Math.round((mouseX - padding.left) / plotW * (viewEnd - viewStart));
+          centerBlock = Math.max(0, Math.min(centerBlock, entropyBlocks.length - 1));
+          var range = viewEnd - viewStart;
+          var newRange = Math.max(16, Math.round(range / 2));
+          viewStart = Math.max(0, Math.round(centerBlock - newRange / 2));
+          viewEnd = Math.min(entropyBlocks.length, viewStart + newRange);
+          viewStart = Math.max(0, viewEnd - newRange);
+          renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
+          updateZoomInfo();
+          lastTapTime = 0;
+        } else {
+          lastTapTime = now;
+        }
       }
-    });
+
+      isScrubbing = false;
+      isPinching = false;
+      if (scrubThrottle) { clearTimeout(scrubThrottle); scrubThrottle = null; }
+      // Final hex update at current position
+      var centerBlock = Math.floor((viewStart + viewEnd) / 2);
+      var offset = centerBlock * entropyData.blockSize;
+      loadAndShowHex(offset);
+    }, { passive: false });
 
     document.getElementById('zoomReset').addEventListener('click', function(e) {
       e.preventDefault();
