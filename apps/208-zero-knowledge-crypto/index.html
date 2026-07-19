@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zero-Knowledge Crypto</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #09090b;
+    color: #e4e4e7;
+    font-family: system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 2rem 1rem;
+  }
+  .container { max-width: 880px; width: 100%; }
+
+  /* ── header ── */
+  header { text-align: center; margin-bottom: 2.5rem; }
+  header h1 {
+    font-size: 2rem;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.25rem;
+  }
+  header h1 span { font-size: 1.6rem; margin-right: 0.35rem; }
+  .subtitle {
+    color: #71717a;
+    font-size: 0.85rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .subtitle span { color: #52525b; margin: 0 0.5rem; }
+
+  /* ── tier grid ── */
+  .tiers { display: grid; grid-template-columns: 1fr; gap: 1.25rem; }
+  @media (min-width: 700px) { .tiers { grid-template-columns: 1fr 1fr 1fr; } }
+
+  /* ── cards ── */
+  .card {
+    background: #18181b;
+    border: 1px solid #27272a;
+    border-radius: 0.875rem;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    transition: border-color .2s, box-shadow .2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 0.875rem 0.875rem 0 0;
+  }
+  .card.public::before { background: #22c55e; }
+  .card.scoped::before  { background: #3b82f6; }
+  .card.lost::before    { background: #ef4444; }
+
+  .card-icon { font-size: 1.6rem; margin-bottom: 0.4rem; }
+  .card h2   { font-size: 1.05rem; font-weight: 500; margin-bottom: 0.3rem; }
+  .card-desc { font-size: 0.82rem; color: #71717a; margin-bottom: 1rem; line-height: 1.45; }
+
+  .card .hint {
+    font-size: 0.75rem;
+    color: #a1a1aa;
+    background: #27272a;
+    border-radius: 0.375rem;
+    padding: 0.35rem 0.6rem;
+    margin-bottom: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    align-self: flex-start;
+  }
+  .card .hint code {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.72rem;
+    color: #93c5fd;
+    background: #1e293b;
+    padding: 0.1rem 0.35rem;
+    border-radius: 0.2rem;
+  }
+
+  /* ── lock area ── */
+  .lock-area {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: auto;
+  }
+  .lock-area input {
+    background: #09090b;
+    border: 1px solid #3f3f46;
+    border-radius: 0.5rem;
+    padding: 0.55rem 0.75rem;
+    color: #e4e4e7;
+    font-size: 0.85rem;
+    font-family: inherit;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .lock-area input:focus { border-color: #6366f1; }
+  .lock-area input::placeholder { color: #52525b; }
+
+  .lock-area button {
+    background: #27272a;
+    border: 1px solid #3f3f46;
+    border-radius: 0.5rem;
+    padding: 0.5rem 0;
+    color: #e4e4e7;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+    font-family: inherit;
+  }
+  .lock-area button:hover { background: #3f3f46; border-color: #52525b; }
+  .lock-area button:active { background: #52525b; }
+  .lock-area button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* ── card content (decrypted) ── */
+  .card-content {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: #09090b;
+    border-radius: 0.5rem;
+    border: 1px solid #27272a;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+  .card-content.hidden { display: none; }
+  .card-content .label {
+    color: #71717a;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.3rem;
+  }
+  .card-content .decrypted-text {
+    color: #e4e4e7;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.82rem;
+  }
+  .card-content .status-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 0.4rem;
+    vertical-align: middle;
+  }
+  .card-content .status-dot.green { background: #22c55e; }
+  .card-content .status-dot.blue  { background: #3b82f6; }
+
+  /* ── error ── */
+  .error {
+    margin-top: 0.6rem;
+    padding: 0.5rem 0.65rem;
+    border-radius: 0.375rem;
+    font-size: 0.78rem;
+    line-height: 1.4;
+  }
+  .error.hidden { display: none; }
+  .card.public .error { background: rgba(34,197,94,0.1); color: #86efac; border: 1px solid rgba(34,197,94,0.2); }
+  .card.scoped .error  { background: rgba(59,130,246,0.1); color: #93c5fd; border: 1px solid rgba(59,130,246,0.2); }
+  .card.lost .error    { background: rgba(239,68,68,0.1); color: #fca5a5; border: 1px solid rgba(239,68,68,0.2); }
+  .error strong { display: block; margin-bottom: 0.2rem; }
+
+  /* ── spinner ── */
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid #52525b;
+    border-top-color: #a1a1aa;
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+    vertical-align: middle;
+    margin-right: 0.4rem;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── public profile ── */
+  .public-profile { font-size: 0.85rem; }
+  .public-profile .row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.35rem 0;
+    border-bottom: 1px solid #1f1f23;
+  }
+  .public-profile .row:last-child { border-bottom: none; }
+  .public-profile .row .key { color: #71717a; }
+  .public-profile .row .val { color: #e4e4e7; }
+
+  /* ── footer ── */
+  footer { margin-top: 2.5rem; text-align: center; }
+  footer a {
+    color: #52525b;
+    font-size: 0.875rem;
+    text-decoration: none;
+    transition: color .15s;
+  }
+  footer a:hover { color: #a1a1aa; }
+
+  /* ── about section (public) ── */
+  .about-box {
+    margin-top: 0.75rem;
+    padding: 0.65rem;
+    background: #09090b;
+    border-radius: 0.5rem;
+    border: 1px solid #27272a;
+    font-size: 0.82rem;
+    color: #a1a1aa;
+    line-height: 1.5;
+  }
+  .about-box strong { color: #e4e4e7; }
+  .about-box code {
+    color: #86efac;
+    background: #1a2e1a;
+    padding: 0.05rem 0.3rem;
+    border-radius: 0.2rem;
+    font-size: 0.75rem;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1><span>🔐</span>Zero-Knowledge Crypto</h1>
+    <p class="subtitle">Client-side encryption<span>·</span>AES-256-GCM<span>·</span>PBKDF2</p>
+  </header>
+
+  <div class="tiers">
+
+    <!-- ════════════ PUBLIC TIER ════════════ -->
+    <div class="card public">
+      <div class="card-icon">🔓</div>
+      <h2>Public Tier</h2>
+      <p class="card-desc">No key required — visible to everyone.</p>
+      <div class="card-content" id="publicContent">
+        <div class="public-profile">
+          <div class="row"><span class="key">👤 Username</span><span class="val">demo_user</span></div>
+          <div class="row"><span class="key">📅 Member since</span><span class="val">January 2024</span></div>
+          <div class="row"><span class="key">🌍 Region</span><span class="val">Global</span></div>
+          <div class="row"><span class="key">🔑 Public key</span><span class="val" style="font-family:monospace;font-size:0.75rem;color:#22c55e">•••• e3f2 8a1c</span></div>
+          <div class="row"><span class="key">📝 Bio</span><span class="val">This profile is fully public. Anyone can see this information — no encryption needed.</span></div>
+        </div>
+        <div class="about-box">
+          <strong>How this works</strong><br>
+          This app demonstrates <strong>client-side zero-knowledge encryption</strong> on a fully static site.
+          Three data tiers show how scoped access works:<br><br>
+          <strong>Public</strong> → plaintext, everyone sees it<br>
+          <strong>Scoped</strong> → encrypted with a known passphrase <code>(scoped-demo-key-2024)</code><br>
+          <strong>Lost Key</strong> → encrypted with a <em>deleted</em> passphrase — truly irrecoverable<br><br>
+          All encryption happens in your browser using the <code>Web Crypto API</code>.
+          No data ever leaves this page. No backend. No cookies. No sessions.
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════ SCOPED TIER ════════════ -->
+    <div class="card scoped" id="scopedCard">
+      <div class="card-icon">🔐</div>
+      <h2>Scoped Tier</h2>
+      <p class="card-desc">Encrypted with a known passphrase. Enter it to unlock.</p>
+      <div class="hint">🔑 <code>scoped-demo-key-2024</code></div>
+      <div class="lock-area" id="scopedLockArea">
+        <input type="password" id="scopedPass" placeholder="Enter passphrase" autocomplete="off" onkeydown="if(event.key==='Enter')unlockScoped()">
+        <button id="scopedBtn" onclick="unlockScoped()">Unlock</button>
+      </div>
+      <div class="card-content hidden" id="scopedContent">
+        <div class="label"><span class="status-dot green"></span>Decrypted — Scoped Tier</div>
+        <div class="decrypted-text" id="scopedDecrypted"></div>
+      </div>
+      <div class="error hidden" id="scopedError"></div>
+    </div>
+
+    <!-- ════════════ LOST KEY TIER ════════════ -->
+    <div class="card lost" id="lostCard">
+      <div class="card-icon">🗝️</div>
+      <h2>Lost Key Tier</h2>
+      <p class="card-desc">The passphrase was deliberately deleted. Without it, the data cannot be recovered.</p>
+      <div class="lock-area" id="lostLockArea">
+        <input type="password" id="lostPass" placeholder="Enter any passphrase" autocomplete="off" onkeydown="if(event.key==='Enter')unlockLost()">
+        <button id="lostBtn" onclick="unlockLost()">Try Unlock</button>
+      </div>
+      <div class="card-content hidden" id="lostContent">
+        <div class="label"><span class="status-dot blue"></span>Decrypted — Lost Key Tier</div>
+        <div class="decrypted-text" id="lostDecrypted"></div>
+      </div>
+      <div class="error hidden" id="lostError"></div>
+    </div>
+
+  </div>
+
+  <footer>
+    <a href="/apps/">← back to apps</a>
+  </footer>
+
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   Zero-Knowledge Crypto Demo
+   Web Crypto API · AES-256-GCM · PBKDF2
+   ══════════════════════════════════════════════════════════════ */
+
+// ─── Base64 helpers ───────────────────────────────────────────
+function b64ToBytes(b64) {
+  return Uint8Array.from(atob(b64), function(c) { return c.charCodeAt(0); });
+}
+function bytesToB64(bytes) {
+  return btoa(String.fromCharCode.apply(null, bytes));
+}
+
+// ─── Encrypted blobs (pre-computed) ───────────────────────────
+// Scoped: encrypted with passphrase "scoped-demo-key-2024"
+// Lost Key: encrypted with a randomly generated passphrase that was
+//           deliberately deleted. Without the passphrase, the data
+//           is mathematically irrecoverable.
+var CRYPTO_DATA = {
+  scoped: {
+    salt: "Ip0Iuc32YNPYiFxc8j4mnw==",
+    iv:   "RYi5r1bu8KBNyl3z",
+    data: "nXgu/Z6ITvuRz2TSbwzlP6IssTvON1YfIvr69685v9szkgD8IACB4G1CxyWjVpJNajTPTQriteCxw2AnjWSD8HtwKLypxicS9bq1UdTC/oDD8nOMubQmXXOGILkx9QSpugqyjMdUS22LoVwmPR11DBg="
+  },
+  lostKey: {
+    salt: "s5/Yvbr7VPIVNk74SxWoQQ==",
+    iv:   "2VF+omvJp0XNwB+w",
+    data: "/guq4t3vjUiWuLJe7S3A/yMCZf/5OALxmYeXWEfXk1dXCaG9jnXPXi5Va3E03XKwgUpQ4lrB8A=="
+  }
+};
+
+// ─── Web Crypto API decrypt ───────────────────────────────────
+async function decryptBlob(blob, passphrase) {
+  var enc = new TextEncoder();
+  var dec = new TextDecoder();
+
+  // Import passphrase as key material
+  var keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(passphrase),
+    'PBKDF2',
+    false,
+    ['deriveKey']
+  );
+
+  // Derive AES-256 key via PBKDF2
+  var key = await crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: b64ToBytes(blob.salt),
+      iterations: 100000,
+      hash: 'SHA-256'
+    },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['decrypt']
+  );
+
+  // Decrypt
+  var plainBuf = await crypto.subtle.decrypt(
+    {
+      name: 'AES-GCM',
+      iv: b64ToBytes(blob.iv)
+    },
+    key,
+    b64ToBytes(blob.data)
+  );
+
+  return dec.decode(plainBuf);
+}
+
+// ─── Unlock: Scoped Tier ──────────────────────────────────────
+async function unlockScoped() {
+  var input = document.getElementById('scopedPass');
+  var btn   = document.getElementById('scopedBtn');
+  var content = document.getElementById('scopedContent');
+  var decrypted = document.getElementById('scopedDecrypted');
+  var errEl = document.getElementById('scopedError');
+
+  var pass = input.value.trim();
+  if (!pass) { showError(errEl, 'Please enter a passphrase.'); return; }
+
+  // Loading state
+  btn.disabled = true;
+  btn.textContent = 'Decrypting…';
+  content.classList.add('hidden');
+  errEl.classList.add('hidden');
+
+  try {
+    var plaintext = await decryptBlob(CRYPTO_DATA.scoped, pass);
+    decrypted.textContent = plaintext;
+    content.classList.remove('hidden');
+    input.value = '';
+  } catch (e) {
+    showError(errEl, 'Incorrect passphrase. Hint: try <code>scoped-demo-key-2024</code>');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Unlock';
+  }
+}
+
+// ─── Unlock: Lost Key Tier ────────────────────────────────────
+var lostAttempts = 0;
+
+async function unlockLost() {
+  var input = document.getElementById('lostPass');
+  var btn   = document.getElementById('lostBtn');
+  var content = document.getElementById('lostContent');
+  var decrypted = document.getElementById('lostDecrypted');
+  var errEl = document.getElementById('lostError');
+
+  var pass = input.value.trim();
+  if (!pass) { showError(errEl, 'Enter any passphrase to try.'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Trying…';
+  content.classList.add('hidden');
+  errEl.classList.add('hidden');
+
+  try {
+    var plaintext = await decryptBlob(CRYPTO_DATA.lostKey, pass);
+    // If we get here, somehow the passphrase worked (should never happen)
+    decrypted.textContent = plaintext;
+    content.classList.remove('hidden');
+    input.value = '';
+    showError(errEl, '<strong>⚠️ Impossible — key was found?</strong> This should not happen. The passphrase was supposed to be deleted.');
+  } catch (e) {
+    lostAttempts++;
+    var msg;
+    if (lostAttempts === 1) {
+      msg = 'Decryption failed. The passphrase for this data was deliberately deleted.';
+    } else if (lostAttempts <= 3) {
+      msg = 'Still no match. Without the correct passphrase, AES-256-GCM is computationally infeasible to break.';
+    } else if (lostAttempts <= 5) {
+      msg = 'The passphrase was a 32-character random hex string, generated and then <strong>permanently discarded</strong>. No amount of guessing will recover it.';
+    } else {
+      msg = '<strong>Lost key = lost data.</strong> This is the fundamental truth of encryption: without the key, the data might as well not exist. The original passphrase was generated once, used to encrypt, and then deleted without ever being written down.';
+    }
+    showError(errEl, msg);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Try Unlock';
+  }
+}
+
+// ─── Error display helper ─────────────────────────────────────
+function showError(el, msg) {
+  el.innerHTML = msg;
+  el.classList.remove('hidden');
+}
+
+// ─── Init: show public content ────────────────────────────────
+// Public content is already in the HTML as static text.
+// The encrypted data is ready and waiting for passphrases.
+console.log('🔐 Zero-Knowledge Crypto Demo loaded');
+console.log('📦 Scoped blob size:', CRYPTO_DATA.scoped.data.length, 'bytes base64');
+console.log('📦 Lost Key blob size:', CRYPTO_DATA.lostKey.data.length, 'bytes base64');
+console.log('🔑 Scoped passphrase hint: scoped-demo-key-2024');
+console.log('🗑️  Lost Key passphrase: DELETED');
+</script>
+
+</body>
+</html>

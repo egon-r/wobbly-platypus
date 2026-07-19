@@ -39,5 +39,10 @@
   "deepseek-chat": {
     "description": "Chat with DeepSeek API \u2014 streaming, local history, multi-key support",
     "created": "2026-07-13T00:00:00+00:00"
+  },
+  "208-zero-knowledge-crypto": {
+    "description": "Zero-knowledge static app \u2014 client-side AES-256-GCM encryption with scoped keys, PBKDF2 key derivation, fully static GH Pages deploy",
+    "url": "/apps/208-zero-knowledge-crypto/",
+    "created": "2026-07-19T00:00:00+00:00"
   }
 }
