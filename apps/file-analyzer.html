@@ -1106,17 +1106,17 @@
     var w = canvas ? canvas.clientWidth || 600 : 600;
     var padding = { left: 36, right: 12 };
     var plotW = Math.max(w - padding.left - padding.right, 1);
-    var numBlocks = Math.min(plotW, 2000); // cap at 2000 even on wide screens
+    var numBlocks = Math.min(plotW * 10, 20000); // cap at 20000
     // Cap numBlocks to file size in blocks of min 256 bytes
     var minBlocks = Math.ceil(fileSize / (256 * 1024 * 1024)); // at least 1 block per 256MB
-    numBlocks = Math.max(minBlocks, Math.min(numBlocks, 10000)); // hard cap at 10000
+    numBlocks = Math.max(minBlocks, numBlocks);
     numBlocks = Math.max(2, numBlocks); // at least 2 blocks
 
     var blockSize = fileSize / numBlocks;
     var values = new Array(numBlocks);
     var completed = 0;
     var cancelled = false;
-    var BATCH_SIZE = 50; // read 50 chunks at a time
+    var BATCH_SIZE = 100; // read 100 chunks at a time
 
     function readBlock(i) {
       var start = Math.round(i * blockSize);
