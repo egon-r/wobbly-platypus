@@ -627,8 +627,8 @@
             const strKey = readUtf16Key(dv, stPos + 6);
 
             let strPos = skipUtf16Key(dv, stPos + 6);
-            if (strValLen > 0 && strPos + strValLen <= dv.byteLength && strPos + strValLen <= stEnd) {
-              result.strings[strKey] = readUtf16Value(dv, strPos, strValLen);
+            if (strValLen > 0 && strPos + strValLen * 2 <= dv.byteLength && strPos + strValLen * 2 <= stEnd) {
+              result.strings[strKey] = readUtf16Value(dv, strPos, strValLen * 2);
             }
 
             stPos += strLen;
