@@ -328,6 +328,81 @@
   .modal-actions button.primary { background: #3b82f6; }
   .modal-actions button.primary:hover { background: #2563eb; }
 
+  /* Disassembly */
+  .disasm-status {
+    font-size: 0.8rem; color: #71717a; margin-top: 0.5rem;
+    min-height: 1.2em;
+  }
+  .disasm-status.error { color: #fca5a5; }
+  .disasm-status.loading { color: #3b82f6; }
+  .disasm-controls {
+    display: flex; gap: 0.5rem; flex-wrap: wrap;
+    align-items: center; margin-bottom: 0.5rem;
+  }
+  .disasm-controls select,
+  .disasm-controls input {
+    background: #27272a; border: 1px solid #3f3f46;
+    color: #e4e4e7; border-radius: 0.4rem;
+    padding: 0.4rem 0.6rem; font-size: 0.8rem;
+    font-family: inherit; box-sizing: border-box;
+  }
+  .disasm-controls select:focus,
+  .disasm-controls input:focus {
+    outline: none; border-color: #3b82f6;
+  }
+  .disasm-controls input { width: 9rem; }
+  .disasm-controls select { min-width: 6rem; }
+  .disasm-btn {
+    background: #3b82f6; border: none; color: #fff;
+    padding: 0.4rem 1rem; border-radius: 0.4rem;
+    cursor: pointer; font-size: 0.8rem; font-family: inherit;
+    transition: background .15s;
+  }
+  .disasm-btn:hover { background: #2563eb; }
+  .disasm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .disasm-output {
+    max-height: 480px; overflow-y: auto;
+    background: #1a1a1e; border-radius: 0.5rem;
+    padding: 0.5rem; border: 1px solid #27272a;
+    margin-top: 0.25rem;
+  }
+  .disasm-output pre {
+    margin: 0; font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.7rem; line-height: 1.6;
+    color: #a1a1aa; white-space: pre;
+  }
+  .disasm-output::-webkit-scrollbar { width: 6px; }
+  .disasm-output::-webkit-scrollbar-track { background: #1a1a1e; }
+  .disasm-output::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+  .disasm-insn-row {
+    display: flex; gap: 1rem; padding: 1px 0;
+    border-bottom: 1px solid #1f1f23;
+  }
+  .disasm-insn-row:hover { background: #1f1f23; }
+  .disasm-insn-addr { color: #6366f1; min-width: 12ch; }
+  .disasm-insn-bytes { color: #52525b; min-width: 12ch; font-size: 0.65rem; }
+  .disasm-insn-mnem { color: #22c55e; min-width: 8ch; }
+  .disasm-insn-op { color: #e4e4e7; }
+  .disasm-detect-badge {
+    display: inline-block; background: #1e293b; color: #3b82f6;
+    padding: 0.15rem 0.4rem; border-radius: 0.25rem;
+    font-size: 0.7rem; font-weight: 500;
+  }
+  .disasm-cache-btn {
+    background: none; border: 1px solid #3f3f46; color: #71717a;
+    padding: 0.2rem 0.5rem; border-radius: 0.3rem;
+    cursor: pointer; font-size: 0.7rem; font-family: inherit;
+    transition: background .15s; margin-left: auto;
+  }
+  .disasm-cache-btn:hover { background: #27272a; color: #a1a1aa; }
+  .disasm-controls .hint {
+    font-size: 0.7rem; color: #52525b;
+  }
+  .disasm-controls .hint kbd {
+    background: #27272a; padding: 0.1rem 0.3rem;
+    border-radius: 0.2rem; font-family: inherit; font-size: 0.7rem;
+  }
+
   @media (max-width: 480px) {
     body { padding: 1rem .75rem; }
     .container { max-width: 100%; }
@@ -393,6 +468,29 @@
         <span class="legend-label">Low (structured)</span>
         <div class="legend-gradient"></div>
         <span class="legend-label">High (encrypted/compressed)</span>
+      </div>
+    </div>
+
+    <div class="results-section" id="disasmSection" style="display:none">
+      <div class="section-title">Disassembly</div>
+      <div class="disasm-controls">
+        <select id="disasmArch">
+          <option value="x86-64">x86-64</option>
+          <option value="arm64">ARM64</option>
+          <option value="arm">ARM (32-bit)</option>
+        </select>
+        <input type="text" id="disasmAddr" placeholder="Start addr (hex)" spellcheck="false">
+        <input type="text" id="disasmSize" placeholder="Bytes" value="512" spellcheck="false" style="width:5rem">
+        <button class="disasm-btn" id="disasmBtn">Disassemble</button>
+        <button class="disasm-cache-btn" id="disasmCacheBtn" title="Cache Capstone WASM for offline">Cache</button>
+      </div>
+      <div class="hint" id="disasmHint" style="margin-bottom:0.3rem">
+        Start address: <kbd>0x1000</kbd> or decimal. For PE files, defaults to entry point file offset.
+        Architecture auto-detects from PE machine field.
+      </div>
+      <div class="disasm-status" id="disasmStatus">Loading Capstone engine…</div>
+      <div class="disasm-output" id="disasmOutput">
+        <pre id="disasmText"></pre>
       </div>
     </div>
 
@@ -501,6 +599,13 @@
   let currentReader = null;
   let cancelled = false;
   let parseTimer = null;
+
+  // ---- Disassembler State ----
+  let capstoneReady = false;
+  let capstoneModule = null;
+  let capstoneLoading = false;
+  let capstoneLoadPromise = null;
+  let currentPEInfo = null; // { entryPointRVA, machineRaw, imageBase, sections, ... }
 
   // ---- Utilities ----
   function formatSize(bytes) {
@@ -677,6 +782,8 @@
       });
     }
 
+    result.sections = sections;
+
     // RVA -> file offset
     function rvaToFileOffset(rva) {
       for (let i = 0; i < sections.length; i++) {
@@ -692,6 +799,8 @@
       }
       return null;
     }
+
+    result.rvaToFileOffset = rvaToFileOffset;
 
     const resDataFileOff = rvaToFileOffset(resDirRVA);
     if (resDataFileOff === null || resDataFileOff >= dv.byteLength) {
@@ -2130,6 +2239,11 @@
 
     document.getElementById('peHeaderSection').style.display = '';
 
+    // Store PE info for disassembler auto-detection
+    currentPEInfo = parsed;
+    // Update disassembler controls with PE data (architecture + entry point)
+    updateDisasmForPE();
+
     // Version info
     if (parsed.hasVersionInfo) {
       r.rFileVer.textContent = formatVer(parsed.fileVerMS, parsed.fileVerLS);
@@ -2337,6 +2451,393 @@
   settingsModal.addEventListener('click', function(e) {
     if (e.target === settingsModal) closeModal();
   });
+
+  // ---- Disassembler ----
+  var DISASM_CDN = 'https://unpkg.com/capstone-wasm@1.0.3/dist/index.mjs';
+  var disasmSection = document.getElementById('disasmSection');
+  var disasmArch = document.getElementById('disasmArch');
+  var disasmAddr = document.getElementById('disasmAddr');
+  var disasmSize = document.getElementById('disasmSize');
+  var disasmBtn = document.getElementById('disasmBtn');
+  var disasmCacheBtn = document.getElementById('disasmCacheBtn');
+  var disasmStatus = document.getElementById('disasmStatus');
+  var disasmText = document.getElementById('disasmText');
+  var disasmOutput = document.getElementById('disasmOutput');
+  var disasmHint = document.getElementById('disasmHint');
+
+  function setDisasmStatus(msg, type) {
+    disasmStatus.textContent = msg;
+    disasmStatus.className = 'disasm-status' + (type ? ' ' + type : '');
+  }
+
+  function setDisasmLoading(loading) {
+    disasmBtn.disabled = loading;
+    disasmBtn.textContent = loading ? 'Loading…' : 'Disassemble';
+  }
+
+  function loadCapstone() {
+    if (capstoneReady) return Promise.resolve();
+    if (capstoneLoadPromise) return capstoneLoadPromise;
+
+    setDisasmStatus('Loading Capstone engine…', 'loading');
+    setDisasmLoading(true);
+
+    capstoneLoadPromise = (async function() {
+      try {
+        // Try to load from cache first
+        var cache = await caches.open('file-analyzer-v1');
+        var cachedResponse = await cache.match(DISASM_CDN);
+        var moduleUrl = DISASM_CDN;
+        var usedBlob = false;
+
+        if (cachedResponse) {
+          // Create a blob URL from the cached response to avoid network fetch
+          var blob = await cachedResponse.blob();
+          moduleUrl = URL.createObjectURL(blob);
+          usedBlob = true;
+        }
+
+        var mod = await import(/* @vite-ignore */ moduleUrl);
+
+        // Provide locateFile so WASM resolves to CDN URL (even when loading
+        // from blob URL due to cache). The WASM file will be fetched from CDN
+        // and cached by the browser automatically.
+        var wasmBaseUrl = DISASM_CDN.replace('index.mjs', '');
+        await mod.loadCapstone({
+          locateFile: function(path) {
+            return wasmBaseUrl + path;
+          }
+        });
+
+        capstoneModule = mod;
+        capstoneReady = true;
+
+        if (usedBlob) {
+          URL.revokeObjectURL(moduleUrl);
+        }
+
+        setDisasmStatus('Capstone engine ready', '');
+        setDisasmLoading(false);
+        return mod;
+      } catch (err) {
+        setDisasmStatus('Failed to load Capstone: ' + err.message, 'error');
+        setDisasmLoading(false);
+        capstoneLoadPromise = null;
+        throw err;
+      }
+    })();
+
+    return capstoneLoadPromise;
+  }
+
+  async function cacheCapstoneForOffline() {
+    setDisasmStatus('Caching Capstone WASM for offline…', 'loading');
+    disasmCacheBtn.disabled = true;
+    try {
+      var cache = await caches.open('file-analyzer-v1');
+      // Fetch and cache the module JS
+      var jsResp = await fetch(DISASM_CDN);
+      await cache.put(DISASM_CDN, jsResp);
+
+      // Fetch and cache the WASM file
+      var wasmUrl = DISASM_CDN.replace('index.mjs', 'capstone.wasm');
+      var wasmResp = await fetch(wasmUrl);
+      await cache.put(wasmUrl, wasmResp);
+
+      setDisasmStatus('Capstone cached for offline use', '');
+    } catch (err) {
+      setDisasmStatus('Cache failed: ' + err.message, 'error');
+    } finally {
+      disasmCacheBtn.disabled = false;
+    }
+  }
+
+  // Show disassembly section and auto-detect when PE is loaded
+  function showDisasmSection() {
+    if (!currentFileBuffer) return;
+    disasmSection.style.display = '';
+
+    // Auto-detect architecture
+    if (currentPEInfo) {
+      var machineRaw = currentPEInfo.machineRaw;
+      var archHint = '';
+
+      if (machineRaw === 0x8664) {
+        disasmArch.value = 'x86-64';
+        archHint = 'x86-64';
+      } else if (machineRaw === 0xAA64) {
+        disasmArch.value = 'arm64';
+        archHint = 'ARM64';
+      } else if (machineRaw === 0x01C4 || machineRaw === 0x5032) {
+        disasmArch.value = 'arm';
+        archHint = 'ARM (32-bit)';
+      } else {
+        disasmArch.value = 'x86-64';
+        archHint = 'x86-64 (default)';
+      }
+
+      // Set entry point as default start address
+      var epFileOff = currentPEInfo.rvaToFileOffset
+        ? currentPEInfo.rvaToFileOffset(currentPEInfo.entryPointRVA)
+        : null;
+
+      if (epFileOff !== null && epFileOff !== undefined) {
+        disasmAddr.value = '0x' + epFileOff.toString(16).toUpperCase();
+        disasmHint.innerHTML =
+          'Start address: <kbd>0x1000</kbd> or decimal. ' +
+          'PE entry point at file offset <kbd>0x' + epFileOff.toString(16).toUpperCase() + '</kbd>. ' +
+          'Architecture: <span class="disasm-detect-badge">' + archHint + '</span>';
+      } else {
+        disasmAddr.value = '0';
+        disasmHint.innerHTML =
+          'Start address: <kbd>0x1000</kbd> or decimal. ' +
+          'Architecture: <span class="disasm-detect-badge">' + archHint + '</span>';
+      }
+    } else {
+      disasmAddr.value = '0';
+      disasmArch.value = 'x86-64';
+      disasmHint.innerHTML =
+        'Start address: <kbd>0x1000</kbd> or decimal. ' +
+        'For PE files, architecture and entry point auto-detect.';
+    }
+
+    // Load capstone lazily
+    loadCapstone().catch(function() {});
+  }
+
+  function updateDisasmForPE() {
+    if (!currentPEInfo || !disasmSection) return;
+    if (disasmSection.style.display === 'none') return; // not yet shown
+
+    var machineRaw = currentPEInfo.machineRaw;
+    var archHint = '';
+
+    if (machineRaw === 0x8664) {
+      disasmArch.value = 'x86-64';
+      archHint = 'x86-64';
+    } else if (machineRaw === 0xAA64) {
+      disasmArch.value = 'arm64';
+      archHint = 'ARM64';
+    } else if (machineRaw === 0x01C4 || machineRaw === 0x5032) {
+      disasmArch.value = 'arm';
+      archHint = 'ARM (32-bit)';
+    } else {
+      archHint = disasmArch.value;
+    }
+
+    // Set entry point as default start address
+    var epFileOff = currentPEInfo.rvaToFileOffset
+      ? currentPEInfo.rvaToFileOffset(currentPEInfo.entryPointRVA)
+      : null;
+
+    if (epFileOff !== null && epFileOff !== undefined) {
+      disasmAddr.value = '0x' + epFileOff.toString(16).toUpperCase();
+      disasmHint.innerHTML =
+        'Start address: <kbd>0x1000</kbd> or decimal. ' +
+        'PE entry point at file offset <kbd>0x' + epFileOff.toString(16).toUpperCase() + '</kbd>. ' +
+        'Architecture: <span class="disasm-detect-badge">' + archHint + '</span>';
+    } else {
+      disasmHint.innerHTML =
+        'Start address: <kbd>0x1000</kbd> or decimal. ' +
+        'Architecture: <span class="disasm-detect-badge">' + archHint + '</span>';
+    }
+  }
+
+  function parseHexOrDec(str) {
+    str = str.trim();
+    if (str === '') return NaN;
+    if (/^0x/i.test(str)) {
+      return parseInt(str, 16);
+    }
+    return parseInt(str, 10);
+  }
+
+  async function doDisassemble() {
+    if (!currentFileBuffer && !currentFile) {
+      setDisasmStatus('No file loaded', 'error');
+      return;
+    }
+
+    setDisasmStatus('Disassembling…', 'loading');
+    disasmBtn.disabled = true;
+
+    try {
+      await loadCapstone();
+
+      var arch = disasmArch.value;
+      var startAddr = parseHexOrDec(disasmAddr.value);
+      if (isNaN(startAddr)) startAddr = 0;
+      var numBytes = parseHexOrDec(disasmSize.value);
+      if (isNaN(numBytes) || numBytes < 1) numBytes = 512;
+      if (numBytes > 65536) numBytes = 65536;
+
+      // Determine which bytes to disassemble
+      var bytesToDisasm;
+      var fileOffset = startAddr;
+
+      if (currentFileBuffer && fileOffset < currentFileBuffer.byteLength) {
+        // Read from current buffer
+        var end = Math.min(fileOffset + numBytes, currentFileBuffer.byteLength);
+        bytesToDisasm = new Uint8Array(currentFileBuffer.slice(fileOffset, end));
+      } else if (currentFile) {
+        // Read from file
+        var end2 = Math.min(fileOffset + numBytes, currentFile.size);
+        if (fileOffset >= currentFile.size) {
+          setDisasmStatus('Start address beyond file size', 'error');
+          disasmBtn.disabled = false;
+          return;
+        }
+        var blob = currentFile.slice(fileOffset, end2);
+        var buf = await new Promise(function(resolve, reject) {
+          var r = new FileReader();
+          r.onload = function(e) { resolve(e.target.result); };
+          r.onerror = function() { reject(new Error('Error reading file')); };
+          r.readAsArrayBuffer(blob);
+        });
+        bytesToDisasm = new Uint8Array(buf);
+      } else {
+        setDisasmStatus('No data available', 'error');
+        disasmBtn.disabled = false;
+        return;
+      }
+
+      if (bytesToDisasm.length === 0) {
+        setDisasmStatus('No bytes to disassemble', 'error');
+        disasmBtn.disabled = false;
+        return;
+      }
+
+      // Set up Capstone
+      var Const = capstoneModule.Const;
+      var csArch, csMode;
+
+      switch (arch) {
+        case 'arm64':
+          csArch = Const.CS_ARCH_ARM64;
+          csMode = Const.CS_MODE_LITTLE_ENDIAN;
+          break;
+        case 'arm':
+          csArch = Const.CS_ARCH_ARM;
+          csMode = Const.CS_MODE_ARM;
+          break;
+        case 'x86-64':
+        default:
+          csArch = Const.CS_ARCH_X86;
+          csMode = Const.CS_MODE_64;
+          break;
+      }
+
+      var cs = new capstoneModule.Capstone(csArch, csMode);
+
+      try {
+        var insns = cs.disasm(bytesToDisasm, { address: startAddr });
+        renderDisassembly(insns, bytesToDisasm, startAddr);
+
+        var count = insns.length;
+        var totalBytes = insns.reduce(function(sum, insn) { return sum + insn.size; }, 0);
+        setDisasmStatus(
+          count + ' instructions (' + totalBytes + ' bytes decoded from ' + bytesToDisasm.length + ' available)',
+          ''
+        );
+      } catch (disasmErr) {
+        disasmText.textContent = 'Disassembly error: ' + disasmErr.message;
+        setDisasmStatus('Error', 'error');
+      } finally {
+        cs.close();
+      }
+    } catch (err) {
+      setDisasmStatus('Error: ' + (err.message || err), 'error');
+    } finally {
+      disasmBtn.disabled = false;
+    }
+  }
+
+  function renderDisassembly(insns, rawBytes, baseAddr) {
+    if (!insns || insns.length === 0) {
+      disasmText.textContent = '(no instructions decoded)';
+      return;
+    }
+
+    var html = '';
+    for (var i = 0; i < insns.length; i++) {
+      var insn = insns[i];
+      var addr = typeof insn.address === 'bigint' ? Number(insn.address) : insn.address;
+      var addrHex = '0x' + addr.toString(16).toUpperCase().padStart(8, '0');
+
+      // Build bytes string
+      var bytesStr = '';
+      for (var j = 0; j < insn.bytes.length; j++) {
+        bytesStr += insn.bytes[j].toString(16).toUpperCase().padStart(2, '0');
+      }
+
+      html += '<div class="disasm-insn-row">';
+      html += '<span class="disasm-insn-addr">' + addrHex + ':</span>';
+      html += '<span class="disasm-insn-bytes">' + bytesStr + '</span>';
+      html += '<span class="disasm-insn-mnem">' + escapeHtml(insn.mnemonic) + '</span>';
+      html += '<span class="disasm-insn-op">' + escapeHtml(insn.opStr) + '</span>';
+      html += '</div>';
+    }
+
+    disasmText.innerHTML = html;
+  }
+
+  function escapeHtml(str) {
+    var div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+  }
+
+  // ---- Wire up disassembler ----
+
+  // Show disassembly section when PE is detected and results are shown
+  // We hook into the existing showMetadataResults via the stored currentPEInfo
+  // and also show for any binary file with data
+
+  // Override: show disasm section whenever base results are shown (for any file with buffer)
+  var origShowBaseResults = showBaseResults;
+  showBaseResults = function(fileName, fileSize, buffer, format, file) {
+    origShowBaseResults(fileName, fileSize, buffer, format, file);
+    // Show disassembly section after results are displayed
+    setTimeout(function() {
+      showDisasmSection();
+    }, 50);
+  };
+
+  disasmBtn.addEventListener('click', doDisassemble);
+
+  // Enter key in address field triggers disassembly
+  disasmAddr.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      doDisassemble();
+    }
+  });
+  disasmSize.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      doDisassemble();
+    }
+  });
+
+  disasmCacheBtn.addEventListener('click', cacheCapstoneForOffline);
+
+  // Arch change: update hint for non-PE files
+  disasmArch.addEventListener('change', function() {
+    if (!currentPEInfo) {
+      disasmHint.innerHTML = 'Start address: <kbd>0x1000</kbd> or decimal. Architecture: <span class="disasm-detect-badge">' + disasmArch.value + '</span>';
+    }
+  });
+
+  // Reset disassembly state when resetting
+  var origResetUI = resetUI;
+  resetUI = function() {
+    origResetUI();
+    disasmSection.style.display = 'none';
+    disasmText.innerHTML = '';
+    setDisasmStatus('', '');
+    currentPEInfo = null;
+    // Do NOT reset capstone - keep it loaded
+  };
 })();
 </script>
 </body>
