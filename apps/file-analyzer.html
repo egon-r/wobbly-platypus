@@ -245,6 +245,9 @@
     background: linear-gradient(90deg, #22c55e, #eab308, #ef4444);
   }
 
+  .hint { font-size: 0.7rem; color: #52525b; text-align: center; margin-top: 0.25rem; }
+  .hint kbd { background: #27272a; padding: 0.1rem 0.35rem; border-radius: 0.2rem; font-family: inherit; font-size: 0.7rem; border: 1px solid #3f3f46; }
+
   @media (max-width: 480px) {
     body { padding: 1rem .75rem; }
     .container { max-width: 100%; }
@@ -294,6 +297,7 @@
       <div class="section-title">Entropy Analysis</div>
       <canvas id="entropyCanvas"></canvas>
       <div class="scrub-info" id="scrubInfo">Hover the graph to inspect</div>
+      <div class="hint">Click graph to jump hex viewer · Press <kbd>S</kbd> to snap to nearest entropy spike</div>
       <div class="entropy-legend" id="entropyLegend">
         <span class="legend-label">Low (structured)</span>
         <div class="legend-gradient"></div>
@@ -843,18 +847,26 @@
   }
 
   // ---- Hex Dump ----
-  function renderHexDump(buffer) {
-    var maxBytes = Math.min(buffer.byteLength, 4096);
-    var bytes = new Uint8Array(buffer.slice(0, maxBytes));
+  function renderHexDump(buffer, startOffset) {
+    startOffset = startOffset || 0;
     var totalBytes = buffer.byteLength;
-    var displayBytes = bytes.length;
+    var windowSize = 4096;
+
+    if (startOffset >= totalBytes) {
+      document.getElementById('hexDump').textContent = '(data not loaded — beyond read window)';
+      var endOff = startOffset + windowSize;
+      document.getElementById('hexSummary').textContent = 'Offset 0x' + startOffset.toString(16).toUpperCase().padStart(4, '0') + ' – 0x' + endOff.toString(16).toUpperCase().padStart(4, '0') + ' (beyond ' + (totalBytes / 1048576).toFixed(1) + ' MB file)';
+      return;
+    }
+
+    var displayBytes = Math.min(windowSize, totalBytes - startOffset);
+    var bytes = new Uint8Array(buffer.slice(startOffset, startOffset + displayBytes));
 
     var hexRows = [];
     for (var i = 0; i < displayBytes; i += 16) {
-      // Offset
-      var row = i.toString(16).toUpperCase().padStart(8, '0') + '  ';
+      var offset = startOffset + i;
+      var row = offset.toString(16).toUpperCase().padStart(8, '0') + '  ';
 
-      // Hex group 1 (bytes 0-7)
       for (var j = 0; j < 8; j++) {
         if (i + j < displayBytes) {
           row += bytes[i + j].toString(16).toUpperCase().padStart(2, '0') + ' ';
@@ -863,7 +875,6 @@
         }
       }
 
-      // Hex group 2 (bytes 8-15)
       row += ' ';
       for (var j = 8; j < 16; j++) {
         if (i + j < displayBytes) {
@@ -873,7 +884,6 @@
         }
       }
 
-      // ASCII
       row += ' |';
       for (var j = 0; j < 16 && i + j < displayBytes; j++) {
         var b = bytes[i + j];
@@ -886,13 +896,20 @@
 
     document.getElementById('hexDump').textContent = hexRows.join('\n');
 
-    // Summary line
     var sizeMB = (totalBytes / 1048576).toFixed(1);
-    document.getElementById('hexSummary').textContent = 'first ' + displayBytes.toLocaleString() + ' bytes of ' + sizeMB + ' MB file';
+    var endOffset = startOffset + displayBytes;
+    var prefix = (startOffset === 0) ? 'first ' : '';
+    var rangeStr = 'Offset 0x' + startOffset.toString(16).toUpperCase().padStart(4, '0') + ' – 0x' + endOffset.toString(16).toUpperCase().padStart(4, '0');
+    document.getElementById('hexSummary').textContent = rangeStr + ' (' + prefix + displayBytes.toLocaleString() + ' bytes of ' + sizeMB + ' MB file)';
   }
 
   // ---- Entropy Analysis ----
   var entropyData = null;
+  var entropyBlocks = [];
+  var spikes = [];
+  var hexViewerOffset = 0;
+  var currentClickBlock = -1;
+  var currentFileBuffer = null;
 
   function renderEntropy(buffer) {
     var maxBytes = Math.min(buffer.byteLength, 2 * 1024 * 1024);
@@ -929,6 +946,9 @@
       numBlocks: numBlocks,
       fileSize: buffer.byteLength
     };
+
+    entropyBlocks = values;
+    spikes = findSpikes(values);
 
     drawEntropyChart();
   }
@@ -1054,6 +1074,55 @@
     ctx.restore();
   }
 
+  function findSpikes(blocks) {
+    if (!blocks || blocks.length === 0) return [];
+    var mean = blocks.reduce(function(a, b) { return a + b; }, 0) / blocks.length;
+    var variance = blocks.reduce(function(sq, v) { return sq + (v - mean) * (v - mean); }, 0) / blocks.length;
+    var stddev = Math.sqrt(variance);
+    var result = [];
+    for (var i = 1; i < blocks.length - 1; i++) {
+      var e = blocks[i];
+      if (e > blocks[i - 1] && e > blocks[i + 1] && e > mean + 0.5 * stddev) {
+        result.push({ index: i, entropy: e, offset: i * 256 });
+      }
+    }
+    return result;
+  }
+
+  function findNearestSpike(blockIndex) {
+    if (spikes.length === 0) return null;
+    return spikes.reduce(function(nearest, s) {
+      return Math.abs(s.index - blockIndex) < Math.abs(nearest.index - blockIndex) ? s : nearest;
+    });
+  }
+
+  function drawClickMarker() {
+    if (currentClickBlock < 0 || !entropyData || entropyData.values.length === 0) return;
+
+    var canvas = document.getElementById('entropyCanvas');
+    var ctx = canvas.getContext('2d');
+    var w = canvas.clientWidth || canvas.parentElement.clientWidth - 32;
+    var h = 100;
+
+    var values = entropyData.values;
+    var n = values.length;
+    var padding = { top: 6, bottom: 18, left: 36, right: 12 };
+    var plotW = Math.max(w - padding.left - padding.right, 1);
+
+    var idx = Math.max(0, Math.min(currentClickBlock, n - 1));
+    var markerX = padding.left + (idx / Math.max(n - 1, 1)) * plotW;
+
+    ctx.save();
+    ctx.strokeStyle = '#3b82f6';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(markerX, padding.top);
+    ctx.lineTo(markerX, h - padding.bottom);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   function setupEntropyEvents() {
     var canvas = document.getElementById('entropyCanvas');
 
@@ -1081,9 +1150,10 @@
       var entropy = entropyData.values[blockIdx];
       var offset = blockIdx * entropyData.blockSize;
 
-      // Redraw chart (without scrubber first)
+      // Redraw chart (without markers first)
       drawEntropyChart();
-
+      // Draw click marker on top
+      drawClickMarker();
       // Draw scrubber on top
       drawScrubber(blockIdx);
 
@@ -1093,8 +1163,43 @@
     canvas.addEventListener('mouseleave', function() {
       if (entropyData && entropyData.values.length > 0) {
         drawEntropyChart();
+        drawClickMarker();
       }
       document.getElementById('scrubInfo').textContent = 'Hover the graph to inspect';
+    });
+
+    canvas.addEventListener('click', function(e) {
+      if (!entropyData || entropyData.values.length === 0) return;
+
+      var rect = canvas.getBoundingClientRect();
+      var mouseX = e.clientX - rect.left;
+      var w = canvas.clientWidth || rect.width;
+      var padding = { left: 36, right: 12 };
+      var plotW = Math.max(w - padding.left - padding.right, 1);
+
+      if (mouseX < padding.left || mouseX > w - padding.right) return;
+
+      var ratio = (mouseX - padding.left) / plotW;
+      var blockIdx = Math.floor(ratio * entropyData.values.length);
+      blockIdx = Math.max(0, Math.min(blockIdx, entropyData.values.length - 1));
+
+      currentClickBlock = blockIdx;
+      hexViewerOffset = blockIdx * entropyData.blockSize;
+
+      // Jump hex viewer
+      if (currentFileBuffer) {
+        renderHexDump(currentFileBuffer, hexViewerOffset);
+      }
+
+      // Redraw chart with both marker and scrubber
+      drawEntropyChart();
+      drawClickMarker();
+      drawScrubber(blockIdx);
+
+      // Update info
+      var entropy = entropyData.values[blockIdx];
+      var offset = blockIdx * entropyData.blockSize;
+      document.getElementById('scrubInfo').textContent = 'Offset: 0x' + offset.toString(16).toUpperCase() + '  Entropy: ' + entropy.toFixed(2);
     });
   }
 
@@ -1131,6 +1236,7 @@
   }
 
   function showResults(parsed, fileName, fileSize, buffer) {
+    currentFileBuffer = buffer;
     // File info
     r.rFileName.textContent = fileName;
     r.rFileSize.textContent = formatSize(fileSize) + ' (' + fileSize.toLocaleString() + ' bytes)';
@@ -1186,7 +1292,7 @@
 
     // Hex dump and entropy visualization
     if (buffer) {
-      renderHexDump(buffer);
+      renderHexDump(buffer, hexViewerOffset);
       renderEntropy(buffer);
     }
   }
@@ -1348,10 +1454,39 @@
 
   resetBtn.addEventListener('click', resetUI);
 
-  // Keyboard shortcut: Escape cancels
+  // Keyboard shortcuts
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' && progressSection.classList.contains('active')) {
       cancelBtn.click();
+      return;
+    }
+
+    // S key: snap to nearest entropy spike
+    if ((e.key === 's' || e.key === 'S') && results.classList.contains('active') && entropyBlocks.length > 0) {
+      // Don't trigger if user is typing in an input
+      var activeEl = document.activeElement;
+      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT')) return;
+
+      var referenceBlock = currentClickBlock >= 0 ? currentClickBlock : Math.floor(hexViewerOffset / 256);
+      var nearest = findNearestSpike(referenceBlock);
+
+      if (!nearest) {
+        document.getElementById('scrubInfo').textContent = 'No entropy spikes detected';
+        return;
+      }
+
+      currentClickBlock = nearest.index;
+      hexViewerOffset = nearest.offset;
+
+      if (currentFileBuffer) {
+        renderHexDump(currentFileBuffer, hexViewerOffset);
+      }
+
+      drawEntropyChart();
+      drawClickMarker();
+      drawScrubber(nearest.index);
+
+      document.getElementById('scrubInfo').textContent = 'Spike: Offset 0x' + nearest.offset.toString(16).toUpperCase() + '  Entropy: ' + nearest.entropy.toFixed(2);
     }
   });
 
