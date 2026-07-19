@@ -1418,8 +1418,10 @@
     canvas.addEventListener('mouseup', function(e) {
       if (!isDragging) return;
       isDragging = false;
-      var startOff = Math.min(dragStartBlock, dragCurrentBlock) * 256;
-      currentClickBlock = Math.min(dragStartBlock, dragCurrentBlock);
+      var midBlock = Math.floor((Math.min(dragStartBlock, dragCurrentBlock) + Math.max(dragStartBlock, dragCurrentBlock)) / 2);
+      var midOffset = midBlock * 256;
+      var startOff = Math.max(0, midOffset - 2048);
+      currentClickBlock = midBlock;
       dragStartBlock = -1;
       dragCurrentBlock = -1;
       if (currentFileBuffer) {
