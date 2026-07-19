@@ -405,7 +405,7 @@
 
   // ---- Constants ----
   var HEADER_READ_SIZE = 2 * 1024 * 1024; // 2 MB
-  var ENTROPY_TARGET_BLOCKS = 2000; // total resolution for full-file entropy graph
+  var ENTROPY_SAMPLE_SIZE = 4096; // bytes per sample — plenty for Shannon entropy estimation
 
   const SUBSYSTEMS = {
     0: 'Unknown', 1: 'Native', 2: 'Windows GUI', 3: 'Windows Console',
@@ -1072,67 +1072,72 @@
   var isFullFileBuild = false;       // true while streaming is running
   var fullFileBuildCancelled = false;
 
-  function computeEntropyFromBytes(bytes) {
-    // bytes is Uint8Array of arbitrary length (at least 256 bytes ideally)
-    var freq = new Array(256);
-    for (var fi = 0; fi < 256; fi++) freq[fi] = 0;
-    for (var i = 0; i < bytes.length; i++) {
-      freq[bytes[i]]++;
-    }
-    var entropy = 0;
-    for (var i = 0; i < 256; i++) {
-      if (freq[i] > 0) {
-        var p = freq[i] / bytes.length;
-        entropy -= p * Math.log2(p);
-      }
-    }
-    return entropy;
-  }
-
   function buildFullFileEntropy(file, onProgress, onDone) {
     var fileSize = file.size;
-    // Compute block size to get roughly ENTROPY_TARGET_BLOCKS across the whole file
-    var blockSize = Math.max(4096, Math.ceil(fileSize / ENTROPY_TARGET_BLOCKS));
-    var numBlocks = Math.ceil(fileSize / blockSize);
+    // Get canvas pixel width for resolution
+    var canvas = document.getElementById('entropyCanvas');
+    var w = canvas ? canvas.clientWidth || 600 : 600;
+    var padding = { left: 36, right: 12 };
+    var plotW = Math.max(w - padding.left - padding.right, 1);
+    var numBlocks = Math.min(plotW, 2000); // cap at 2000 even on wide screens
+    // Cap numBlocks to file size in blocks of min 256 bytes
+    var minBlocks = Math.ceil(fileSize / (256 * 1024 * 1024)); // at least 1 block per 256MB
+    numBlocks = Math.max(minBlocks, Math.min(numBlocks, 10000)); // hard cap at 10000
+    numBlocks = Math.max(2, numBlocks); // at least 2 blocks
+
+    var blockSize = fileSize / numBlocks;
     var values = new Array(numBlocks);
     var completed = 0;
     var cancelled = false;
-    var BATCH_SIZE = 16;
+    var BATCH_SIZE = 50; // read 50 chunks at a time
 
     function readBlock(i) {
-      var start = i * blockSize;
-      var end = Math.min(start + blockSize, fileSize);
-      var blob = file.slice(start, end);
+      var start = Math.round(i * blockSize);
+      var sampleEnd = Math.min(start + ENTROPY_SAMPLE_SIZE, fileSize);
+      if (sampleEnd <= start) {
+        // Block too small (near end of file) — use whatever is available
+        sampleEnd = Math.min(start + 256, fileSize);
+      }
+      var blob = file.slice(start, sampleEnd);
       var reader = new FileReader();
       reader.onload = function(e) {
         if (cancelled) return;
-        var buf = e.target.result;
-        var bytes = new Uint8Array(buf);
-        values[i] = computeEntropyFromBytes(bytes);
+        var bytes = new Uint8Array(e.target.result);
+        // Compute Shannon entropy
+        var freq = new Array(256);
+        for (var fi = 0; fi < 256; fi++) freq[fi] = 0;
+        for (var ii = 0; ii < bytes.length; ii++) {
+          freq[bytes[ii]]++;
+        }
+        var entropy = 0;
+        for (var ii = 0; ii < 256; ii++) {
+          if (freq[ii] > 0) {
+            var p = freq[ii] / bytes.length;
+            entropy -= p * (Math.log(p) / Math.LN2); // log2(p)
+          }
+        }
+        values[i] = entropy;
         completed++;
         if (onProgress) onProgress(completed, numBlocks);
-        if (completed === numBlocks) {
-          if (onDone) onDone({
+        if (completed >= numBlocks && onDone) {
+          onDone({
             values: values,
-            blockSize: blockSize,
+            blockSize: Math.round(blockSize),
             numBlocks: numBlocks,
             fileSize: fileSize
           });
         }
       };
       reader.onerror = function() {
-        // On error reading a slice, fill with -1 and continue
         values[i] = -1;
         completed++;
         if (onProgress) onProgress(completed, numBlocks);
-        if (completed === numBlocks && onDone) {
-          onDone({
-            values: values,
-            blockSize: blockSize,
-            numBlocks: numBlocks,
-            fileSize: fileSize
-          });
-        }
+        if (completed >= numBlocks && onDone) onDone({
+          values: values,
+          blockSize: Math.round(blockSize),
+          numBlocks: numBlocks,
+          fileSize: fileSize
+        });
       };
       reader.readAsArrayBuffer(blob);
     }
@@ -1140,17 +1145,13 @@
     function processBatch(startIdx) {
       if (cancelled) return;
       var endIdx = Math.min(startIdx + BATCH_SIZE, numBlocks);
-      for (var i = startIdx; i < endIdx; i++) {
-        readBlock(i);
-      }
+      for (var i = startIdx; i < endIdx; i++) readBlock(i);
       if (endIdx < numBlocks) {
-        setTimeout(function() { processBatch(endIdx); }, 30);
+        setTimeout(function() { processBatch(endIdx); }, 10);
       }
     }
 
     processBatch(0);
-
-    // Return a cancel function
     return function() { cancelled = true; };
   }
 
@@ -1458,7 +1459,8 @@
     }
   }
 
-  function findSpikes(blocks) {
+  function findSpikes(blocks, blockSize) {
+    blockSize = blockSize || 256;
     if (!blocks || blocks.length === 0) return [];
     var mean = blocks.reduce(function(a, b) { return a + b; }, 0) / blocks.length;
     var variance = blocks.reduce(function(sq, v) { return sq + (v - mean) * (v - mean); }, 0) / blocks.length;
@@ -1467,7 +1469,7 @@
     for (var i = 1; i < blocks.length - 1; i++) {
       var e = blocks[i];
       if (e > blocks[i - 1] && e > blocks[i + 1] && e > mean + 0.5 * stddev) {
-        result.push({ index: i, entropy: e, offset: i * 256 });
+        result.push({ index: i, entropy: e, offset: i * blockSize });
       }
     }
     return result;
@@ -1631,7 +1633,7 @@
       if (isSnapMode && hoveredSpike >= 0) {
         currentSnapBlock = hoveredSpike;
         currentClickBlock = hoveredSpike;
-        var snapOffset = hoveredSpike * 256;
+        var snapOffset = hoveredSpike * (entropyData ? entropyData.blockSize : 256);
         if (currentFileBuffer) {
           renderHexDump(currentFileBuffer, snapOffset);
         }
@@ -1796,7 +1798,7 @@
           if (isSnapMode && hoveredSpike >= 0) {
             currentSnapBlock = hoveredSpike;
             currentClickBlock = hoveredSpike;
-            var snapOffset = hoveredSpike * 256;
+            var snapOffset = hoveredSpike * (entropyData ? entropyData.blockSize : 256);
             if (currentFileBuffer) {
               renderHexDump(currentFileBuffer, snapOffset);
             }
@@ -2067,9 +2069,12 @@
     results.classList.add('active');
     resetBtn.classList.add('active');
 
-    // Hex dump and entropy visualization
+    // Hex dump
     if (buffer) {
       renderHexDump(buffer, hexViewerOffset);
+    }
+    // Entropy — only render initial 2MB graph if file is small
+    if (buffer && (!file || fileSize <= HEADER_READ_SIZE)) {
       renderEntropy(buffer);
     }
 
@@ -2083,24 +2088,24 @@
     }
 
     // If file bigger than 2MB, build full-file entropy in background
-    if (file && fileSize > HEADER_READ_SIZE && entropyBlocks && entropyBlocks.length > 0) {
+    if (file && fileSize > HEADER_READ_SIZE) {
       isFullFileBuild = true;
       fullFileBuildCancelled = false;
 
       // Show progress (keep progress bar visible)
       progressSection.classList.add('active');
-      setProgress(70, 'Building full-file entropy graph…');
+      setProgress(0, 'Building entropy graph…');
 
       buildFullFileEntropy(file, function(completed, total) {
         if (fullFileBuildCancelled) return;
-        var pct = 70 + Math.round((completed / total) * 25);
+        var pct = Math.round((completed / total) * 95);
         setProgress(pct, 'Building full-file entropy graph… (' + completed + '/' + total + ' blocks)');
       }, function(fullData) {
         if (fullFileBuildCancelled) return;
         // Replace entropy graph data with full-file version
         entropyData = fullData;
         entropyBlocks = fullData.values;
-        spikes = findSpikes(entropyBlocks);
+        spikes = findSpikes(entropyBlocks, fullData.blockSize);
         viewStart = 0;
         viewEnd = entropyBlocks.length;
         currentClickBlock = -1;
@@ -2108,7 +2113,7 @@
         renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1, -1);
         renderMinimap();
         isFullFileBuild = false;
-        setProgress(100, 'Full-file entropy ready!');
+        setProgress(100, 'Entropy graph ready!');
         setTimeout(function() {
           if (!cancelled) progressSection.classList.remove('active');
         }, 600);
