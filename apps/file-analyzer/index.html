@@ -483,6 +483,10 @@
         <input type="text" id="disasmSize" placeholder="Bytes" value="512" spellcheck="false" style="width:5rem">
         <button class="disasm-btn" id="disasmBtn">Disassemble</button>
         <button class="disasm-cache-btn" id="disasmCacheBtn" title="Cache Capstone WASM for offline">Cache</button>
+        <label style="font-size:0.75rem;display:inline-flex;align-items:center;gap:0.25rem;margin-left:0.5rem;cursor:pointer">
+          <input type="checkbox" id="disasmSyncEntropy" checked>
+          Sync to entropy
+        </label>
       </div>
       <div class="hint" id="disasmHint" style="margin-bottom:0.3rem">
         Start address: <kbd>0x1000</kbd> or decimal. For PE files, defaults to entry point file offset.
@@ -2739,6 +2743,22 @@
           count + ' instructions (' + totalBytes + ' bytes decoded from ' + bytesToDisasm.length + ' available)',
           ''
         );
+
+        // Sync entropy graph viewport to disassembly range if checkbox is checked
+        if (document.getElementById('disasmSyncEntropy').checked && entropyData) {
+          var blockSize = entropyData.blockSize;
+          if (blockSize > 0) {
+            var blockStart = Math.floor(fileOffset / blockSize);
+            var blockEnd = Math.ceil((fileOffset + numBytes) / blockSize);
+            blockEnd = Math.min(blockEnd, entropyBlocks.length);
+            if (blockStart < blockEnd) {
+              viewStart = blockStart;
+              viewEnd = blockEnd;
+              renderEntropyCanvas(entropyBlocks, viewStart, viewEnd, -1);
+              syncHexWithView();
+            }
+          }
+        }
       } catch (disasmErr) {
         disasmText.textContent = 'Disassembly error: ' + disasmErr.message;
         setDisasmStatus('Error', 'error');
