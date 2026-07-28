@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>yt-embed</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #09090b;
+    color: #e4e4e7;
+    font-family: system-ui, sans-serif;
+    display: grid;
+    place-items: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: 1.5rem;
+  }
+  .container {
+    width: 100%;
+    max-width: 640px;
+  }
+  h1 {
+    font-size: 1.25rem;
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+  }
+  .subtitle {
+    color: #71717a;
+    font-size: 0.8rem;
+    margin-bottom: 1.25rem;
+  }
+  .input-group {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .input-group input {
+    flex: 1;
+    background: #18181b;
+    border: 1px solid #27272a;
+    border-radius: 0.5rem;
+    padding: 0.65rem 0.85rem;
+    color: #e4e4e7;
+    font-size: 0.9rem;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .input-group input:focus {
+    border-color: #6366f1;
+  }
+  .input-group input::placeholder {
+    color: #52525b;
+  }
+  .player-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #18181b;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    margin-bottom: 1rem;
+    box-shadow: 0 8px 32px rgba(0,0,0,.5);
+  }
+  .player-wrap iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+  .placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #52525b;
+    font-size: 0.9rem;
+    gap: 0.75rem;
+  }
+  .placeholder svg {
+    opacity: 0.4;
+  }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    align-items: center;
+  }
+  .toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: #a1a1aa;
+    cursor: pointer;
+    user-select: none;
+  }
+  .toggle input {
+    display: none;
+  }
+  .toggle .slider {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    background: #27272a;
+    border-radius: 10px;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .toggle .slider::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 14px;
+    height: 14px;
+    background: #71717a;
+    border-radius: 50%;
+    transition: transform 0.2s, background 0.2s;
+  }
+  .toggle input:checked + .slider {
+    background: #6366f1;
+  }
+  .toggle input:checked + .slider::after {
+    transform: translateX(16px);
+    background: #fff;
+  }
+  .btn {
+    background: #18181b;
+    border: 1px solid #27272a;
+    color: #e4e4e7;
+    font-family: inherit;
+    font-size: 0.85rem;
+    padding: 0.55rem 1rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    white-space: nowrap;
+  }
+  .btn:hover {
+    background: #27272a;
+    border-color: #3f3f46;
+  }
+  .btn:active {
+    background: #3f3f46;
+  }
+  .btn-copy {
+    margin-left: auto;
+  }
+  .btn-copy.copied {
+    background: #065f46;
+    border-color: #059669;
+    color: #6ee7b7;
+  }
+  .btn-copy.error {
+    background: #7f1d1d;
+    border-color: #991b1b;
+    color: #fca5a5;
+  }
+  .foot {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 0.5rem;
+    align-items: center;
+  }
+  a.back {
+    color: #a1a1aa;
+    font-size: 0.875rem;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  a.back:hover {
+    color: #e4e4e7;
+  }
+  .created {
+    color: #52525b;
+    font-size: 0.75rem;
+  }
+  @media (max-width: 480px) {
+    body { padding: 1rem; }
+    .controls { gap: 0.5rem; }
+    .btn-copy { margin-left: 0; width: 100%; }
+    .btn { padding: 0.5rem 0.75rem; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>YouTube Clean Player</h1>
+  <p class="subtitle">Paste a YouTube link — get a chrome-free embed</p>
+
+  <div class="input-group">
+    <input type="text" id="urlInput" placeholder="https://youtube.com/watch?v=..." spellcheck="false">
+  </div>
+
+  <div class="player-wrap" id="playerWrap">
+    <div class="placeholder" id="placeholder">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      <span>Paste a YouTube URL above</span>
+    </div>
+    <iframe id="player" style="display:none" allowfullscreen allow="autoplay; encrypted-media"></iframe>
+  </div>
+
+  <div class="controls">
+    <label class="toggle">
+      <input type="checkbox" id="autoplayToggle">
+      <span class="slider"></span>
+      autoplay
+    </label>
+    <label class="toggle">
+      <input type="checkbox" id="controlsToggle" checked>
+      <span class="slider"></span>
+      controls
+    </label>
+    <label class="toggle">
+      <input type="checkbox" id="loopToggle">
+      <span class="slider"></span>
+      loop
+    </label>
+    <button class="btn btn-copy" id="copyBtn">Copy Embed HTML</button>
+  </div>
+
+  <div class="foot">
+    <a class="back" href="/apps/">back</a>
+    <span class="created">created 2026-07-29</span>
+  </div>
+</div>
+
+<script>
+(function() {
+  const urlInput   = document.getElementById('urlInput');
+  const player     = document.getElementById('player');
+  const placeholder= document.getElementById('placeholder');
+  const autoplayCb = document.getElementById('autoplayToggle');
+  const controlsCb = document.getElementById('controlsToggle');
+  const loopCb     = document.getElementById('loopToggle');
+  const copyBtn    = document.getElementById('copyBtn');
+
+  let currentVideoId = '';
+
+  function extractVideoId(str) {
+    if (!str) return null;
+    const s = str.trim();
+    // youtu.be/VIDEO_ID
+    let m = s.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+    if (m) return m[1];
+    // youtube.com/embed/VIDEO_ID
+    m = s.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/);
+    if (m) return m[1];
+    // youtube.com/watch?v=VIDEO_ID
+    m = s.match(/youtube\.com\/watch\?(?:.*&)?v=([a-zA-Z0-9_-]{11})/);
+    if (m) return m[1];
+    // bare ID (11 chars, alphanumeric + underscore + dash)
+    m = s.match(/^([a-zA-Z0-9_-]{11})$/);
+    if (m) return m[1];
+    return null;
+  }
+
+  function buildEmbedUrl(videoId) {
+    const params = new URLSearchParams();
+    if (autoplayCb.checked) params.set('autoplay', '1');
+    if (controlsCb.checked) params.set('controls', '1');
+    else params.set('controls', '0');
+    if (loopCb.checked) {
+      params.set('loop', '1');
+      params.set('playlist', videoId);
+    }
+    return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
+  }
+
+  function loadPlayer(videoId) {
+    currentVideoId = videoId;
+    const src = buildEmbedUrl(videoId);
+    player.src = src;
+    player.style.display = '';
+    placeholder.style.display = 'none';
+  }
+
+  function unloadPlayer() {
+    currentVideoId = '';
+    player.src = '';
+    player.style.display = 'none';
+    placeholder.style.display = 'flex';
+  }
+
+  function handleInput() {
+    const id = extractVideoId(urlInput.value);
+    if (id) {
+      loadPlayer(id);
+    } else {
+      unloadPlayer();
+    }
+  }
+
+  function reloadPlayer() {
+    if (currentVideoId) {
+      // preserve current src position by reassigning
+      const src = buildEmbedUrl(currentVideoId);
+      player.src = src;
+    }
+  }
+
+  // Real-time input handling
+  let inputTimer = null;
+  urlInput.addEventListener('input', () => {
+    clearTimeout(inputTimer);
+    inputTimer = setTimeout(handleInput, 300);
+  });
+  // Also handle paste directly
+  urlInput.addEventListener('paste', () => {
+    setTimeout(handleInput, 50);
+  });
+
+  // Toggle changes reload player
+  autoplayCb.addEventListener('change', reloadPlayer);
+  controlsCb.addEventListener('change', reloadPlayer);
+  loopCb.addEventListener('change', reloadPlayer);
+
+  // Copy embed HTML
+  copyBtn.addEventListener('click', async () => {
+    if (!currentVideoId) {
+      copyBtn.textContent = 'No video loaded';
+      copyBtn.classList.add('error');
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy Embed HTML';
+        copyBtn.classList.remove('error');
+      }, 2000);
+      return;
+    }
+    const src = buildEmbedUrl(currentVideoId);
+    const html = `<iframe width="560" height="315" src="${src}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+    try {
+      await navigator.clipboard.writeText(html);
+      copyBtn.textContent = 'Copied!';
+      copyBtn.classList.add('copied');
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy Embed HTML';
+        copyBtn.classList.remove('copied');
+      }, 2000);
+    } catch {
+      // fallback
+      const ta = document.createElement('textarea');
+      ta.value = html;
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        copyBtn.textContent = 'Copied!';
+        copyBtn.classList.add('copied');
+        setTimeout(() => {
+          copyBtn.textContent = 'Copy Embed HTML';
+          copyBtn.classList.remove('copied');
+        }, 2000);
+      } catch {
+        copyBtn.textContent = 'Copy failed';
+        copyBtn.classList.add('error');
+        setTimeout(() => {
+          copyBtn.textContent = 'Copy Embed HTML';
+          copyBtn.classList.remove('error');
+        }, 2000);
+      }
+      document.body.removeChild(ta);
+    }
+  });
+})();
+</script>
+</body>
+</html>

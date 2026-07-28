@@ -45,5 +45,9 @@
     "description": "Zero-knowledge static app — client-side AES-256-GCM encryption with scoped keys, PBKDF2 key derivation, fully static GH Pages deploy",
     "url": "/apps/208-zero-knowledge-crypto/",
     "created": "2026-07-19T00:00:00+00:00"
+  },
+  "yt-embed": {
+    "description": "YouTube Clean Player — paste a link, get a chrome-free embed",
+    "created": "2026-07-29"
   }
 }
