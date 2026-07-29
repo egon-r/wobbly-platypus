@@ -275,11 +275,14 @@
     active = true;
     anchorX = e.clientX;
     anchorY = e.clientY;
+    startX = anchorX;
+    startY = anchorY;
+    lastX = anchorX;
+    lastY = anchorY;
 
     showGizmo(anchorX, anchorY);
     showInd();
     setLabel('Click-scroll');
-    setDir('\u25C9'); /* ◉ */
 
     try {
       document.body.style.cursor = 'crosshair';
@@ -287,10 +290,18 @@
     } catch (_) {
       /* body may not exist */
     }
+
+    /* Reuse the same RAF-driven scroll loop as auto-scroll */
+    startAutoScroll();
   }
 
   function stopClickScroll() {
     active = false;
+
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
 
     hideGizmo();
 
@@ -357,18 +368,12 @@
     if (!active) return;
 
     if (mode === 'click-scroll') {
-      var dx = e.clientX - anchorX;
-      var dy = e.clientY - anchorY;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      var dx = lastX - anchorX;
+      var dy = lastY - anchorY;
       var dist = Math.sqrt(dx * dx + dy * dy);
-
-      if (dist > 5) {
-        window.scrollBy(dx * 0.1, dy * 0.1);
-        updateDirection(dx, dy);
-        updateGizmo(dx, dy, dist);
-      } else {
-        setDir('\u25C9'); /* ◉ */
-        updateGizmo(dx, dy, dist);
-      }
+      updateGizmo(dx, dy, dist);
       return;
     }
 
