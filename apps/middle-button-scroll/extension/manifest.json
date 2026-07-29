@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Middle Button Scroll",
+  "version": "1.0",
+  "description": "Auto-scroll or drag-scroll any page with the middle mouse button.",
+  "permissions": ["storage"],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "128": "icon.svg"
+    },
+    "default_title": "Middle Button Scroll"
+  },
+  "icons": {
+    "128": "icon.svg"
+  }
+}
