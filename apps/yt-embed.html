@@ -184,7 +184,6 @@
     background: #09090b;
     display: flex;
     flex-direction: column;
-    transition: all 0.3s ease;
   }
   .container.theatre h1,
   .container.theatre .subtitle {
@@ -199,6 +198,7 @@
     padding: 0.75rem 1rem;
     margin: 0;
     border: none;
+    opacity: 1;
     background: linear-gradient(rgba(9,9,11,0.92) 0%, transparent 100%);
   }
   .container.theatre .player-wrap {
@@ -208,7 +208,6 @@
     border-radius: 0;
     margin: 0;
     box-shadow: none;
-    transition: all 0.3s ease;
   }
   .container.theatre .controls {
     position: absolute;
@@ -225,6 +224,7 @@
     gap: 1rem;
     flex-wrap: wrap;
     border-radius: 0;
+    opacity: 1;
   }
   .container.theatre .foot {
     display: none;
@@ -509,9 +509,12 @@
   // --- Theatre mode + auto-hide controls ---
   let hideTimer = null;
   let hideController = null;
+  let lastMouseMove = 0;
 
   function showControls() {
-    container.classList.remove('controls-hidden');
+    if (container.classList.contains('controls-hidden')) {
+      container.classList.remove('controls-hidden');
+    }
     resetHideTimer();
   }
 
@@ -522,14 +525,24 @@
     }, 3000);
   }
 
+  function onMouseMove() {
+    const now = Date.now();
+    if (now - lastMouseMove < 100) return;
+    lastMouseMove = now;
+    if (!container.classList.contains('theatre')) return;
+    if (container.classList.contains('controls-hidden')) {
+      container.classList.remove('controls-hidden');
+    }
+    resetHideTimer();
+  }
+
   function setupAutoHide() {
     hideController = new AbortController();
     const signal = hideController.signal;
-    showControls();
+    lastMouseMove = 0;
+    resetHideTimer();
 
-    document.addEventListener('mousemove', () => {
-      if (container.classList.contains('theatre')) showControls();
-    }, { signal });
+    document.addEventListener('mousemove', onMouseMove, { signal });
     container.addEventListener('click', (e) => {
       if (e.target.closest('.input-group, .controls')) showControls();
     }, { signal });
