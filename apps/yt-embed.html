@@ -152,19 +152,6 @@
   .btn:active {
     background: #3f3f46;
   }
-  .btn-copy {
-    margin-left: auto;
-  }
-  .btn-copy.copied {
-    background: #065f46;
-    border-color: #059669;
-    color: #6ee7b7;
-  }
-  .btn-copy.error {
-    background: #7f1d1d;
-    border-color: #991b1b;
-    color: #fca5a5;
-  }
   .foot {
     display: flex;
     justify-content: center;
@@ -239,9 +226,6 @@
     flex-wrap: wrap;
     border-radius: 0;
   }
-  .container.theatre .btn-copy {
-    margin-left: 0;
-  }
   .container.theatre .foot {
     display: none;
   }
@@ -263,7 +247,6 @@
   @media (max-width: 480px) {
     body { padding: 1rem; }
     .controls { gap: 0.5rem; }
-    .btn-copy { margin-left: 0; width: 100%; }
     .btn { padding: 0.5rem 0.75rem; }
     .container.theatre { padding: 0; }
     .container.theatre .input-group { padding: 0.5rem 0.75rem; }
@@ -308,7 +291,6 @@
       loop
     </label>
     <button class="btn" id="theatreBtn">□ Theatre</button>
-    <button class="btn btn-copy" id="copyBtn">Copy Embed HTML</button>
   </div>
 
   <div class="foot">
@@ -328,7 +310,6 @@
   const autoplayCb  = document.getElementById('autoplayToggle');
   const controlsCb  = document.getElementById('controlsToggle');
   const loopCb      = document.getElementById('loopToggle');
-  const copyBtn     = document.getElementById('copyBtn');
   const theatreBtn  = document.getElementById('theatreBtn');
   const container   = document.querySelector('.container');
 
@@ -394,21 +375,6 @@
     if (!str) return 0;
     const m = str.trim().match(/[?&]t=(\d+)/);
     return m ? parseInt(m[1], 10) : 0;
-  }
-
-  // --- Embed URL builder (for copy) ---
-  function buildEmbedUrl(videoId, startTime) {
-    const params = new URLSearchParams();
-    params.set('origin', window.location.origin);
-    if (autoplayCb.checked) params.set('autoplay', '1');
-    if (controlsCb.checked) params.set('controls', '1');
-    else params.set('controls', '0');
-    if (loopCb.checked) {
-      params.set('loop', '1');
-      params.set('playlist', videoId);
-    }
-    if (startTime > 0) params.set('start', String(startTime));
-    return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
   }
 
   // --- URL time sync ---
@@ -596,56 +562,6 @@
       cleanupAutoHide();
     }
   });
-
-  // --- Copy embed HTML (includes current position) ---
-  copyBtn.addEventListener('click', async () => {
-    if (!currentVideoId) {
-      copyBtn.textContent = 'No video loaded';
-      copyBtn.classList.add('error');
-      setTimeout(() => {
-        copyBtn.textContent = 'Copy Embed HTML';
-        copyBtn.classList.remove('error');
-      }, 2000);
-      return;
-    }
-    const currentTime = player ? Math.floor(player.getCurrentTime() || 0) : 0;
-    const src = buildEmbedUrl(currentVideoId, currentTime);
-    const html = '<iframe width="560" height="315" src="' + src + '" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
-    try {
-      await navigator.clipboard.writeText(html);
-      copyDone();
-    } catch {
-      fallbackCopy(html);
-    }
-  });
-
-  function copyDone() {
-    copyBtn.textContent = 'Copied!';
-    copyBtn.classList.add('copied');
-    setTimeout(() => {
-      copyBtn.textContent = 'Copy Embed HTML';
-      copyBtn.classList.remove('copied');
-    }, 2000);
-  }
-
-  function fallbackCopy(text) {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    document.body.appendChild(ta);
-    ta.select();
-    try {
-      document.execCommand('copy');
-      copyDone();
-    } catch {
-      copyBtn.textContent = 'Copy failed';
-      copyBtn.classList.add('error');
-      setTimeout(() => {
-        copyBtn.textContent = 'Copy Embed HTML';
-        copyBtn.classList.remove('error');
-      }, 2000);
-    }
-    document.body.removeChild(ta);
-  }
 
   // --- localStorage backup (beforeunload) ---
   function saveToStorage() {
