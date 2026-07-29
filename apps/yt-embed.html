@@ -240,6 +240,21 @@
   .container.theatre .foot {
     display: none;
   }
+  /* Theatre mode — auto-hide controls */
+  .container.theatre .input-group,
+  .container.theatre .controls {
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+  .container.theatre.controls-hidden .input-group {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-10px);
+  }
+  .container.theatre.controls-hidden .controls {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(10px);
+  }
   @media (max-width: 480px) {
     body { padding: 1rem; }
     .controls { gap: 0.5rem; }
@@ -386,19 +401,77 @@
   controlsCb.addEventListener('change', reloadPlayer);
   loopCb.addEventListener('change', reloadPlayer);
 
-  // Theatre mode
+  // Theatre mode + auto-hide controls
   const theatreBtn = document.getElementById('theatreBtn');
   const container = document.querySelector('.container');
+  let hideTimer = null;
+  let hideController = null;
+
+  function showControls() {
+    container.classList.remove('controls-hidden');
+    resetHideTimer();
+  }
+
+  function resetHideTimer() {
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => {
+      container.classList.add('controls-hidden');
+    }, 3000);
+  }
+
+  function setupAutoHide() {
+    hideController = new AbortController();
+    const signal = hideController.signal;
+
+    showControls();
+
+    document.addEventListener('mousemove', () => {
+      if (container.classList.contains('theatre')) {
+        showControls();
+      }
+    }, { signal });
+
+    container.addEventListener('click', (e) => {
+      if (e.target.closest('.input-group, .controls')) {
+        showControls();
+      }
+    }, { signal });
+
+    container.addEventListener('input', () => {
+      showControls();
+    }, { signal });
+
+    container.addEventListener('focusin', (e) => {
+      if (e.target.closest('.input-group, .controls')) {
+        showControls();
+      }
+    }, { signal });
+  }
+
+  function cleanupAutoHide() {
+    clearTimeout(hideTimer);
+    container.classList.remove('controls-hidden');
+    if (hideController) {
+      hideController.abort();
+      hideController = null;
+    }
+  }
 
   theatreBtn.addEventListener('click', () => {
     const isTheatre = container.classList.toggle('theatre');
     theatreBtn.textContent = isTheatre ? 'Exit Theatre' : '□ Theatre';
+    if (isTheatre) {
+      setupAutoHide();
+    } else {
+      cleanupAutoHide();
+    }
   });
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && container.classList.contains('theatre')) {
       container.classList.remove('theatre');
       theatreBtn.textContent = '□ Theatre';
+      cleanupAutoHide();
     }
   });
 
