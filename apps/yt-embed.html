@@ -63,10 +63,15 @@
     margin-bottom: 1rem;
     box-shadow: 0 8px 32px rgba(0,0,0,.5);
   }
-  .player-wrap iframe {
+  .player-wrap #player,
+  .player-wrap #player iframe {
     width: 100%;
     height: 100%;
     border: none;
+  }
+  .player-wrap #player {
+    position: absolute;
+    inset: 0;
   }
   .placeholder {
     position: absolute;
@@ -283,7 +288,7 @@
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
       <span>Paste a YouTube URL above</span>
     </div>
-    <iframe id="player" style="display:none" allowfullscreen allow="autoplay; encrypted-media"></iframe>
+    <div id="player" style="display:none"></div>
   </div>
 
   <div class="controls">
@@ -314,35 +319,85 @@
 
 <script>
 (function() {
-  const urlInput   = document.getElementById('urlInput');
-  const player     = document.getElementById('player');
-  const placeholder= document.getElementById('placeholder');
-  const autoplayCb = document.getElementById('autoplayToggle');
-  const controlsCb = document.getElementById('controlsToggle');
-  const loopCb     = document.getElementById('loopToggle');
-  const copyBtn    = document.getElementById('copyBtn');
+  'use strict';
 
+  // --- DOM refs ---
+  const urlInput    = document.getElementById('urlInput');
+  const playerDiv   = document.getElementById('player');
+  const placeholder = document.getElementById('placeholder');
+  const autoplayCb  = document.getElementById('autoplayToggle');
+  const controlsCb  = document.getElementById('controlsToggle');
+  const loopCb      = document.getElementById('loopToggle');
+  const copyBtn     = document.getElementById('copyBtn');
+  const theatreBtn  = document.getElementById('theatreBtn');
+  const container   = document.querySelector('.container');
+
+  // --- State ---
+  let player = null;
   let currentVideoId = '';
+  let syncInterval = null;
+  let ytApiReady = false;
+  let pendingCreate = null;
+  const STORAGE_KEY = 'yt-embed-state';
 
+  // --- YT IFrame API bootstrap ---
+  window.onYouTubeIframeAPIReady = function() {
+    ytApiReady = true;
+    if (pendingCreate) {
+      const fn = pendingCreate;
+      pendingCreate = null;
+      fn();
+    }
+  };
+
+  (function loadYTAPI() {
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    const first = document.getElementsByTagName('script')[0];
+    first.parentNode.insertBefore(tag, first);
+  })();
+
+  // --- URL helpers (history.replaceState — no history pollution) ---
+  function getUrlParams() {
+    const p = new URLSearchParams(window.location.search);
+    const v = p.get('v');
+    const t = parseInt(p.get('t'), 10);
+    return { videoId: v || null, time: isNaN(t) ? 0 : t };
+  }
+
+  function updateUrl(videoId, time) {
+    const p = new URLSearchParams();
+    if (videoId) {
+      p.set('v', videoId);
+      p.set('t', String(Math.floor(time)));
+    }
+    const qs = p.toString();
+    history.replaceState(null, '', qs ? '?' + qs : window.location.pathname);
+  }
+
+  // --- Video ID extraction ---
   function extractVideoId(str) {
     if (!str) return null;
     const s = str.trim();
-    // youtu.be/VIDEO_ID
     let m = s.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
     if (m) return m[1];
-    // youtube.com/embed/VIDEO_ID
     m = s.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/);
     if (m) return m[1];
-    // youtube.com/watch?v=VIDEO_ID
     m = s.match(/youtube\.com\/watch\?(?:.*&)?v=([a-zA-Z0-9_-]{11})/);
     if (m) return m[1];
-    // bare ID (11 chars, alphanumeric + underscore + dash)
     m = s.match(/^([a-zA-Z0-9_-]{11})$/);
     if (m) return m[1];
     return null;
   }
 
-  function buildEmbedUrl(videoId) {
+  function extractStartTime(str) {
+    if (!str) return 0;
+    const m = str.trim().match(/[?&]t=(\d+)/);
+    return m ? parseInt(m[1], 10) : 0;
+  }
+
+  // --- Embed URL builder (for copy) ---
+  function buildEmbedUrl(videoId, startTime) {
     const params = new URLSearchParams();
     params.set('origin', window.location.origin);
     if (autoplayCb.checked) params.set('autoplay', '1');
@@ -352,58 +407,140 @@
       params.set('loop', '1');
       params.set('playlist', videoId);
     }
+    if (startTime > 0) params.set('start', String(startTime));
     return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
   }
 
-  function loadPlayer(videoId) {
-    currentVideoId = videoId;
-    const src = buildEmbedUrl(videoId);
-    player.src = src;
-    player.style.display = '';
+  // --- URL time sync ---
+  function startSync() {
+    stopSync();
+    syncInterval = setInterval(() => {
+      if (!player || document.hidden) return;
+      try {
+        if (player.getPlayerState() === YT.PlayerState.PLAYING) {
+          updateUrl(currentVideoId, Math.floor(player.getCurrentTime()));
+        }
+      } catch(e) { /* player disposed during tick */ }
+    }, 1000);
+  }
+
+  function stopSync() {
+    if (syncInterval) {
+      clearInterval(syncInterval);
+      syncInterval = null;
+    }
+  }
+
+  // --- Player management ---
+  function createPlayer(videoId, startSeconds) {
+    if (!ytApiReady) {
+      pendingCreate = () => createPlayer(videoId, startSeconds);
+      return;
+    }
+
+    if (player) {
+      player.destroy();
+      player = null;
+    }
+
+    const vars = {
+      origin: window.location.origin,
+      rel: 0,
+      modestbranding: 1,
+    };
+    if (autoplayCb.checked) vars.autoplay = 1;
+    if (controlsCb.checked) vars.controls = 1;
+    else vars.controls = 0;
+    if (loopCb.checked) {
+      vars.loop = 1;
+      vars.playlist = videoId;
+    }
+
+    player = new YT.Player('player', {
+      height: '100%',
+      width: '100%',
+      videoId: videoId,
+      playerVars: vars,
+      events: {
+        onReady: () => {
+          if (startSeconds > 0) {
+            player.seekTo(startSeconds, true);
+          }
+          placeholder.style.display = 'none';
+          playerDiv.style.display = '';
+          startSync();
+        },
+        onStateChange: (e) => {
+          if (e.data === YT.PlayerState.ENDED) {
+            stopSync();
+          }
+        },
+      },
+    });
+  }
+
+  function loadPlayer(videoId, startSeconds) {
+    if (!videoId) { unloadPlayer(); return; }
+
+    if (videoId !== currentVideoId) {
+      currentVideoId = videoId;
+      updateUrl(videoId, startSeconds);
+    }
     placeholder.style.display = 'none';
+    stopSync();
+    createPlayer(videoId, startSeconds);
   }
 
   function unloadPlayer() {
+    stopSync();
+    if (player) {
+      player.destroy();
+      player = null;
+    }
     currentVideoId = '';
-    player.src = '';
-    player.style.display = 'none';
+    playerDiv.style.display = 'none';
     placeholder.style.display = 'flex';
+    updateUrl(null, 0);
   }
 
+  function reloadPlayer() {
+    if (!currentVideoId) return;
+    let startTime = 0;
+    if (player) {
+      try { startTime = player.getCurrentTime() || 0; } catch(e) {}
+      stopSync();
+      player.destroy();
+      player = null;
+    }
+    createPlayer(currentVideoId, startTime);
+  }
+
+  // --- Input handling ---
   function handleInput() {
     const id = extractVideoId(urlInput.value);
     if (id) {
-      loadPlayer(id);
+      const startTime = extractStartTime(urlInput.value);
+      loadPlayer(id, startTime);
     } else {
       unloadPlayer();
     }
   }
 
-  function reloadPlayer() {
-    if (currentVideoId) {
-      player.src = buildEmbedUrl(currentVideoId);
-    }
-  }
-
-  // Real-time input handling
   let inputTimer = null;
   urlInput.addEventListener('input', () => {
     clearTimeout(inputTimer);
     inputTimer = setTimeout(handleInput, 300);
   });
-  // Also handle paste directly
   urlInput.addEventListener('paste', () => {
     setTimeout(handleInput, 50);
   });
 
-  // Toggle changes reload player
+  // --- Toggles → recreate player with new settings ---
   autoplayCb.addEventListener('change', reloadPlayer);
   controlsCb.addEventListener('change', reloadPlayer);
   loopCb.addEventListener('change', reloadPlayer);
 
-  // Theatre mode + auto-hide controls
-  const theatreBtn = document.getElementById('theatreBtn');
-  const container = document.querySelector('.container');
+  // --- Theatre mode + auto-hide controls ---
   let hideTimer = null;
   let hideController = null;
 
@@ -422,29 +559,17 @@
   function setupAutoHide() {
     hideController = new AbortController();
     const signal = hideController.signal;
-
     showControls();
 
     document.addEventListener('mousemove', () => {
-      if (container.classList.contains('theatre')) {
-        showControls();
-      }
+      if (container.classList.contains('theatre')) showControls();
     }, { signal });
-
     container.addEventListener('click', (e) => {
-      if (e.target.closest('.input-group, .controls')) {
-        showControls();
-      }
+      if (e.target.closest('.input-group, .controls')) showControls();
     }, { signal });
-
-    container.addEventListener('input', () => {
-      showControls();
-    }, { signal });
-
+    container.addEventListener('input', showControls, { signal });
     container.addEventListener('focusin', (e) => {
-      if (e.target.closest('.input-group, .controls')) {
-        showControls();
-      }
+      if (e.target.closest('.input-group, .controls')) showControls();
     }, { signal });
   }
 
@@ -460,11 +585,8 @@
   theatreBtn.addEventListener('click', () => {
     const isTheatre = container.classList.toggle('theatre');
     theatreBtn.textContent = isTheatre ? 'Exit Theatre' : '□ Theatre';
-    if (isTheatre) {
-      setupAutoHide();
-    } else {
-      cleanupAutoHide();
-    }
+    if (isTheatre) setupAutoHide();
+    else cleanupAutoHide();
   });
 
   document.addEventListener('keydown', (e) => {
@@ -475,7 +597,7 @@
     }
   });
 
-  // Copy embed HTML
+  // --- Copy embed HTML (includes current position) ---
   copyBtn.addEventListener('click', async () => {
     if (!currentVideoId) {
       copyBtn.textContent = 'No video loaded';
@@ -486,41 +608,85 @@
       }, 2000);
       return;
     }
-    const src = buildEmbedUrl(currentVideoId);
-    const html = `<iframe width="560" height="315" src="${src}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+    const currentTime = player ? Math.floor(player.getCurrentTime() || 0) : 0;
+    const src = buildEmbedUrl(currentVideoId, currentTime);
+    const html = '<iframe width="560" height="315" src="' + src + '" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
     try {
       await navigator.clipboard.writeText(html);
-      copyBtn.textContent = 'Copied!';
-      copyBtn.classList.add('copied');
-      setTimeout(() => {
-        copyBtn.textContent = 'Copy Embed HTML';
-        copyBtn.classList.remove('copied');
-      }, 2000);
+      copyDone();
     } catch {
-      // fallback
-      const ta = document.createElement('textarea');
-      ta.value = html;
-      document.body.appendChild(ta);
-      ta.select();
-      try {
-        document.execCommand('copy');
-        copyBtn.textContent = 'Copied!';
-        copyBtn.classList.add('copied');
-        setTimeout(() => {
-          copyBtn.textContent = 'Copy Embed HTML';
-          copyBtn.classList.remove('copied');
-        }, 2000);
-      } catch {
-        copyBtn.textContent = 'Copy failed';
-        copyBtn.classList.add('error');
-        setTimeout(() => {
-          copyBtn.textContent = 'Copy Embed HTML';
-          copyBtn.classList.remove('error');
-        }, 2000);
-      }
-      document.body.removeChild(ta);
+      fallbackCopy(html);
     }
   });
+
+  function copyDone() {
+    copyBtn.textContent = 'Copied!';
+    copyBtn.classList.add('copied');
+    setTimeout(() => {
+      copyBtn.textContent = 'Copy Embed HTML';
+      copyBtn.classList.remove('copied');
+    }, 2000);
+  }
+
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      copyDone();
+    } catch {
+      copyBtn.textContent = 'Copy failed';
+      copyBtn.classList.add('error');
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy Embed HTML';
+        copyBtn.classList.remove('error');
+      }, 2000);
+    }
+    document.body.removeChild(ta);
+  }
+
+  // --- localStorage backup (beforeunload) ---
+  function saveToStorage() {
+    if (currentVideoId && player) {
+      try {
+        const t = Math.floor(player.getCurrentTime() || 0);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ v: currentVideoId, t }));
+      } catch(e) {}
+    }
+  }
+
+  function restoreFromStorage() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      const d = JSON.parse(raw);
+      if (d && d.v && /^[a-zA-Z0-9_-]{11}$/.test(d.v)) {
+        return { videoId: d.v, time: d.t || 0 };
+      }
+    } catch(e) {}
+    return null;
+  }
+
+  window.addEventListener('beforeunload', saveToStorage);
+
+  // --- Init: URL params > localStorage > placeholder ---
+  function init() {
+    const { videoId, time } = getUrlParams();
+    if (videoId) {
+      urlInput.value = 'https://youtube.com/watch?v=' + videoId;
+      loadPlayer(videoId, time);
+      return;
+    }
+    const saved = restoreFromStorage();
+    if (saved) {
+      urlInput.value = 'https://youtube.com/watch?v=' + saved.videoId;
+      loadPlayer(saved.videoId, saved.time);
+    }
+  }
+
+  init();
 })();
 </script>
 </body>
