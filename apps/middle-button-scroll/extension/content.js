@@ -148,7 +148,7 @@
     }
 
     /* Rotate arrow to point in the direction of mouse movement */
-    var angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    var angle = Math.atan2(dx, -dy) * (180 / Math.PI);
     arrow.setAttribute('transform', 'rotate(' + angle + ', 30, 30)');
 
     /* Speed: arrow opacity scales with distance (0.3 → 1.0) */
@@ -308,9 +308,20 @@
   /* ===== Event handlers ===== */
 
   function onMouseDown(e) {
+    /* Click-scroll: middle click toggles, left click deactivates */
+    if (mode === 'click-scroll' && active) {
+      if (e.button === 0 || e.button === 1) {
+        e.preventDefault();
+        stopClickScroll();
+        return;
+      }
+      return; /* ignore other buttons */
+    }
+
+    /* For non-click-scroll modes, only respond to middle button */
     if (e.button !== 1) return;
     e.preventDefault();
-
+    
     if (mode === 'click-scroll') {
       if (active) {
         stopClickScroll();
