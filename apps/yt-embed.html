@@ -233,7 +233,7 @@
 <script>
 (function() {
   const urlInput   = document.getElementById('urlInput');
-  let   player     = document.getElementById('player');
+  const player     = document.getElementById('player');
   const placeholder= document.getElementById('placeholder');
   const autoplayCb = document.getElementById('autoplayToggle');
   const controlsCb = document.getElementById('controlsToggle');
@@ -263,7 +263,6 @@
   function buildEmbedUrl(videoId) {
     const params = new URLSearchParams();
     params.set('origin', window.location.origin);
-    params.set('enablejsapi', '1');
     if (autoplayCb.checked) params.set('autoplay', '1');
     if (controlsCb.checked) params.set('controls', '1');
     else params.set('controls', '0');
@@ -274,31 +273,18 @@
     return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
   }
 
-  function createPlayerIframe(src, display) {
-    const el = document.createElement('iframe');
-    el.id = 'player';
-    el.src = src;
-    el.style.display = display;
-    el.allowFullscreen = true;
-    el.allow = 'autoplay; encrypted-media';
-    el.setAttribute('loading', 'lazy');
-    return el;
-  }
-
   function loadPlayer(videoId) {
     currentVideoId = videoId;
     const src = buildEmbedUrl(videoId);
-    const newIframe = createPlayerIframe(src, '');
-    player.replaceWith(newIframe);
-    player = newIframe;
+    player.src = src;
+    player.style.display = '';
     placeholder.style.display = 'none';
   }
 
   function unloadPlayer() {
     currentVideoId = '';
-    const blankIframe = createPlayerIframe('', 'none');
-    player.replaceWith(blankIframe);
-    player = blankIframe;
+    player.src = '';
+    player.style.display = 'none';
     placeholder.style.display = 'flex';
   }
 
@@ -313,7 +299,7 @@
 
   function reloadPlayer() {
     if (currentVideoId) {
-      loadPlayer(currentVideoId);
+      player.src = buildEmbedUrl(currentVideoId);
     }
   }
 
