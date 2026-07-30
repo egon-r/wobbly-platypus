@@ -609,7 +609,15 @@ function buildControls() {
         });
         animBtn.addEventListener('click', () => {
           ctrl.animating = !ctrl.animating;
-          if(ctrl.animating) ctrl.startTime = (performance.now()-start)/1000;
+          if(ctrl.animating){
+            ctrl.startTime = (performance.now()-start)/1000;
+            var norm = (parseFloat(ctrl.element.value) - ctrl.min) / (ctrl.max - ctrl.min);
+            switch(ctrl.curve){
+              case'saw':ctrl.phaseOffset=norm*2*Math.PI;break;
+              case'triangle':ctrl.phaseOffset=norm*Math.PI;break;
+              default:ctrl.phaseOffset=Math.asin(2*norm-1);
+            }
+          }
           animBtn.textContent = ctrl.animating ? '⏸' : '▶';
           animBtn.dataset.playing = ctrl.animating ? 'true' : 'false';
         });
@@ -659,7 +667,15 @@ function buildControls() {
         });
         animBtn.addEventListener('click', () => {
           ctrl.animating = !ctrl.animating;
-          if(ctrl.animating) ctrl.startTime = (performance.now()-start)/1000;
+          if(ctrl.animating){
+            ctrl.startTime = (performance.now()-start)/1000;
+            var norm = (parseFloat(ctrl.element.value) - ctrl.min) / (ctrl.max - ctrl.min);
+            switch(ctrl.curve){
+              case'saw':ctrl.phaseOffset=norm*2*Math.PI;break;
+              case'triangle':ctrl.phaseOffset=norm*Math.PI;break;
+              default:ctrl.phaseOffset=Math.asin(2*norm-1);
+            }
+          }
           animBtn.textContent = ctrl.animating ? '⏸' : '▶';
           animBtn.dataset.playing = ctrl.animating ? 'true' : 'false';
         });
@@ -764,7 +780,8 @@ function frame(){
     for (const ctrl of annotControls) {
       if (ctrl.animating && ctrl.min !== undefined && ctrl.max !== undefined) {
         const period = 8;
-        const phase = ((sec*timeSpeed - ctrl.startTime*timeSpeed) / period) * Math.PI * 2;
+        var elapsed = (sec - ctrl.startTime) * timeSpeed;
+        var phase = (elapsed / period) * Math.PI * 2 + (ctrl.phaseOffset||0);
         var t;
         switch(ctrl.curve){
           case'saw':t=(phase%(2*Math.PI))/(2*Math.PI);break;
