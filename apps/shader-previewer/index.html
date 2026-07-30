@@ -676,6 +676,7 @@ function buildControls() {
           animBtn.textContent = ctrl.animating ? '⏸' : '▶';
           animBtn.dataset.playing = ctrl.animating ? 'true' : 'false';
         });
+        input.addEventListener('keydown',function(e){if(e.key===' '||e.key==='Spacebar'||e.keyCode===32){e.preventDefault();animBtn.click();}});
         group.appendChild(input);
         group.appendChild(valSpan);
         group.appendChild(animBtn);
@@ -734,6 +735,7 @@ function buildControls() {
           animBtn.textContent = ctrl.animating ? '⏸' : '▶';
           animBtn.dataset.playing = ctrl.animating ? 'true' : 'false';
         });
+        input.addEventListener('keydown',function(e){if(e.key===' '||e.key==='Spacebar'||e.keyCode===32){e.preventDefault();animBtn.click();}});
         group.appendChild(input);
         group.appendChild(valSpan);
         group.appendChild(animBtn);
