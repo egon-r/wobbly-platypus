@@ -1,18 +1,22 @@
 {
   "hello": {
     "description": "a friendly greeting",
+    "url": "/apps/hello/",
     "created": "2026-07-09T03:37:15+09:00"
   },
   "calc": {
     "description": "a pocket calculator",
+    "url": "/apps/calc/",
     "created": "2026-07-09T03:42:32+09:00"
   },
   "myip": {
     "description": "your public IP address",
+    "url": "/apps/myip/",
     "created": "2026-07-09T03:47:33+09:00"
   },
   "dice": {
     "description": "3D CSS cube roller",
+    "url": "/apps/dice/",
     "created": "2026-07-09T04:12:05+09:00"
   },
   "shader-previewer": {
@@ -22,10 +26,12 @@
   },
   "sensors": {
     "description": "Real-time device sensor monitor \u2014 gyroscope, accelerometer, geolocation, battery, network, screen, ambient light",
+    "url": "/apps/sensors/",
     "created": "2026-07-11T12:00:00+00:00"
   },
   "code-editor": {
     "description": "Local-first HTML/CSS/JS playground with live preview \u2014 no backend",
+    "url": "/apps/code-editor/",
     "created": "2026-07-11T17:15:54.339450+00:00"
   },
   "file-analyzer": {
@@ -40,6 +46,7 @@
   },
   "deepseek-chat": {
     "description": "Chat with DeepSeek API \u2014 streaming, local history, multi-key support",
+    "url": "/apps/deepseek-chat/",
     "created": "2026-07-13T00:00:00+00:00"
   },
   "208-zero-knowledge-crypto": {
@@ -49,6 +56,7 @@
   },
   "yt-embed": {
     "description": "YouTube Clean Player \u2014 paste a link, get a chrome-free embed",
+    "url": "/apps/yt-embed/",
     "created": "2026-07-29"
   },
   "middle-button-scroll": {
