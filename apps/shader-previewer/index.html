@@ -799,7 +799,7 @@ function fmtSpeed(v){
 }
 document.getElementById('time-speed').addEventListener('input',function(){
   var v=parseFloat(this.value);
-  timeSpeed=v<=0?0:Math.pow(10,(v-50)/25);
+  timeSpeed=v<=0?0:Math.pow(4,(v-75)/25);
   document.getElementById('time-speed-label').textContent=fmtSpeed(timeSpeed);
 });
 code.addEventListener('keydown',e=>{
