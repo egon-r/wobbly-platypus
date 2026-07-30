@@ -908,19 +908,21 @@ document.getElementById('compile').addEventListener('click',()=>compileShader())
 document.getElementById('reset').addEventListener('click',()=>loadShader(select.value));
 function fmtWarp(lvl){
   if(lvl===0)return '1×';
-  var s=Math.pow(2,lvl);
-  if(lvl<4)return s+'× slower';
+  var s=Math.pow(10,lvl);
+  if(lvl<5)return s.toLocaleString()+'× slower';
   return s.toExponential(2)+'× slower';
 }
-document.getElementById('time-up').addEventListener('click',function(){
-  warpLevel++;
-  timeSpeed=1/Math.pow(2,warpLevel);
+document.getElementById('time-up').addEventListener('click',function(e){
+  var step=e.shiftKey?5:1;
+  warpLevel+=step;
+  timeSpeed=1/Math.pow(10,warpLevel);
   document.getElementById('time-speed-label').textContent=fmtWarp(warpLevel);
 });
-document.getElementById('time-down').addEventListener('click',function(){
-  if(warpLevel>0){warpLevel--;
-  timeSpeed=1/Math.pow(2,warpLevel);
-  document.getElementById('time-speed-label').textContent=fmtWarp(warpLevel);}
+document.getElementById('time-down').addEventListener('click',function(e){
+  var step=e.shiftKey?5:1;
+  warpLevel=Math.max(0,warpLevel-step);
+  timeSpeed=1/Math.pow(10,warpLevel);
+  document.getElementById('time-speed-label').textContent=fmtWarp(warpLevel);
 });
 code.addEventListener('keydown',e=>{
   if(e.ctrlKey&&e.key==='Enter')compileShader();
