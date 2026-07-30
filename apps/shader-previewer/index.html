@@ -314,24 +314,14 @@ select.curve-select{
 }
 #time-control.show{display:flex}
 #time-control label{min-width:32px}
+#time-control input[type="range"]{
+  flex:1;height:4px;accent-color:#6366f1;min-width:0
+}
 #time-speed-label{
   min-width:90px;
   text-align:center;
   font-family:monospace
 }
-.warp-btn{
-  background:transparent;
-  color:#a1a1aa;
-  border:1px solid #3f3f46;
-  border-radius:4px;
-  cursor:pointer;
-  font-size:.75rem;
-  padding:1px 8px;
-  line-height:1.5;
-  transition:color .15s,border-color .15s
-}
-.warp-btn:hover{color:#e4e4e7;border-color:#6366f1}
-.warp-btn:active{background:#27272a}
 #time-control.warn{color:#f59e0b}
 #time-control.warn #time-speed-label{color:#f59e0b;font-weight:600}
 </style>
@@ -356,9 +346,8 @@ select.curve-select{
     </div>
     <div id="time-control">
       <label>Time</label>
-      <button id="time-down" class="warp-btn">◀</button>
+      <input type="range" id="time-speed" min="0" max="100" step="1" value="100">
       <span id="time-speed-label">1×</span>
-      <button id="time-up" class="warp-btn">▶</button>
     </div>
     <div id="annot-controls"></div>
     <div id="errors"></div>
@@ -367,7 +356,6 @@ select.curve-select{
 <script>
 let SHADERS = {};
 let shaderOrder = [];
-let warpLevel = 0;
 let timeSpeed = 1;
 var userShaders = {};
 
@@ -908,28 +896,24 @@ select.addEventListener('change',function(){
 });
 document.getElementById('compile').addEventListener('click',()=>compileShader());
 document.getElementById('reset').addEventListener('click',()=>loadShader(select.value));
-function fmtWarp(lvl){
-  if(lvl===0)return '1×';
-  var s=Math.pow(10,lvl);
-  if(lvl<5)return s.toLocaleString()+'× slower';
-  return s.toExponential(2)+'× slower';
+function fmtSpeed(v){
+  if(v===0)return '0×';
+  if(v<1){
+    var s=1/v;
+    if(s<10)return s.toFixed(1)+'× slower';
+    if(s<100)return Math.round(s)+'× slower';
+    return s.toFixed()+'× slower';
+  }
+  return '1×';
 }
-function setWarp(lvl){
-  warpLevel=lvl;
-  timeSpeed=1/Math.pow(10,warpLevel);
+document.getElementById('time-speed').addEventListener('input',function(){
+  var v=parseInt(this.value);
+  timeSpeed=v<=0?0:Math.pow(10,(v-100)*7/100);
   var el=document.getElementById('time-control');
   var label=document.getElementById('time-speed-label');
-  label.textContent=fmtWarp(warpLevel);
-  if(warpLevel>=7){el.classList.add('warn');label.title='FP32 precision limit — t changes by <1ulp per frame';}
+  label.textContent=fmtSpeed(timeSpeed);
+  if(timeSpeed>0&&timeSpeed<1e-6){el.classList.add('warn');label.title='FP32 precision limit — t changes by <1ulp per frame';}
   else{el.classList.remove('warn');label.title='';}
-}
-document.getElementById('time-up').addEventListener('click',function(e){
-  var step=e.shiftKey?5:1;
-  setWarp(warpLevel+step);
-});
-document.getElementById('time-down').addEventListener('click',function(e){
-  var step=e.shiftKey?5:1;
-  setWarp(Math.max(0,warpLevel-step));
 });
 code.addEventListener('keydown',e=>{
   if(e.ctrlKey&&e.key==='Enter')compileShader();
