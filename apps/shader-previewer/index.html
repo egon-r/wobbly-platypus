@@ -347,7 +347,7 @@ select.curve-select{
     </div>
     <div id="time-control">
       <label>Time</label>
-      <input type="range" id="time-speed" min="0" max="100" step="0.1" value="50">
+      <input type="range" id="time-speed" min="0" max="1000" step="1" value="500">
       <span id="time-speed-label">1x</span>
     </div>
     <div id="annot-controls"></div>
@@ -905,7 +905,7 @@ function fmtSpeed(v){
 }
 document.getElementById('time-speed').addEventListener('input',function(){
   var v=parseFloat(this.value);
-  timeSpeed=v<=0?0:Math.pow(4,(v-75)/25);
+  timeSpeed=v<=0?0:Math.pow(4,(v-750)/250);
   document.getElementById('time-speed-label').textContent=fmtSpeed(timeSpeed);
 });
 code.addEventListener('keydown',e=>{
