@@ -358,12 +358,50 @@ select.curve-select{
 let SHADERS = {};
 let shaderOrder = [];
 let timeSpeed = 1;
+var userShaders = {};
+
+function loadUserShaders(){
+  userShaders = {};
+  for(var i=0;i<localStorage.length;i++){
+    var k=localStorage.key(i);
+    if(k.indexOf('shader_user_')===0){
+      try{
+        var d=JSON.parse(localStorage.getItem(k));
+        var name=k.slice(12);
+        userShaders[name]={label:d.label||name,type:d.type||'2d',src:d.src};
+        SHADERS['_user_'+name]={label:d.label||name,type:d.type||'2d',src:d.src};
+      }catch(e){}
+    }
+  }
+}
+
+function saveUserShader(name,label,src){
+  var type='2d';
+  if(/\beye\b|\bscene\(\b|\bnorm\(\b/.test(src))type='3d';
+  var data={label:label||name,type:type,src:src,created:new Date().toISOString()};
+  localStorage.setItem('shader_user_'+name,JSON.stringify(data));
+  userShaders[name]={label:data.label,type:data.type,src:data.src};
+  SHADERS['_user_'+name]={label:data.label,type:data.type,src:data.src};
+}
+
+function cloneShader(){
+  var name=prompt('Name for cloned shader:');
+  if(!name||!name.trim())return;
+  name=name.trim();
+  if(name.indexOf('_user_')===0)name=name.slice(6);
+  saveUserShader(name,name,code.value);
+  populateSelect();
+  select.value='_user_'+name;
+  loadShader('_user_'+name);
+}
+
 async function loadShadersJSON() {
   const resp = await fetch('shaders.json');
   const data = await resp.json();
   shaderOrder = data._order || [];
   delete data._order;
   SHADERS = data;
+  loadUserShaders();
   populateSelect();
   // Load default shader
   if (shaderOrder.length > 0) {
@@ -372,14 +410,31 @@ async function loadShadersJSON() {
 }
 function populateSelect() {
   select.innerHTML = '';
-  shaderOrder.forEach(id => {
-    const entry = SHADERS[id];
-    if (!entry) return;
-    const opt = document.createElement('option');
-    opt.value = id;
-    opt.textContent = entry.label || id;
+  shaderOrder.forEach(function(id){
+    var entry=SHADERS[id];
+    if(!entry)return;
+    var opt=document.createElement('option');
+    opt.value=id;
+    opt.textContent=entry.label||id;
     select.appendChild(opt);
   });
+  // separator + user shaders
+  var ukeys=Object.keys(userShaders);
+  if(ukeys.length){
+    var sep=document.createElement('option');
+    sep.disabled=true;sep.textContent='\u2500\u2500\u2500 user \u2500\u2500\u2500';
+    select.appendChild(sep);
+    ukeys.forEach(function(name){
+      var opt=document.createElement('option');
+      opt.value='_user_'+name;
+      opt.textContent=userShaders[name].label||name;
+      select.appendChild(opt);
+    });
+  }
+  var clone=document.createElement('option');
+  clone.value='__clone__';
+  clone.textContent='\u271a Clone & rename...';
+  select.appendChild(clone);
 }
 function isShader3D(name) {
   return SHADERS[name]?.type === '3d';
@@ -834,7 +889,10 @@ function loadShader(name){
   document.getElementById('time-control').classList.toggle('show', /\buniform\s+float\s+t\b/.test(src));
   compileShader(src);
 }
-select.addEventListener('change',()=>loadShader(select.value));
+select.addEventListener('change',function(){
+  if(this.value==='__clone__'){cloneShader();return;}
+  loadShader(this.value);
+});
 document.getElementById('compile').addEventListener('click',()=>compileShader());
 document.getElementById('reset').addEventListener('click',()=>loadShader(select.value));
 function fmtSpeed(v){
