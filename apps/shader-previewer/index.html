@@ -315,7 +315,7 @@ select.curve-select{
 #time-control.show{display:flex}
 #time-control label{min-width:32px}
 #time-speed-label{
-  min-width:80px;
+  min-width:90px;
   text-align:center;
   font-family:monospace
 }
@@ -909,7 +909,8 @@ document.getElementById('reset').addEventListener('click',()=>loadShader(select.
 function fmtWarp(lvl){
   if(lvl===0)return '1×';
   var s=Math.pow(2,lvl);
-  return s.toLocaleString()+'× slower';
+  if(lvl<4)return s+'× slower';
+  return s.toExponential(2)+'× slower';
 }
 document.getElementById('time-up').addEventListener('click',function(){
   warpLevel++;
