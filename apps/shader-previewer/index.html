@@ -292,6 +292,16 @@ body{
   color:#6366f1;
   border-color:#6366f1
 }
+select.curve-select{
+  background:#09090b;
+  color:#a1a1aa;
+  border:1px solid #3f3f46;
+  border-radius:3px;
+  font-size:.6rem;
+  padding:1px 2px;
+  cursor:pointer;
+  max-width:80px
+}
 #time-control{
   display:none;
   align-items:center;
@@ -606,10 +616,17 @@ function buildControls() {
         group.appendChild(input);
         group.appendChild(valSpan);
         group.appendChild(animBtn);
+        const curveSel = document.createElement('select');
+        curveSel.className = 'curve-select';
+        ['↻ sine','↗ saw','↕ triangle'].forEach(function(c){const o=document.createElement('option');o.textContent=c;o.value=c.split(' ')[1];curveSel.appendChild(o)});
+        curveSel.value='sine';
+        curveSel.onchange=function(){ctrl.curve=this.value};
+        group.appendChild(curveSel);
         ctrl.element = input;
         ctrl.getValue = () => parseFloat(input.value);
         ctrl.animating = false;
         ctrl.animBtn = animBtn;
+        ctrl.curve = 'sine';
         ctrl.min = mn;
         ctrl.max = mx;
         break;
@@ -649,10 +666,17 @@ function buildControls() {
         group.appendChild(input);
         group.appendChild(valSpan);
         group.appendChild(animBtn);
+        const curveSel = document.createElement('select');
+        curveSel.className = 'curve-select';
+        ['↻ sine','↗ saw','↕ triangle'].forEach(function(c){const o=document.createElement('option');o.textContent=c;o.value=c.split(' ')[1];curveSel.appendChild(o)});
+        curveSel.value='sine';
+        curveSel.onchange=function(){ctrl.curve=this.value};
+        group.appendChild(curveSel);
         ctrl.element = input;
         ctrl.getValue = () => Math.round(parseFloat(input.value));
         ctrl.animating = false;
         ctrl.animBtn = animBtn;
+        ctrl.curve = 'sine';
         ctrl.min = mn;
         ctrl.max = mx;
         break;
@@ -741,7 +765,12 @@ function frame(){
       if (ctrl.animating && ctrl.min !== undefined && ctrl.max !== undefined) {
         const period = 8;
         const phase = ((sec*timeSpeed - ctrl.startTime*timeSpeed) / period) * Math.PI * 2;
-        const t = (Math.sin(phase) + 1) / 2;
+        var t;
+        switch(ctrl.curve){
+          case'saw':t=(phase%(2*Math.PI))/(2*Math.PI);break;
+          case'triangle':t=1-Math.abs(((phase%(2*Math.PI))/Math.PI)-1);break;
+          default:t=(Math.sin(phase)+1)/2;
+        }
         const val = ctrl.min + t * (ctrl.max - ctrl.min);
         ctrl.element.value = val;
         const valSpan = ctrl.element.parentElement.querySelector('.ctrl-value');
