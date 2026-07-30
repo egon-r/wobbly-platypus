@@ -160,7 +160,6 @@ body{
 #toolbar button:hover{background:#3f3f46;border-color:#52525b}
 #toolbar button.primary{background:#6366f1;border-color:#6366f1}
 #toolbar button.primary:hover{background:#818cf8}
-
 #errors{
   background:#1a0a0a;
   border:1px solid #7f1d1d;
@@ -177,7 +176,6 @@ body{
   word-break:break-all
 }
 #errors.show{display:block}
-
 /* mobile */
 @media(max-width:900px){
   body{padding:0;align-items:stretch}
@@ -207,7 +205,6 @@ body{
     min-height:44px
   }
 }
-
 /* --- annotation controls --- */
 #annot-controls{
   display:none;
@@ -296,7 +293,7 @@ body{
   border-color:#6366f1
 }
 #time-control{
-  display:flex;
+  display:none;
   align-items:center;
   gap:.5rem;
   padding:.35rem .75rem;
@@ -305,6 +302,7 @@ body{
   color:#a1a1aa;
   flex-shrink:0
 }
+#time-control.show{display:flex}
 #time-control input[type="range"]{
   flex:1;
   max-width:120px;
@@ -350,7 +348,6 @@ body{
 let SHADERS = {};
 let shaderOrder = [];
 let timeSpeed = 1;
-
 async function loadShadersJSON() {
   const resp = await fetch('shaders.json');
   const data = await resp.json();
@@ -363,7 +360,6 @@ async function loadShadersJSON() {
     loadShader(shaderOrder[0]);
   }
 }
-
 function populateSelect() {
   select.innerHTML = '';
   shaderOrder.forEach(id => {
@@ -375,16 +371,13 @@ function populateSelect() {
     select.appendChild(opt);
   });
 }
-
 function isShader3D(name) {
   return SHADERS[name]?.type === '3d';
 }
-
 // --- setup ---
 const canvas = document.getElementById('c');
 const gl = canvas.getContext('webgl2', {antialias:true});
 if(!gl){document.getElementById('app').innerHTML='<div style="color:red;padding:2rem;width:100%;text-align:center">WebGL2 not supported</div>';}
-
 let W, H;
 function resize(){
   const rect = canvas.parentElement.getBoundingClientRect();
@@ -403,17 +396,14 @@ function resize(){
 new ResizeObserver(resize).observe(canvas.parentElement);
 window.addEventListener('resize', resize);
 resize();
-
 // --- vertex shader ---
 const VS_SRC = `#version 300 es\nin vec2 p;\nvoid main(){gl_Position=vec4(p,0,1);}`;
 const vs = gl.createShader(gl.VERTEX_SHADER);
 gl.shaderSource(vs, VS_SRC);
 gl.compileShader(vs);
-
 const buf = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, buf);
 gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), gl.STATIC_DRAW);
-
 function createProgram(fsSrc){
   const fs = gl.createShader(gl.FRAGMENT_SHADER);
   gl.shaderSource(fs, fsSrc);
@@ -436,11 +426,9 @@ function createProgram(fsSrc){
   gl.deleteShader(fs);
   return prog;
 }
-
 let curProg = null;
 let uR=null, uT=null, uEye=null, uTarget=null, uPan=null, uZoom=null;
 let aP = null;
-
 function useProgram(prog){
   curProg=prog; gl.useProgram(prog);
   aP=gl.getAttribLocation(prog,'p');
@@ -453,7 +441,6 @@ function useProgram(prog){
   uPan=gl.getUniformLocation(prog,'pan');
   uZoom=gl.getUniformLocation(prog,'zoom');
 }
-
 function compileShader(src){
   try{
     const prog = createProgram(src||code.value);
@@ -466,19 +453,14 @@ function compileShader(src){
     errEl.classList.add('show');
   }
 }
-
 // --- shader type detection ---
-
 // --- orbital camera (3D shaders) ---
 let theta=0, phi=.6, dist=7;
 let targetPos = [0,1.2,0];
-
 // --- pan/zoom state (2D fractal shaders) ---
 let panX = 0, panY = 0, zoomLevel = 1;
-
 // --- interaction ---
 let mx=0, my=0, down=false;
-
 canvas.addEventListener('pointerdown',e=>{
   down=true; mx=e.clientX; my=e.clientY;
   canvas.setPointerCapture(e.pointerId);
@@ -508,7 +490,6 @@ canvas.addEventListener('wheel',e=>{
   }
   e.preventDefault();
 },{passive:false});
-
 // double-click to reset pan/zoom on fractals
 canvas.addEventListener('dblclick',()=>{
   if(isShader3D(select.value)){
@@ -517,7 +498,6 @@ canvas.addEventListener('dblclick',()=>{
     panX=0; panY=0; zoomLevel=1;
   }
 });
-
 // --- pinch-to-zoom on mobile (base-state reference for smooth zoom) ---
 let isPinching=false, prevPinchDist=0;
 canvas.addEventListener('touchstart',e=>{
@@ -548,7 +528,6 @@ canvas.addEventListener('touchmove',e=>{
 canvas.addEventListener('touchend',e=>{
   if(e.touches.length<2){isPinching=false;prevPinchDist=0;}
 });
-
 // --- annotation UI controls ---
 // Parse uniform annotations like: uniform float u_x; // @slider 0.0 1.0 0.5
 // Extracts type, name, annotation type, and parameters from each annotated uniform.
@@ -566,16 +545,13 @@ function parseAnnotations(src) {
   }
   return controls;
 }
-
 // Stores { name, glslType, loc, annotType, element, getValue } for each active control
 let annotControls = [];
-
 function clearControls() {
   const container = document.getElementById('annot-controls');
   if (container) container.innerHTML = '';
   annotControls = [];
 }
-
 // Build DOM controls from annotations in the current shader source
 function buildControls() {
   clearControls();
@@ -584,43 +560,34 @@ function buildControls() {
   const parsed = parseAnnotations(code.value);
   if (!parsed.length) { container.classList.remove('show'); return; }
   container.classList.add('show');
-
   parsed.forEach(info => {
     const loc = gl.getUniformLocation(curProg, info.name);
     if (loc === null) return; // uniform may be optimized out
-
     const group = document.createElement('div');
     group.className = 'ctrl-group';
-
     const label = document.createElement('label');
     label.textContent = info.name;
     group.appendChild(label);
-
     const ctrl = { name: info.name, glslType: info.glslType, loc, annotType: info.annotType, element: null, getValue: null };
-
     switch (info.annotType) {
       case 'slider': {
         const parts = info.params.split(/\s+/).map(Number);
         const mn = parts[0] || 0;
         const mx = parts[1] || 1;
         const def = parts[2] !== undefined ? parts[2] : (mn + mx) / 2;
-
         const input = document.createElement('input');
         input.type = 'range';
         input.min = mn;
         input.max = mx;
         input.step = 'any';
         input.value = def;
-
         const valSpan = document.createElement('span');
         valSpan.className = 'ctrl-value';
         valSpan.textContent = Number(def).toFixed(3);
-
         const animBtn = document.createElement('button');
         animBtn.className = 'anim-btn';
         animBtn.textContent = '▶';
         animBtn.dataset.playing = 'false';
-
         input.addEventListener('input', () => {
           if (ctrl.animating) {
             ctrl.animating = false;
@@ -629,19 +596,15 @@ function buildControls() {
           }
           valSpan.textContent = parseFloat(input.value).toFixed(3);
         });
-
         animBtn.addEventListener('click', () => {
-          if(!ctrl.animating) ctrl.startTime = sec;
           ctrl.animating = !ctrl.animating;
-          if(ctrl.animating){ctrl.startTime=(performance.now()-start)/1000;}
+          if(ctrl.animating) ctrl.startTime = (performance.now()-start)/1000;
           animBtn.textContent = ctrl.animating ? '⏸' : '▶';
           animBtn.dataset.playing = ctrl.animating ? 'true' : 'false';
         });
-
         group.appendChild(input);
         group.appendChild(valSpan);
         group.appendChild(animBtn);
-
         ctrl.element = input;
         ctrl.getValue = () => parseFloat(input.value);
         ctrl.animating = false;
@@ -655,23 +618,19 @@ function buildControls() {
         const mn = parts[0] || 0;
         const mx = parts[1] || 100;
         const def = parts[2] !== undefined ? Math.round(parts[2]) : Math.floor((mn + mx) / 2);
-
         const input = document.createElement('input');
         input.type = 'range';
         input.min = mn;
         input.max = mx;
         input.step = 1;
         input.value = def;
-
         const valSpan = document.createElement('span');
         valSpan.className = 'ctrl-value';
         valSpan.textContent = Math.round(def);
-
         const animBtn = document.createElement('button');
         animBtn.className = 'anim-btn';
         animBtn.textContent = '▶';
         animBtn.dataset.playing = 'false';
-
         input.addEventListener('input', () => {
           if (ctrl.animating) {
             ctrl.animating = false;
@@ -680,19 +639,15 @@ function buildControls() {
           }
           valSpan.textContent = Math.round(input.value);
         });
-
         animBtn.addEventListener('click', () => {
-          if(!ctrl.animating) ctrl.startTime = sec;
           ctrl.animating = !ctrl.animating;
-          if(ctrl.animating){ctrl.startTime=(performance.now()-start)/1000;}
+          if(ctrl.animating) ctrl.startTime = (performance.now()-start)/1000;
           animBtn.textContent = ctrl.animating ? '⏸' : '▶';
           animBtn.dataset.playing = ctrl.animating ? 'true' : 'false';
         });
-
         group.appendChild(input);
         group.appendChild(valSpan);
         group.appendChild(animBtn);
-
         ctrl.element = input;
         ctrl.getValue = () => Math.round(parseFloat(input.value));
         ctrl.animating = false;
@@ -706,9 +661,7 @@ function buildControls() {
         const input = document.createElement('input');
         input.type = 'color';
         input.value = defaultHex;
-
         group.appendChild(input);
-
         ctrl.element = input;
         ctrl.getValue = () => {
           const hex = input.value;
@@ -724,9 +677,7 @@ function buildControls() {
         const input = document.createElement('input');
         input.type = 'checkbox';
         input.checked = true;
-
         group.appendChild(input);
-
         ctrl.element = input;
         ctrl.getValue = () => input.checked ? 1 : 0;
         break;
@@ -743,7 +694,6 @@ function buildControls() {
           defaultIdx = 0;
         }
         const vals = valsStr.split(',').map(s => s.trim());
-
         const select = document.createElement('select');
         vals.forEach((v, i) => {
           const opt = document.createElement('option');
@@ -752,9 +702,7 @@ function buildControls() {
           if (i === defaultIdx) opt.selected = true;
           select.appendChild(opt);
         });
-
         group.appendChild(select);
-
         ctrl.element = select;
         ctrl.getValue = () => {
           const v = select.value;
@@ -765,17 +713,14 @@ function buildControls() {
         break;
       }
     }
-
     container.appendChild(group);
     annotControls.push(ctrl);
   });
 }
-
 // --- render loop ---
 let start = performance.now();
 let errEl = document.getElementById('errors');
 let zoomEl = document.getElementById('zoom-indicator');
-
 function frame(){
   const sec = (performance.now()-start)/1000;
   if(curProg && W>0 && H>0){
@@ -816,7 +761,6 @@ function frame(){
       }
     }
     gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
-
     // zoom indicator for 2D fractals
     if(isShader3D(select.value)){
       zoomEl.classList.remove('show');
@@ -829,11 +773,9 @@ function frame(){
   }
   requestAnimationFrame(frame);
 }
-
 // --- DOM ---
 const code = document.getElementById('code');
 const select = document.getElementById('shader-select');
-
 function loadShader(name){
   const src = SHADERS[name]?.src;
   if(!src)return;
@@ -842,30 +784,26 @@ function loadShader(name){
   theta=0; phi=.6; dist=7;
   if(name === 'julia-3d'){ targetPos = [0, 0, 0]; }
   else if(isShader3D(name)){ targetPos = [0, 1.2, 0]; }
+  document.getElementById('time-control').classList.toggle('show', /\buniform\s+float\s+t\b/.test(src));
   compileShader(src);
 }
-
 select.addEventListener('change',()=>loadShader(select.value));
 document.getElementById('compile').addEventListener('click',()=>compileShader());
 document.getElementById('reset').addEventListener('click',()=>loadShader(select.value));
 document.getElementById('time-speed').addEventListener('input',function(){timeSpeed=parseFloat(this.value);document.getElementById('time-speed-label').textContent=timeSpeed.toFixed(1)+'x';});
-
 code.addEventListener('keydown',e=>{
   if(e.ctrlKey&&e.key==='Enter')compileShader();
 });
-
 // --- fullscreen (native API primary, CSS fallback when API unavailable) ---
 const fsBtn = document.getElementById('fs-btn');
 const preview = document.getElementById('preview');
 let fsActive = false;
-
 function setFS(on){
   fsActive = on;
   preview.classList.toggle('fullscreen', on);
   document.body.style.overflow = on ? 'hidden' : '';
   setTimeout(resize, 150);
 }
-
 function toggleFS(){
   if(document.fullscreenElement){
     document.exitFullscreen().catch(()=>setFS(false));
@@ -882,20 +820,16 @@ function toggleFS(){
     }, 300);
   }
 }
-
 fsBtn.addEventListener('click', toggleFS);
-
 // CSS-only Escape handler — native fullscreen handles its own Escape
 document.addEventListener('keydown', function fsKeydown(e){
   if(e.key === 'Escape' && fsActive && !document.fullscreenElement){
     setFS(false);
   }
 });
-
 document.addEventListener('fullscreenchange', ()=>{
   setFS(!!document.fullscreenElement);
 });
-
 // --- init ---
 loadShadersJSON();
 frame();
