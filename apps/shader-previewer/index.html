@@ -295,6 +295,28 @@ body{
   color:#6366f1;
   border-color:#6366f1
 }
+#time-control{
+  display:flex;
+  align-items:center;
+  gap:.5rem;
+  padding:.35rem .75rem;
+  border-bottom:1px solid #27272a;
+  font-size:.7rem;
+  color:#a1a1aa;
+  flex-shrink:0
+}
+#time-control input[type="range"]{
+  flex:1;
+  max-width:120px;
+  height:4px;
+  accent-color:#6366f1
+}
+#time-control label{min-width:32px}
+#time-speed-label{
+  min-width:36px;
+  text-align:right;
+  font-family:monospace
+}
 </style>
 </head>
 <body>
@@ -315,6 +337,11 @@ body{
       <span style="flex:1"></span>
       <a class="back-link" href="/apps/">← back</a>
     </div>
+    <div id="time-control">
+      <label>Time</label>
+      <input type="range" id="time-speed" min="0" max="5" step="0.1" value="1">
+      <span id="time-speed-label">1.0x</span>
+    </div>
     <div id="annot-controls"></div>
     <div id="errors"></div>
   </div>
@@ -322,6 +349,7 @@ body{
 <script>
 let SHADERS = {};
 let shaderOrder = [];
+let timeSpeed = 1;
 
 async function loadShadersJSON() {
   const resp = await fetch('shaders.json');
@@ -603,7 +631,9 @@ function buildControls() {
         });
 
         animBtn.addEventListener('click', () => {
+          if(!ctrl.animating) ctrl.startTime = sec;
           ctrl.animating = !ctrl.animating;
+          if(ctrl.animating){ctrl.startTime=(performance.now()-start)/1000;}
           animBtn.textContent = ctrl.animating ? '⏸' : '▶';
           animBtn.dataset.playing = ctrl.animating ? 'true' : 'false';
         });
@@ -652,7 +682,9 @@ function buildControls() {
         });
 
         animBtn.addEventListener('click', () => {
+          if(!ctrl.animating) ctrl.startTime = sec;
           ctrl.animating = !ctrl.animating;
+          if(ctrl.animating){ctrl.startTime=(performance.now()-start)/1000;}
           animBtn.textContent = ctrl.animating ? '⏸' : '▶';
           animBtn.dataset.playing = ctrl.animating ? 'true' : 'false';
         });
@@ -748,7 +780,7 @@ function frame(){
   const sec = (performance.now()-start)/1000;
   if(curProg && W>0 && H>0){
     if(uR)gl.uniform2f(uR,W,H);
-    if(uT)gl.uniform1f(uT,sec);
+    if(uT)gl.uniform1f(uT,sec*timeSpeed);
     if(uPan)gl.uniform2f(uPan,panX,panY);
     if(uZoom)gl.uniform1f(uZoom,zoomLevel);
     if(isShader3D(select.value)){
@@ -762,7 +794,7 @@ function frame(){
     for (const ctrl of annotControls) {
       if (ctrl.animating && ctrl.min !== undefined && ctrl.max !== undefined) {
         const period = 8;
-        const phase = (sec / period) * Math.PI * 2;
+        const phase = ((sec*timeSpeed - ctrl.startTime*timeSpeed) / period) * Math.PI * 2;
         const t = (Math.sin(phase) + 1) / 2;
         const val = ctrl.min + t * (ctrl.max - ctrl.min);
         ctrl.element.value = val;
@@ -816,6 +848,7 @@ function loadShader(name){
 select.addEventListener('change',()=>loadShader(select.value));
 document.getElementById('compile').addEventListener('click',()=>compileShader());
 document.getElementById('reset').addEventListener('click',()=>loadShader(select.value));
+document.getElementById('time-speed').addEventListener('input',function(){timeSpeed=parseFloat(this.value);document.getElementById('time-speed-label').textContent=timeSpeed.toFixed(1)+'x';});
 
 code.addEventListener('keydown',e=>{
   if(e.ctrlKey&&e.key==='Enter')compileShader();
