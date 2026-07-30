@@ -377,6 +377,7 @@ function isShader3D(name) {
 // --- setup ---
 const canvas = document.getElementById('c');
 const gl = canvas.getContext('webgl2', {antialias:true});
+if(gl)gl.drawingBufferColorSpace='display-p3';
 if(!gl){document.getElementById('app').innerHTML='<div style="color:red;padding:2rem;width:100%;text-align:center">WebGL2 not supported</div>';}
 let W, H;
 function resize(){
