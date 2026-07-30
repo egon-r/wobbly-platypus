@@ -16,7 +16,8 @@
     "created": "2026-07-09T04:12:05+09:00"
   },
   "shader-previewer": {
-    "description": "shader preview \u2014 live GLSL editing, shader presets, orbit + zoom camera",
+    "description": "shader preview — live GLSL editing, shader presets, orbit + zoom camera",
+    "url": "/apps/shader-previewer/",
     "created": "2026-07-10T01:05:04.471006+00:00"
   },
   "sensors": {
