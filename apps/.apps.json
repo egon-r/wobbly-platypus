@@ -20,7 +20,7 @@
     "created": "2026-07-09T04:12:05+09:00"
   },
   "shader-previewer": {
-    "description": "shader preview — live GLSL editing, shader presets, orbit + zoom camera",
+    "description": "shader preview — live GLSL editing, shader presets, animated uniform controls ▶/⏸, log time speed, orbit + zoom camera, Display P3 color",
     "url": "/apps/shader-previewer/",
     "created": "2026-07-10T01:05:04.471006+00:00"
   },
