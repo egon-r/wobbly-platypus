@@ -332,6 +332,8 @@ select.curve-select{
 }
 .warp-btn:hover{color:#e4e4e7;border-color:#6366f1}
 .warp-btn:active{background:#27272a}
+#time-control.warn{color:#f59e0b}
+#time-control.warn #time-speed-label{color:#f59e0b;font-weight:600}
 </style>
 </head>
 <body>
@@ -912,17 +914,22 @@ function fmtWarp(lvl){
   if(lvl<5)return s.toLocaleString()+'× slower';
   return s.toExponential(2)+'× slower';
 }
+function setWarp(lvl){
+  warpLevel=lvl;
+  timeSpeed=1/Math.pow(10,warpLevel);
+  var el=document.getElementById('time-control');
+  var label=document.getElementById('time-speed-label');
+  label.textContent=fmtWarp(warpLevel);
+  if(warpLevel>=7){el.classList.add('warn');label.title='FP32 precision limit — t changes by <1ulp per frame';}
+  else{el.classList.remove('warn');label.title='';}
+}
 document.getElementById('time-up').addEventListener('click',function(e){
   var step=e.shiftKey?5:1;
-  warpLevel+=step;
-  timeSpeed=1/Math.pow(10,warpLevel);
-  document.getElementById('time-speed-label').textContent=fmtWarp(warpLevel);
+  setWarp(warpLevel+step);
 });
 document.getElementById('time-down').addEventListener('click',function(e){
   var step=e.shiftKey?5:1;
-  warpLevel=Math.max(0,warpLevel-step);
-  timeSpeed=1/Math.pow(10,warpLevel);
-  document.getElementById('time-speed-label').textContent=fmtWarp(warpLevel);
+  setWarp(Math.max(0,warpLevel-step));
 });
 code.addEventListener('keydown',e=>{
   if(e.ctrlKey&&e.key==='Enter')compileShader();
